@@ -46,7 +46,8 @@ class PasswordResetEmailVerifyAPIView(generics.RetrieveAPIView):
 
             context = {
                 "link": link,
-                "user_name": user.username
+                "user_name": user.username,
+                "full_name": user.full_name
             }
             
             subject = "Password Rest Email"
@@ -66,7 +67,7 @@ class PasswordResetEmailVerifyAPIView(generics.RetrieveAPIView):
             print ("link ======", link)
         return user
     
-class PasswordChangeAPIView(generics.RetrieveAPIView):
+class PasswordChangeAPIView(generics.CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = api_serializer.UserSerializer
 
@@ -78,9 +79,9 @@ class PasswordChangeAPIView(generics.RetrieveAPIView):
         user = User.objects.get(id=uuidb64,otp=otp)
         if user:
             user.set_password(password)
-            user.otp = ""
+            # user.otp = ""
             user.save()
 
             return Response({"message":"Password Changed Successfully!!"}, status=status.HTTP_201_CREATED)
         else:
-            return Response({"message":"User Does Not Exits!!"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"message":"User Does Not Exists!!"}, status=status.HTTP_404_NOT_FOUND)
