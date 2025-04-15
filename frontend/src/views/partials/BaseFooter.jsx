@@ -1,4 +1,4 @@
-import React from 'react'
+import React from "react";
 
 function BaseFooter() {
   return (
@@ -8,11 +8,12 @@ function BaseFooter() {
           <div className="col-lg-4 col-md-6 col-12 text-white">
             {/* about company */}
             <div className="mb-4">
-              <h1>Desphixs</h1>
+              <h1>Vdemy</h1>
               <div className="mt-4">
                 <p>
-                  Desphixs is feature-rich components and beautifully Bootstrap UIKit
-                  for developers, built with bootstrap responsive framework.
+                  Vdemy is feature-rich components and beautifully Bootstrap
+                  UIKit for developers, built with bootstrap responsive
+                  framework.
                 </p>
                 {/* social media */}
                 <div className="fs-4 mt-4">
@@ -43,7 +44,7 @@ function BaseFooter() {
                     </svg>
                   </a>
                   {/*GitHub*/}
-                  <a href="#" className='text-white'>
+                  <a href="#" className="text-white">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width={16}
@@ -132,7 +133,10 @@ function BaseFooter() {
               <p>123 Main Street, U.S.A</p>
               <p className="mb-1">
                 Email:
-                <a href="#" className='text-white'> support@desphixs.com</a>
+                <a href="#" className="text-white">
+                  {" "}
+                  support@vdemy.com
+                </a>
               </p>
               <p>
                 Phone:
@@ -164,7 +168,7 @@ function BaseFooter() {
               <div className="me-4">
                 <span>
                   ©<span id="copyright5"></span>
-                  Desphixs
+                  Vdemy
                 </span>
               </div>
               <div>
@@ -324,8 +328,7 @@ function BaseFooter() {
         </div>
       </div>
     </footer>
-
-  )
+  );
 }
 
-export default BaseFooter
+export default BaseFooter;

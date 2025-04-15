@@ -161,6 +161,12 @@ ANYMAIL = {
 FROM_EMAIL = env("FROM_EMAIL")
 EMAIL_BACKEND = 'anymail.backends.mailgun.EmailBackend'
 
+VNPAY_TMN_CODE = env("VNPAY_TMN_CODE")
+VNPAY_HASH_SECRET = env("VNPAY_HASH_SECRET")
+VNPAY_PAYMENT_URL = env("VNPAY_PAYMENT_URL")
+FRONTEND_SITE_URL = env("FRONTEND_SITE_URL")
+PAYPAL_CLIENT_ID = env("PAYPAL_CLIENT_ID")
+PAYPAL_SECRET_ID = env("PAYPAL_SECRET_ID")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

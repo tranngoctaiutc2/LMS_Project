@@ -12,6 +12,7 @@ import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
 import { CartContext } from "../plugin/Context";
 import apiInstance from "../../utils/axios";
+import acedamyImg from "../../assets/images/background/2.jpg";
 
 function Index() {
   const [courses, setCourses] = useState([]);
@@ -81,7 +82,6 @@ function Index() {
     (_, index) => index + 1
   );
 
-
   const addToWishlist = (courseId) => {
     const formdata = new FormData();
     formdata.append("user_id", UserData()?.user_id);
@@ -142,7 +142,8 @@ function Index() {
               {/* images */}
               <div className="position-relative">
                 <img
-                  src="https://geeksui.codescandy.com/geeks/assets/images/background/acedamy-img/girl-image.png"
+                  // src="https://geeksui.codescandy.com/geeks/assets/images/background/acedamy-img/girl-image.png"
+                  src={acedamyImg}
                   alt="girl"
                   className="end-0 bottom-0"
                 />
@@ -253,7 +254,10 @@ function Index() {
                               {c.language}
                             </span>
                           </div>
-                          <a onClick={() => addToWishlist(c.id)} className="fs-5">
+                          <a
+                            onClick={() => addToWishlist(c.id)}
+                            className="fs-5"
+                          >
                             <i className="fas fa-heart text-danger align-middle" />
                           </a>
                         </div>
@@ -279,7 +283,8 @@ function Index() {
                           </span>
                           <span className="text-warning">4.5</span>
                           <span className="fs-6 ms-2">
-                            ({c.reviews?.length} Reviews)
+                            ({c.reviews?.length} Review
+                            {c.reviews?.length > 1 && "s"})
                           </span>
                         </div>
                       </div>
