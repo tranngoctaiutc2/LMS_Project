@@ -17,8 +17,9 @@ const useAuthStore = create((set, get) => ({
 
   setLoading: (loading) => set({ loading }),
 
-  isLoggedIn: () => get().allUserData != null,
+  isLoggedIn: () => get().allUserData !== null,
 }));
+
 
 if (import.meta.env.DEV) {
   mountStoreDevtool("Store", useAuthStore);
