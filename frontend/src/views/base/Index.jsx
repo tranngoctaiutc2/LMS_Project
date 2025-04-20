@@ -13,6 +13,8 @@ import Toast from "../plugin/Toast";
 import { CartContext } from "../plugin/Context";
 import apiInstance from "../../utils/axios";
 
+import backgroundImg from '../../assets/images/background/2.jpg';
+
 function Index() {
     const [courses, setCourses] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -122,7 +124,7 @@ function Index() {
                         <div className="col-lg-6 d-flex justify-content-center">
                             {/* images */}
                             <div className="position-relative">
-                                <img src="https://desphixs.com/geeks/assets/images/background/acedamy-img/girl-image.png" alt="girl" className="end-0 bottom-0" />
+                                <img src={backgroundImg} alt="girl" className="end-0 bottom-0" />
                             </div>
                         </div>
                     </div>
