@@ -61,7 +61,7 @@ NOTI_TYPE = (
 )
 
 class Teacher(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.SET_NULL, blank=True, null=True)
     image = models.FileField(upload_to="course-file", blank=True, null=True, default="default.jpg")
     full_name = models.CharField(max_length=100)
     bio = models.CharField(max_length=100, null=True, blank=True)
@@ -106,20 +106,21 @@ class Category(models.Model):
             
 class Course(models.Model):
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
-    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
-    file = models.FileField(upload_to="course-file", blank=True, null=True)
-    image = models.FileField(upload_to="course-file", blank=True, null=True)
-    title = models.CharField(max_length=200)
+    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, blank=True, null=True)
+    file = models.CharField(max_length=200, blank=True, null=True)
+    image = models.CharField(max_length=200, blank=True, null=True)
+    title = models.CharField(max_length=200, blank=True, null=True)
     description = models.TextField(null=True, blank=True)
-    price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
-    language = models.CharField(choices=LANGUAGE, default="English", max_length=100)
-    level = models.CharField(choices=LEVEL, default="Beginner", max_length=100)
-    platform_status = models.CharField(choices=PLATFORM_STATUS, default="Published", max_length=100)
+    price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, blank=True, null=True)
+    language = models.CharField(choices=LANGUAGE, default="English", max_length=100, blank=True, null=True)
+    level = models.CharField(choices=LEVEL, default="Beginner", max_length=100, blank=True, null=True)
+    platform_status = models.CharField(choices=PLATFORM_STATUS, default="Published", max_length=100, blank=True, null=True)
     teacher_course_status = models.CharField(choices=TEACHER_STATUS, default="Published", max_length=100)
     featured = models.BooleanField(default=False)
     course_id = ShortUUIDField(unique=True, length=6, max_length=20, alphabet="1234567890")
     slug = models.SlugField(unique=True, null=True, blank=True)
     date = models.DateTimeField(default=timezone.now)
+
 
 
     def __str__(self):
@@ -169,7 +170,7 @@ class VariantItem(models.Model):
     variant = models.ForeignKey(Variant, on_delete=models.CASCADE, related_name="variant_items")
     title = models.CharField(max_length=1000)
     description = models.TextField(null=True, blank=True)
-    file = models.FileField(upload_to="course-file", null=True, blank=True)
+    file = models.CharField(max_length=200)
     duration = models.DurationField(null=True, blank=True)
     content_duration = models.CharField(max_length=1000, null=True, blank=True)
     preview = models.BooleanField(default=False)
@@ -178,22 +179,6 @@ class VariantItem(models.Model):
 
     def __str__(self):
         return f"{self.variant.title} - {self.title}"
-    
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-
-        if self.file:
-            clip = VideoFileClip(self.file.path)
-            duration_seconds = clip.duration
-
-            minutes, remainder = divmod(duration_seconds, 60)  
-
-            minutes = math.floor(minutes)
-            seconds = math.floor(remainder)
-
-            duration_text = f"{minutes}m {seconds}s"
-            self.content_duration = duration_text
-            super().save(update_fields=['content_duration'])
 
 class Question_Answer(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)

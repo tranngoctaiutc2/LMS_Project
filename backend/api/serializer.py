@@ -14,9 +14,14 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['full_name'] = user.full_name
         token['email'] = user.email
         token['username'] = user.username
+        try:
+            token['teacher_id'] = user.teacher.id
+        except:
+            token['teacher_id'] = 0
+
 
         return token
-    
+
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)
@@ -27,13 +32,14 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate(self, attr):
         if attr['password'] != attr['password2']:
-            raise serializers.ValidationError({"password": "Password fields didn,t match."})
+            raise serializers.ValidationError({"password": "Password fields didn't match."})
+
         return attr
     
     def create(self, validated_data):
         user = User.objects.create(
-            full_name = validated_data['full_name'],
-            email = validated_data['email'],
+            full_name=validated_data['full_name'],
+            email=validated_data['email'],
         )
 
         email_username, _ = user.email.split("@")
@@ -51,7 +57,7 @@ class UserSerializer(serializers.ModelSerializer):
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        fields = '__all__'
+        fields = "__all__"
 
 class CategorySerializer(serializers.ModelSerializer):
 
@@ -80,7 +86,6 @@ class VariantItemSerializer(serializers.ModelSerializer):
         else:
             self.Meta.depth = 3
 
-
 class VariantSerializer(serializers.ModelSerializer):
     variant_items = VariantItemSerializer(many=True)
     items = VariantItemSerializer(many=True)
@@ -97,16 +102,12 @@ class VariantSerializer(serializers.ModelSerializer):
         else:
             self.Meta.depth = 3
 
-
-
-
 class Question_Answer_MessageSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer(many=False)
 
     class Meta:
         fields = '__all__'
         model = api_models.Question_Answer_Message
-
 
 class Question_AnswerSerializer(serializers.ModelSerializer):
     messages = Question_Answer_MessageSerializer(many=True)
@@ -115,7 +116,6 @@ class Question_AnswerSerializer(serializers.ModelSerializer):
     class Meta:
         fields = '__all__'
         model = api_models.Question_Answer
-
 
 
 class CartSerializer(serializers.ModelSerializer):
@@ -131,7 +131,6 @@ class CartSerializer(serializers.ModelSerializer):
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
-
 
 class CartOrderItemSerializer(serializers.ModelSerializer):
 
@@ -297,3 +296,9 @@ class TeacherSummarySerializer(serializers.Serializer):
     total_students = serializers.IntegerField(default=0)
     total_revenue = serializers.IntegerField(default=0)
     monthly_revenue = serializers.IntegerField(default=0)
+
+
+
+
+class FileUploadSerializer(serializers.Serializer):
+    file = serializers.FileField(required=True)

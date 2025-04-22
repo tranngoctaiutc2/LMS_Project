@@ -6,10 +6,14 @@ from django.contrib.auth.hashers import check_password
 from django.db import models
 from django.db.models.functions import ExtractMonth
 from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
 import hashlib
 import urllib.parse
 import hmac
+import os
+import math
 
 from api import serializer as api_serializer
 from api import models as api_models
@@ -17,15 +21,18 @@ from userauths.models import User, Profile
 
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import generics, status, viewsets
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, APIView
+from rest_framework.parsers import MultiPartParser, FormParser
 
+from moviepy.editor import VideoFileClip
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 import random
 from decimal import Decimal
-import stripe
 import requests
 from datetime import datetime, timedelta
 
@@ -157,14 +164,14 @@ class CourseListAPIView(generics.ListAPIView):
     serializer_class = api_serializer.CourseSerializer
     permission_classes = [AllowAny]
 
-class CourseDetailAPIView(generics.RetrieveAPIView):
+class TeacherCourseDetailAPIView(generics.RetrieveAPIView):
     serializer_class = api_serializer.CourseSerializer
     permission_classes = [AllowAny]
     queryset = api_models.Course.objects.filter(platform_status="Published", teacher_course_status="Published")
 
     def get_object(self):
-        slug = self.kwargs['slug']
-        course = api_models.Course.objects.get(slug=slug, platform_status="Published", teacher_course_status="Published")
+        course_id = self.kwargs['course_id']
+        course = api_models.Course.objects.get(course_id=course_id, platform_status="Published", teacher_course_status="Published")
         return course
 
 class CartAPIView(generics.CreateAPIView):
@@ -292,7 +299,7 @@ class CartStatsAPIView(generics.RetrieveAPIView):
 
 class CreateOrderAPIView(generics.CreateAPIView):
     serializer_class = api_serializer.CartOrderSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = api_models.CartOrder.objects.all()
 
     def create(self, request, *args, **kwargs):
@@ -300,7 +307,7 @@ class CreateOrderAPIView(generics.CreateAPIView):
         email = request.data['email']
         country = request.data['country']
         cart_id = request.data['cart_id']
-        user_id = request.data['user_id']
+        user_id = request.user.id
 
         if user_id != 0:
             user = User.objects.get(id=user_id)
@@ -351,21 +358,21 @@ class CreateOrderAPIView(generics.CreateAPIView):
 
 class CheckoutAPIView(generics.RetrieveAPIView):
     serializer_class = api_serializer.CartOrderSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = api_models.CartOrder.objects.all()
     lookup_field = 'oid'
 
 
 class CouponApplyAPIView(generics.CreateAPIView):
     serializer_class = api_serializer.CouponSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
         order_oid = request.data['order_oid']
         coupon_code = request.data['coupon_code']
 
         order = api_models.CartOrder.objects.get(oid=order_oid)
-        coupon = api_models.Coupon.objects.get(code=coupon_code)
+        coupon = api_models.Coupon.objects.filter(code=coupon_code).first()
 
         if coupon:
             order_items = api_models.CartOrderItem.objects.filter(order=order, teacher=coupon.teacher)
@@ -392,46 +399,6 @@ class CouponApplyAPIView(generics.CreateAPIView):
                     return Response({"message": "Coupon Already Applied", "icon": "warning"}, status=status.HTTP_200_OK)
         else:
             return Response({"message": "Coupon Not Found", "icon": "error"}, status=status.HTTP_404_NOT_FOUND)
-
-# class StripeCheckoutAPIView(generics.CreateAPIView):
-#     serializer_class = api_serializer.CartOrderSerializer
-#     permission_classes = [AllowAny]
-
-#     def create(self, request, *args, **kwargs):
-        
-#         order_oid = self.kwargs['order_oid']
-#         order = api_models.CartOrder.objects.get(oid=order_oid)
-
-#         if not order:
-#             return Response({"message": "Order Not Found"}, status=status.HTTP_404_NOT_FOUND)
-        
-#         try:
-#             checkout_session = stripe.checkout.Session.create(
-#                 customer_email = order.email,
-#                 payment_method_types=['card'],
-#                 line_items=[
-#                     {
-#                         'price_data': {
-#                             'currency': 'usd',
-#                             'product_data': {
-#                                 'name': order.full_name,
-#                             },
-#                             'unit_amount': int(order.total * 100)
-#                         },
-#                         'quantity': 1
-#                     }
-#                 ],
-#                 mode='payment',
-#                 success_url=settings.FRONTEND_SITE_URL + '/payment-success/' + order.oid + '?session_id={CHECKOUT_SESSION_ID}',
-#                 cancel_url= settings.FRONTEND_SITE_URL + '/payment-failed/'
-#             )
-#             print("checkout_session ====", checkout_session)
-#             order.stripe_session_id = checkout_session.id
-
-#             return redirect(checkout_session.url)
-#         except stripe.error.StripeError as e:
-#             return Response({"message": f"Something went wrong when trying to make payment. Error: {str(e)}"})
-
 class VNPayCheckoutAPIView(generics.CreateAPIView):
     serializer_class = api_serializer.CartOrderSerializer
     permission_classes = [AllowAny]
@@ -505,10 +472,11 @@ def get_access_token(client_id, secret_key):
 class PaymentSuccessAPIView(generics.CreateAPIView):
     serializer_class = api_serializer.CartOrderSerializer
     queryset = api_models.CartOrder.objects.all()
+    permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
-        order_oid = request.data.get('order_oid')
-        paypal_order_id = request.data.get('paypal_order_id')
+        order_oid = request.data['order_oid']
+        paypal_order_id = request.data['paypal_order_id']
         vnp_response_code = request.data.get('vnp_ResponseCode')
         vnp_secure_hash = request.data.get('vnp_SecureHash')
         vnp_params = dict(request.data)
@@ -716,7 +684,7 @@ class StudentNoteCreateAPIView(generics.ListCreateAPIView):
 
 class StudentNoteDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = api_serializer.NoteSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self):
         user_id = self.kwargs['user_id']
@@ -1048,62 +1016,36 @@ class TeacherNotificationDetailAPIView(generics.RetrieveUpdateAPIView):
         teacher = api_models.Teacher.objects.get(id=teacher_id)
         return api_models.Notification.objects.get(teacher=teacher, id=noti_id)
     
-class CourseCreateAPIView(generics.CreateAPIView):
-    querysect = api_models.Course.objects.all()
-    serializer_class = api_serializer.CourseSerializer
-    permisscion_classes = [AllowAny]
+class CourseCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
 
-    def perform_create(self, serializer):
-        serializer.is_valid(raise_exception=True)
-        course_instance = serializer.save()
+    def post(self, request):
+        title = request.data.get("title")
+        description = request.data.get("description")
+        image = request.data.get("image")
+        file = request.data.get("file")
+        level = request.data.get("level")
+        language = request.data.get("language")
+        price = request.data.get("price")
+        category = request.data.get("category")
 
-        variant_data = []
-        for key, value in self.request.data.items():
-            if key.startswith('variant') and '[variant_title]' in key:
-                index = key.split('[')[1].split(']')[0]
-                title = value
+        category_obj = api_models.Category.objects.filter(id=category).first()
+        teacher = api_models.Teacher.objects.get(user=request.user)
 
-                variant_dict = {'title': title}
-                item_data_list = []
-                current_item = {}
-                variant_data = []
+        course = api_models.Course.objects.create(
+            teacher=teacher,
+            category=category_obj,
+            file=file,
+            image=image,
+            title=title,
+            description=description,
+            price=price,
+            language=language,
+            level=level
+        )
 
-                for item_key, item_value in self.request.data.items():
-                    if f'variants[{index}][items]' in item_key:
-                        field_name = item_key.split('[')[-1].split(']')[0]
-                        if field_name == "title":
-                            if current_item:
-                                item_data_list.append(current_item)
-                            current_item = {}
-                        current_item.update({field_name: item_value})
-                    
-                if current_item:
-                    item_data_list.append(current_item)
-
-                variant_data.append({'variant_data': variant_dict, 'variant_item_data': item_data_list})
-
-        for data_entry in variant_data:
-            variant = api_models.Variant.objects.create(title=data_entry['variant_data']['title'], course=course_instance)
-
-            for item_data in data_entry['variant_item_data']:
-                preview_value = item_data.get("preview")
-                preview = bool(strtobool(str(preview_value))) if preview_value is not None else False
-
-                api_models.VariantItem.objects.create(
-                    variant=variant,
-                    title=item_data.get("title"),
-                    description=item_data.get("description"),
-                    file=item_data.get("file"),
-                    preview=preview,
-                )
-
-    def save_nested_data(self, course_instance, serializer_class, data):
-        serializer = serializer_class(data=data, many=True, context={"course_instance": course_instance})
-        serializer.is_valid(raise_exception=True)
-        serializer.save(course=course_instance) 
-
-
-
+        return Response({"message": "Course Created", "course_id": course.course_id}, status=status.HTTP_201_CREATED)
+ 
 class CourseUpdateAPIView(generics.RetrieveUpdateAPIView):
     querysect = api_models.Course.objects.all()
     serializer_class = api_serializer.CourseSerializer
@@ -1240,7 +1182,6 @@ class CourseUpdateAPIView(generics.RetrieveUpdateAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save(course=course_instance) 
 
-
 class CourseDetailAPIView(generics.RetrieveDestroyAPIView):
     serializer_class = api_serializer.CourseSerializer
     permission_classes = [AllowAny]
@@ -1248,7 +1189,6 @@ class CourseDetailAPIView(generics.RetrieveDestroyAPIView):
     def get_object(self):
         slug = self.kwargs['slug']
         return api_models.Course.objects.get(slug=slug)
-
 
 class CourseVariantDeleteAPIView(generics.DestroyAPIView):
     serializer_class = api_serializer.VariantSerializer
@@ -1266,8 +1206,9 @@ class CourseVariantDeleteAPIView(generics.DestroyAPIView):
         return api_models.Variant.objects.get(id=variant_id)
     
 class CourseVariantItemDeleteAPIVIew(generics.DestroyAPIView):
+
     serializer_class = api_serializer.VariantItemSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self):
         variant_id = self.kwargs['variant_id']
@@ -1280,3 +1221,58 @@ class CourseVariantItemDeleteAPIVIew(generics.DestroyAPIView):
         course = api_models.Course.objects.get(teacher=teacher, course_id=course_id)
         variant = api_models.Variant.objects.get(variant_id=variant_id, course=course)
         return api_models.VariantItem.objects.get(variant=variant, variant_item_id=variant_item_id)
+    
+
+class FileUploadAPIView(APIView):
+    permission_classes = [AllowAny]
+    parser_classes = (MultiPartParser, FormParser,)  # Allow file uploads
+
+    @swagger_auto_schema(
+        operation_description="Upload a file",
+        request_body=api_serializer.FileUploadSerializer,  # Use the serializer here
+        responses={
+            200: openapi.Response('File uploaded successfully', openapi.Schema(type=openapi.TYPE_OBJECT)),
+            400: openapi.Response('No file provided', openapi.Schema(type=openapi.TYPE_OBJECT)),
+        }
+    )
+
+    def post(self, request):
+        
+        serializer = api_serializer.FileUploadSerializer(data=request.data)  
+
+        if serializer.is_valid():
+            file = serializer.validated_data.get("file")
+
+            # Save the file to the media directory
+            file_path = default_storage.save(file.name, ContentFile(file.read()))
+            file_url = request.build_absolute_uri(default_storage.url(file_path))
+
+            # Check if the file is a video by inspecting its extension
+            if file.name.endswith(('.mp4', '.avi', '.mov', '.mkv')):
+                # Calculate the video duration
+                file_full_path = os.path.join(default_storage.location, file_path)
+                clip = VideoFileClip(file_full_path)
+                duration_seconds = clip.duration
+
+                # Calculate minutes and seconds
+                minutes, remainder = divmod(duration_seconds, 60)
+                minutes = math.floor(minutes)
+                seconds = math.floor(remainder)
+
+                duration_text = f"{minutes}m {seconds}s"
+
+                print("url ==========", file_url)
+                print("duration_seconds ==========", duration_seconds)
+
+                # Return both the file URL and the video duration
+                return Response({
+                    "url": file_url,
+                    "video_duration": duration_text
+                })
+
+            # If not a video, just return the file URL
+            return Response({
+                    "url": file_url,
+            })
+
+        return Response({"error": "No file provided"}, status=400)
