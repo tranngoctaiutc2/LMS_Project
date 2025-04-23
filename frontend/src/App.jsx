@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Route, Routes, BrowserRouter } from "react-router-dom";
 
+import './locales/i18n';
+
 import { CartContext, ProfileContext } from "./views/plugin/Context";
 import apiInstance from "./utils/axios";
 import CartId from "./views/plugin/CartId";
