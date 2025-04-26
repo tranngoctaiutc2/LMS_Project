@@ -4,8 +4,8 @@ from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
-    # Authentication Endpoints
 
+    # Authentication Endpoints
     path("user/token/", api_views.MyTokenObtainPairView.as_view()),
     path("user/token/refresh/", TokenRefreshView.as_view()),
     path("user/register/", api_views.RegisterView.as_view()),
@@ -64,7 +64,10 @@ urlpatterns = [
     path("teacher/course/variant-delete/<variant_id>/<teacher_id>/<course_id>/", api_views.CourseVariantDeleteAPIView.as_view()),
     path("teacher/course/variant-item-delete/<variant_id>/<variant_item_id>/<teacher_id>/<course_id>/", api_views.CourseVariantItemDeleteAPIVIew.as_view()),
 
-    path("file-upload/", api_views.FileUploadAPIView.as_view())
+    path("file-upload/", api_views.FileUploadAPIView.as_view()),
+
+    path('chat/', api_views.ChatBotAPIView.as_view()),
+    path('chat/history/', api_views.GetChatHistoryAPIView.as_view()),
 ]
 
 

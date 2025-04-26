@@ -170,7 +170,7 @@ class VariantItem(models.Model):
     variant = models.ForeignKey(Variant, on_delete=models.CASCADE, related_name="variant_items")
     title = models.CharField(max_length=1000)
     description = models.TextField(null=True, blank=True)
-    file = models.CharField(max_length=200)
+    file = models.CharField(max_length=200, blank=True, null=True)
     duration = models.DurationField(null=True, blank=True)
     content_duration = models.CharField(max_length=1000, null=True, blank=True)
     preview = models.BooleanField(default=False)

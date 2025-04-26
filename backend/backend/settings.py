@@ -167,6 +167,10 @@ FRONTEND_SITE_URL = env("FRONTEND_SITE_URL")
 PAYPAL_CLIENT_ID = env("PAYPAL_CLIENT_ID")
 PAYPAL_SECRET_ID = env("PAYPAL_SECRET_ID")
 
+GEMINI_API_KEY = env("GEMINI_API_KEY")
+QDRANT_API_KEY = env("QDRANT_API_KEY")
+QDRANT_URL = env("QDRANT_URL")
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 

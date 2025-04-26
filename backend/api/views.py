@@ -14,6 +14,8 @@ import urllib.parse
 import hmac
 import os
 import math
+from .ai_agent import CustomerSupportAIAgent
+import traceback
 
 from api import serializer as api_serializer
 from api import models as api_models
@@ -67,7 +69,7 @@ class PasswordResetEmailVerifyAPIView(generics.RetrieveAPIView):
     serializer_class = api_serializer.UserSerializer
 
     def get_object(self):
-        email = self.kwargs['email'] # api/v1/password-email-verify/desphixs@gmail.com/
+        email = self.kwargs['email']
 
         user = User.objects.filter(email=email).first()
 
@@ -401,7 +403,7 @@ class CouponApplyAPIView(generics.CreateAPIView):
             return Response({"message": "Coupon Not Found", "icon": "error"}, status=status.HTTP_404_NOT_FOUND)
 class VNPayCheckoutAPIView(generics.CreateAPIView):
     serializer_class = api_serializer.CartOrderSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
         order_oid = self.kwargs['order_oid']
@@ -423,7 +425,7 @@ class VNPayCheckoutAPIView(generics.CreateAPIView):
                 'vnp_Version': '2.1.0',
                 'vnp_Command': 'pay',
                 'vnp_TmnCode': vnp_TmnCode,
-                'vnp_Amount': int(vnd_total * 100),  # VNPay yêu cầu nhân 100
+                'vnp_Amount': int(vnd_total * 100), 
                 'vnp_CurrCode': 'VND',
                 'vnp_TxnRef': order.oid,
                 'vnp_OrderInfo': f"Thanh toán khóa học cho {order.full_name or 'Người dùng'}",
@@ -1225,11 +1227,11 @@ class CourseVariantItemDeleteAPIVIew(generics.DestroyAPIView):
 
 class FileUploadAPIView(APIView):
     permission_classes = [AllowAny]
-    parser_classes = (MultiPartParser, FormParser,)  # Allow file uploads
+    parser_classes = (MultiPartParser, FormParser,)
 
     @swagger_auto_schema(
         operation_description="Upload a file",
-        request_body=api_serializer.FileUploadSerializer,  # Use the serializer here
+        request_body=api_serializer.FileUploadSerializer,
         responses={
             200: openapi.Response('File uploaded successfully', openapi.Schema(type=openapi.TYPE_OBJECT)),
             400: openapi.Response('No file provided', openapi.Schema(type=openapi.TYPE_OBJECT)),
@@ -1243,18 +1245,14 @@ class FileUploadAPIView(APIView):
         if serializer.is_valid():
             file = serializer.validated_data.get("file")
 
-            # Save the file to the media directory
             file_path = default_storage.save(file.name, ContentFile(file.read()))
             file_url = request.build_absolute_uri(default_storage.url(file_path))
 
-            # Check if the file is a video by inspecting its extension
             if file.name.endswith(('.mp4', '.avi', '.mov', '.mkv')):
-                # Calculate the video duration
                 file_full_path = os.path.join(default_storage.location, file_path)
                 clip = VideoFileClip(file_full_path)
                 duration_seconds = clip.duration
 
-                # Calculate minutes and seconds
                 minutes, remainder = divmod(duration_seconds, 60)
                 minutes = math.floor(minutes)
                 seconds = math.floor(remainder)
@@ -1264,15 +1262,93 @@ class FileUploadAPIView(APIView):
                 print("url ==========", file_url)
                 print("duration_seconds ==========", duration_seconds)
 
-                # Return both the file URL and the video duration
                 return Response({
                     "url": file_url,
                     "video_duration": duration_text
                 })
 
-            # If not a video, just return the file URL
             return Response({
                     "url": file_url,
             })
 
         return Response({"error": "No file provided"}, status=400)
+
+
+
+
+class ChatBotAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        try:
+            user_id = request.data.get("user_id")
+            query = request.data.get("query")
+
+            if not query:
+                return Response({
+                    "message": "Invalid query.",
+                    "icon": "warning"
+                }, status=400)
+
+            agent = CustomerSupportAIAgent()
+
+            if user_id is None:
+                response = agent.generate_response_only(query)
+                return Response({
+                    "message": response,
+                    "icon": "success"
+                })
+
+            response = agent.handle_query(query, user_id=user_id)
+
+            return Response({
+                "message": response,
+                "icon": "success"
+            })
+
+        except Exception as e:
+            print(traceback.format_exc())
+            return Response({
+                "message": "Error chatbot.",
+                "error": str(e),
+                "icon": "error"
+            }, status=500)
+
+class GetChatHistoryAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        try:
+            user_id = request.data.get("user_id")
+
+            if not user_id:
+                return Response({
+                    "message": "Invalid user_id.",
+                    "icon": "warning"
+                }, status=400)
+
+            agent = CustomerSupportAIAgent()
+            memories = agent.get_all_memories(user_id)
+
+            if not memories:
+                return Response({
+                    "message": "Invalid chat history.",
+                    "data": [],
+                    "icon": "info"
+                })
+
+            memories = sorted(memories, key=lambda x: x.get("timestamp", ""), reverse=True)
+
+            return Response({
+                "message": "Get chat history success.",
+                "data": memories,
+                "icon": "success"
+            })
+
+        except Exception as e:
+            return Response({
+                "message": "Error to get chat history.",
+                "error": str(e),
+                "icon": "error"
+            }, status=500)
+
