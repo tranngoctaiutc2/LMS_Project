@@ -46,6 +46,8 @@ import CourseCreate from "./views/instructor/CourseCreate";
 import CourseEdit from "./views/instructor/CourseEdit";
 import CourseEditCurriculum from "./views/instructor/CourseEditCurriculum";
 
+import Chatbox from "./views/chat/Chatbox";
+
 function App() {
     const [cartCount, setCartCount] = useState(0);
     const [profile, setProfile] = useState([]);
@@ -253,6 +255,7 @@ function App() {
                                 }
                             />
                         </Routes>
+                        <Chatbox/>
                     </MainWrapper>
                 </BrowserRouter>
             </ProfileContext.Provider>

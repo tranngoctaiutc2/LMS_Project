@@ -89,6 +89,29 @@ function Cart() {
             });
         }
     };
+    const deleteAllCartItems = async () => {
+        try {
+            // Lặp qua từng item trong giỏ hàng và gọi xoá
+            for (const item of cart) {
+                await apiInstance.delete(`course/cart-item-delete/${CartId()}/${item.id}/`);
+            }
+    
+            // Sau khi xoá xong thì làm sạch state
+            fetchCartItem();
+            setCartCount(0);
+            Toast().fire({
+                icon: "success",
+                title: "Deleted All Cart Items",
+            });
+        } catch (error) {
+            console.error("Fail to deleted:", error);
+            Toast().fire({
+                icon: "error",
+                title: "Không thể xoá giỏ hàng",
+            });
+        }
+    };
+
 
     return (
         <>
@@ -134,7 +157,7 @@ function Cart() {
                             <div className="col-lg-8 mb-4 mb-sm-0">
                                 <div className="p-4 shadow rounded-3">
                                     <h5 className="mb-0 mb-3">Cart Items ({cart?.length})</h5>
-
+                                    <button onClick={deleteAllCartItems} disabled={cart.length === 0} className="btn btn-danger">Delete All</button>
                                     <div className="table-responsive border-0 rounded-3">
                                         <table className="table align-middle p-4 mb-0">
                                             <tbody className="border-top-2">
@@ -229,7 +252,7 @@ function Cart() {
                                         </li>
                                     </ul>
                                     <div className="d-grid">
-                                        <button type="submit" className="btn btn-lg btn-success">
+                                        <button type="submit" disabled={cart.length === 0} className="btn btn-lg btn-success">
                                             Proceed to Checkout
                                         </button>
                                     </div>

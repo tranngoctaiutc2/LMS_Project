@@ -1,107 +1,165 @@
 import React, { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
-
+import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 
 import apiInstance from "../../utils/axios";
 
 function Success() {
-    const [order, setOrder] = useState([]);
-    const [orderMessage, setOrderMessage] = useState("");
-
+    const [orderMessage, setOrderMessage] = useState("Processing Payment");
+    const [isLoading, setIsLoading] = useState(true);
+    const navigate = useNavigate();
+    
     const param = useParams();
-    const urlParam = new URLSearchParams(window.location.search);
-    const sessionId = urlParam.get("session_id");
+    const location = useLocation();
+    // const CartId = location.state?.cartId;
+    // console.log("Received CartId in Success:", location.state?.cartId);
+    const urlParam = new URLSearchParams(location.search);
+
     const paypalOrderId = urlParam.get("paypal_order_id");
+    const vnpSecureHash = urlParam.get("vnp_SecureHash");
+    const vnpResponseCode = urlParam.get("vnp_ResponseCode");
+    const vnpTxnRef = urlParam.get("vnp_TxnRef");
 
-    console.log(sessionId);
-    console.log(paypalOrderId);
-    console.log(param);
-
+    // const deleteCartItemAfterPayment = async (orderOid) => {
+    //     try {
+    //         // Gọi API xoá giỏ hàng hoặc sản phẩm
+    //         await apiInstance.delete(`course/cart-item-delete/${CartId()}/${orderOid}/`);
+    //         console.log('Sản phẩm đã được xoá khỏi giỏ hàng');
+    //     } catch (error) {
+    //         console.error("Lỗi khi xoá sản phẩm sau thanh toán", error);
+    //     }
+    // };
+    
+    
     useEffect(() => {
-        const formdata = new FormData();
+        const verifyPayment = async () => {
+            if (!param.order_oid && !vnpTxnRef && !paypalOrderId) {
+                setOrderMessage("Missing payment information");
+                setIsLoading(false);
+                return;
+            }
+            const formdata = new FormData();
 
-        formdata.append("order_oid", param.order_oid);
-        formdata.append("session_id", sessionId);
-        formdata.append("paypal_order_id", paypalOrderId);
+            formdata.append("order_oid", param.order_oid || vnpTxnRef);
 
-        setOrderMessage("Processing Payment");
+            if (paypalOrderId) {
+                formdata.append("paypal_order_id", paypalOrderId);
+            }            
 
-        try {
-            apiInstance.post(`payment/payment-sucess/`, formdata).then((res) => {
-                console.log(res.data);
-                setOrderMessage(res.data.message);
-            });
-        } catch (error) {
-            console.log(error);
-        }
-    }, []);
+            if (vnpResponseCode && vnpSecureHash) {
+                for (const [key, value] of urlParam.entries()) {
+                    if (key.startsWith("vnp_")) {
+                        formdata.append(key, value);
+                    }
+                }
+            }
 
-    console.log(orderMessage);
+            try {
+                apiInstance.post(`payment/payment-sucess/`, formdata).then((res) => {
+                    console.log(res.data);
+                    setOrderMessage(res.data.message);
+                });
+            } catch (error) {
+                console.error("Payment verification failed full error:", error);
+                const errorMessage = vnpResponseCode 
+                    ? getVnpayErrorMessage(vnpResponseCode) 
+                    : "Payment Failed";
+                setOrderMessage(errorMessage);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        verifyPayment();
+    }, [param.order_oid, paypalOrderId, vnpResponseCode, vnpSecureHash, vnpTxnRef, location.search, navigate]);
+
+    const getVnpayErrorMessage = (code) => {
+        const errorMap = {
+            '00': 'Payment Successful',
+            '07': 'Transaction suspected of fraud',
+            '09': 'Card/Account not registered',
+            '10': 'Incorrect authentication',
+            '11': 'Payment expired',
+            '12': 'Card/Account blocked',
+            '13': 'Incorrect transaction amount',
+            '24': 'Operation cancelled',
+            '51': 'Insufficient balance',
+            '65': 'Exceeded transaction limit',
+            '75': 'Bank is under maintenance',
+            '79': 'Incorrect payment password',
+            '99': 'Other error'
+        };
+        return errorMap[code] || `Payment Failed (Code: ${code})`;
+    };
 
     return (
+
         <>
             <BaseHeader />
 
-            <section className="pt-0  position-relative overflow-hidden my-auto">
+            <section className="pt-0 position-relative overflow-hidden my-auto">
                 <div className="container position-relative">
                     <div className="row g-5 align-items-center justify-content-center">
-                        {/* Payment Successfull */}
-                        {orderMessage === "Payment Successfull" && (
+                        {/* Successful Payment */}
+                        {(orderMessage === "Payment Successful" || orderMessage === "Already Paid") && (
                             <>
                                 <div className="col-lg-5">
                                     <h1 className="text-success">Enrollment Successful!</h1>
-                                    <p>Your enrollment was successfull, please visit your dashboard to start course now.</p>
+                                    <p>Your enrollment was successful, please visit your dashboard to start your course now.</p>
+                                    <p>You will be redirected automatically in 5 seconds...</p>
+                                    <Link to="/user/dashboard" className="btn btn-success mb-0 rounded-2">
+                                        Go to Dashboard <i className="fas fa-arrow-right ms-2"></i>
+                                    </Link>
                                 </div>
                                 <div className="col-lg-7 text-center">
-                                    <img src="https://i.pinimg.com/originals/0d/e4/1a/0de41a3c5953fba1755ebd416ec109dd.gif" className="h-300px h-sm-400px h-md-500px h-xl-700px" alt="" />
-                                </div>
-                            </>
-                        )}
-
-                        {/* Already Paid */}
-                        {orderMessage === "Already Paid" && (
-                            <>
-                                <div className="col-lg-5">
-                                    <h1 className="text-success">Enrollment Successful!</h1>
-                                    <p>Your enrollment was successfull, please visit your dashboard to start course now.</p>
-                                </div>
-                                <div className="col-lg-7 text-center">
-                                    <img src="https://i.pinimg.com/originals/0d/e4/1a/0de41a3c5953fba1755ebd416ec109dd.gif" className="h-300px h-sm-400px h-md-500px h-xl-700px" alt="" />
+                                    <img src="https://i.pinimg.com/originals/0d/e4/1a/0de41a3c5953fba1755ebd416ec109dd.gif" 
+                                         className="h-300px h-sm-400px h-md-500px h-xl-700px" 
+                                         alt="Success animation" />
                                 </div>
                             </>
                         )}
 
                         {/* Processing */}
-                        {orderMessage === "Processing Payment" && (
+                        {isLoading && (
                             <>
                                 <div className="col-lg-5">
                                     <h1 className="text-warning">
                                         Processing Payment <i className="fas fa-spinner fa-spin"></i>
                                     </h1>
-                                    <p> Hey there, hold on while we process your payment, please do not leave the page.</p>
+                                    <p>Hey there, hold on while we process your payment, please do not leave the page.</p>
                                 </div>
                                 <div className="col-lg-7 text-center">
-                                    <img sty src="https://www.icegif.com/wp-content/uploads/2023/07/icegif-1259.gif" className="h-300px h-sm-400px h-md-500px h-xl-700px" alt="" />
+                                    <img src="https://www.icegif.com/wp-content/uploads/2023/07/icegif-1259.gif" 
+                                         className="h-300px h-sm-400px h-md-500px h-xl-700px" 
+                                         alt="Loading animation" />
                                 </div>
                             </>
                         )}
 
-                        {/* Failed */}
-                        {orderMessage === "Payment Failed" && (
+                        {/* Failed Payment */}
+                        {!isLoading && orderMessage && orderMessage !== "Payment Successful" && orderMessage !== "Already Paid" && (
                             <>
                                 <div className="col-lg-5">
                                     <h1 className="text-danger">Payment Failed 😔</h1>
-                                    <p>
-                                        Unfortunately, phew! Your payment did not go through. <br /> Please try again.
-                                    </p>
-                                    <button type="button" className="btn btn-danger mb-0 rounded-2">
-                                        Try again <i className="fas fa-repeat"></i>
-                                    </button>
+                                    <p className="text-muted">{orderMessage}</p>
+                                    
+                                    <div className="d-flex gap-2">
+                                        <button 
+                                            onClick={() => window.location.reload()} 
+                                            className="btn btn-danger mb-0 rounded-2"
+                                        >
+                                            Try again <i className="fas fa-repeat ms-2"></i>
+                                        </button>
+                                        <Link to="/" className="btn btn-outline-secondary mb-0 rounded-2">
+                                            Back to Home
+                                        </Link>
+                                    </div>
                                 </div>
                                 <div className="col-lg-7 text-center">
-                                    <img sty src="https://media3.giphy.com/media/h4OGa0npayrJX2NRPT/giphy.gif?cid=790b76117pc6298jypyph0liy6xlp3lzb7b2y405ixesujeu&ep=v1_stickers_search&rid=giphy.gif&ct=e" className="h-300px h-sm-400px h-md-500px h-xl-700px" alt="" />
+                                    <img src="https://media3.giphy.com/media/h4OGa0npayrJX2NRPT/giphy.gif?cid=790b76117pc6298jypyph0liy6xlp3lzb7b2y405ixesujeu&ep=v1_stickers_search&rid=giphy.gif&ct=e" 
+                                         className="h-300px h-sm-400px h-md-500px h-xl-700px" 
+                                         alt="Error animation" />
                                 </div>
                             </>
                         )}

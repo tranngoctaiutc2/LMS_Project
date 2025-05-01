@@ -41,13 +41,20 @@ function Checkout() {
                 });
             });
         } catch (error) {
-            if (error.response.data.includes("Coupon matching query does not exi")) {
+            const message = error.response?.data?.detail;
+            if (typeof message === "string" && message.includes("Coupon matching query does not exist")) {
                 Toast().fire({
                     icon: "error",
                     title: "Coupon does not exist",
                 });
+            } else {
+                Toast().fire({
+                    icon: "error",
+                    title: "Coupon is not suitable",
+                });
             }
         }
+        
     };
 
     useEffect(() => {
@@ -60,11 +67,31 @@ function Checkout() {
         intent: "capture",
     };
 
-    const payWithStripe = (event) => {
-        setPaymentLoading(true);
-        event.target.form.submit();
+    const payWithVNPAY = async (event) => {
+        event.preventDefault();  // Ngừng form submit mặc định
+    
+        setPaymentLoading(true);  // Bắt đầu trạng thái loading
+    
+        try {
+            // Gửi POST request đến API để nhận payment_url
+            const response = await apiInstance.post(
+                `http://127.0.0.1:8000/api/v1/payment/vnpay-checkout/${order.oid}/`
+            );
+    
+            const paymentUrl = response.data.payment_url;  // Lấy payment_url từ response
+    
+            if (paymentUrl) {
+                window.location.href = paymentUrl;  // Chuyển hướng người dùng đến VNPAY
+            } else {
+                console.error("Không nhận được URL thanh toán từ VNPAY.");
+            }
+        } catch (error) {
+            console.error("Lỗi khi gửi yêu cầu thanh toán VNPAY:", error);
+        } finally {
+            setPaymentLoading(false);  // Kết thúc trạng thái loading
+        }
     };
-
+    
     return (
         <>
             <BaseHeader />
@@ -229,19 +256,20 @@ function Checkout() {
                                                 </li>
                                             </ul>
                                             <div className="d-grid">
-                                                <form action={`http://127.0.0.1:8000/api/v1/payment/stripe-checkout/${order.oid}/`} className="w-100" method="POST">
-                                                    {paymentLoading === true ? (
-                                                        <button type="submit" disabled className="btn btn-lg btn-success mt-2 w-100">
-                                                            {" "}
-                                                            Processing <i className="fas fa-spinner f a-spin"></i>
-                                                        </button>
-                                                    ) : (
-                                                        <button type="submit" onClick={payWithStripe} className="btn btn-lg btn-success mt-2 w-100">
-                                                            {" "}
-                                                            Pay With Stripe
-                                                        </button>
-                                                    )}
-                                                </form>
+                                            <form className="w-100">
+                                                {paymentLoading ? (
+                                                    <button type="submit" disabled className="btn btn-lg btn-success mt-2 w-100">
+                                                        {" "}
+                                                        Processing <i className="fas fa-spinner fa-spin"></i>
+                                                    </button>
+                                                ) : (
+                                                    <button type="button" onClick={payWithVNPAY} className="btn btn-lg btn-success mt-2 w-100">
+                                                        {" "}
+                                                        Pay With VNPAY
+                                                    </button>
+                                                )}
+                                            </form>
+
 
                                                 <PayPalScriptProvider options={initialOptions}>
                                                     <PayPalButtons
