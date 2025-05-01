@@ -47,7 +47,6 @@ def strtobool(val):
     else:
         raise ValueError(f"invalid truth value {val!r}")
 
-get_usd_to_vnd_rate = 26000
 
 PAYPAL_CLIENT_ID = settings.PAYPAL_CLIENT_ID
 PAYPAL_SECRET_ID = settings.PAYPAL_SECRET_ID
@@ -401,9 +400,10 @@ class CouponApplyAPIView(generics.CreateAPIView):
                     return Response({"message": "Coupon Already Applied", "icon": "warning"}, status=status.HTTP_200_OK)
         else:
             return Response({"message": "Coupon Not Found", "icon": "error"}, status=status.HTTP_404_NOT_FOUND)
+        
 class VNPayCheckoutAPIView(generics.CreateAPIView):
     serializer_class = api_serializer.CartOrderSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         order_oid = self.kwargs['order_oid']
@@ -416,10 +416,9 @@ class VNPayCheckoutAPIView(generics.CreateAPIView):
             vnp_TmnCode = settings.VNPAY_TMN_CODE
             vnp_HashSecret = settings.VNPAY_HASH_SECRET
             vnp_Url = settings.VNPAY_PAYMENT_URL
-            vnp_Returnurl = f"{settings.FRONTEND_SITE_URL}/payment-success/{order.oid}"
+            vnp_Returnurl = f"{settings.FRONTEND_SITE_URL.rstrip('/')}/payment-success/{order.oid}"
 
-            usd_to_vnd = get_usd_to_vnd_rate()
-            vnd_total = order.total * usd_to_vnd
+            vnd_total = order.total * 26000
 
             vnp_params = {
                 'vnp_Version': '2.1.0',
@@ -482,14 +481,12 @@ class PaymentSuccessAPIView(generics.CreateAPIView):
         vnp_response_code = request.data.get('vnp_ResponseCode')
         vnp_secure_hash = request.data.get('vnp_SecureHash')
         vnp_params = dict(request.data)
+    
+        print("order_oid ====", order_oid)
+        print("paypal_order_id ====", paypal_order_id)
 
-        try:
-            order = api_models.CartOrder.objects.get(oid=order_oid)
-        except api_models.CartOrder.DoesNotExist:
-            return Response({"message": "Order not found"}, status=404)
-
+        order = api_models.CartOrder.objects.get(oid=order_oid)
         order_items = api_models.CartOrderItem.objects.filter(order=order)
-
 
         # Paypal payment success
         if paypal_order_id != "null":
@@ -507,20 +504,9 @@ class PaymentSuccessAPIView(generics.CreateAPIView):
                         order.payment_status = "Paid"
                         order.save()
                         api_models.Notification.objects.create(user=order.student, order=order, type="Course Enrollment Completed")
-
                         for o in order_items:
-                            api_models.Notification.objects.create(
-                                teacher=o.teacher,
-                                order=order,
-                                order_item=o,
-                                type="New Order",
-                            )
-                            api_models.EnrolledCourse.objects.create(
-                                course=o.course,
-                                user=order.student,
-                                teacher=o.teacher,
-                                order_item=o
-                            )
+                            api_models.Notification.objects.create(teacher=o.teacher, order=order, order_item=o, type="New Order")
+                            api_models.EnrolledCourse.objects.create(course=o.course, user=order.student, teacher=o.teacher, order_item=o)
 
                         return Response({"message": "Payment Successfull"})
                     else:
@@ -530,29 +516,40 @@ class PaymentSuccessAPIView(generics.CreateAPIView):
             else:
                 return Response({"message": "PayPal Error Occured"})
 
+        if vnp_response_code != "null" and vnp_secure_hash != "null":
+            vnp_params = {}
+            for key in request.data:
+                if key.startswith('vnp_') and key not in ['vnp_SecureHash', 'vnp_SecureHashType']:
+                    vnp_params[key] = str(request.data[key])
 
-        # VNPay payment success
-        if vnp_response_code and vnp_secure_hash:
-            vnp_params.pop('vnp_SecureHashType', None)
-            vnp_params.pop('vnp_SecureHash', None)
+            sorted_params = sorted(vnp_params.items())
+
+            hash_data = '&'.join(f"{k}={urllib.parse.quote_plus(v)}" for k, v in sorted_params)
 
             vnp_HashSecret = settings.VNPAY_HASH_SECRET
-            sorted_params = sorted(vnp_params.items())
-            hash_data = '&'.join(f"{k}={urllib.parse.quote_plus(str(v[0]))}" for k, v in sorted_params)
-            secure_hash = hmac.new(
+            generated_hash = hmac.new(
                 vnp_HashSecret.encode('utf-8'),
                 hash_data.encode('utf-8'),
                 hashlib.sha512
             ).hexdigest()
 
-            if secure_hash != vnp_secure_hash:
-                return Response({"message": "Sai chữ ký VNPay!"}, status=400)
+            if generated_hash.lower() != vnp_secure_hash.lower():
+                print(f"Hash mismatch: {generated_hash} != {vnp_secure_hash}")
+                print(f"Hash data: {hash_data}")
+                return Response({"message": "Invalid VNPay signature"}, status=400)
 
             if vnp_response_code == '00':
                 if order.payment_status == "Processing":
                     order.payment_status = "Paid"
+                    order.vnp_TransactionNo = request.data.get('vnp_TransactionNo')
                     order.save()
-                    api_models.Notification.objects.create(user=order.student, order=order, type="Course Enrollment Completed")
+                    
+                    api_models.Notification.objects.create(
+                        user=order.student, 
+                        order=order, 
+                        type="Course Enrollment Completed"
+                    )
+                    
                     for o in order_items:
                         api_models.Notification.objects.create(
                             teacher=o.teacher,
@@ -566,13 +563,12 @@ class PaymentSuccessAPIView(generics.CreateAPIView):
                             teacher=o.teacher,
                             order_item=o
                         )
-                    return Response({"message": "VNPay Payment Successfull"})
+                    
+                    return Response({"message": "Payment Successful"})
                 else:
                     return Response({"message": "Already Paid"})
             else:
-                return Response({"message": "VNPay Payment Failed"}, status=400)
-
-        return Response({"message": "No payment method provided"}, status=400)
+                return Response({"message": f"VNPay Payment Failed. Code: {vnp_response_code}"}, status=400)
             
 class SearchCourseAPIView(generics.ListAPIView):
     serializer_class = api_serializer.CourseSerializer
