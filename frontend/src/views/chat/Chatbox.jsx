@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useAxios from "../../utils/useAxios";
 import moment from "moment";
-import UserData from "../plugin/UserData";
-
+import { userId } from "../../utils/constants";
 
 function ChatBox() {
     const [messages, setMessages] = useState([]);
@@ -12,8 +11,6 @@ function ChatBox() {
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef(null);
 
-    const userId = UserData()?.user_id;
-
     const toggleChat = () => setIsOpen(!isOpen);
 
     const scrollToBottom = () => {
@@ -21,10 +18,10 @@ function ChatBox() {
     };
 
     useEffect(() => {
-        if (userId) {
+        if (userId()) {
             fetchChatHistory();
         }
-    }, [userId]);
+    }, []);
 
     useEffect(() => {
         scrollToBottom();
@@ -33,7 +30,7 @@ function ChatBox() {
     const fetchChatHistory = async () => {
         try {
             const response = await useAxios.post(`chat/history/`, {
-                user_id: userId,
+                user_id: userId(),
             });
             if (Array.isArray(response.data.data)) {
                 setMessages(response.data.data);
@@ -50,8 +47,9 @@ function ChatBox() {
         if (!inputMessage.trim()) return;
 
         const now = new Date().toISOString();
+        const uid = userId();
 
-        if (!userId) {
+        if (!uid) {
             setSessionMessages(prev => [...prev, { role: "user", content: inputMessage, timestamp: now }]);
             setInputMessage("");
 
@@ -68,7 +66,7 @@ function ChatBox() {
             setIsLoading(true);
 
             try {
-                await useAxios.post(`chat/`, { user_id: userId, query: inputMessage });
+                await useAxios.post(`chat/`, { user_id: uid, query: inputMessage });
                 await fetchChatHistory();
             } catch (error) {
                 console.error("Failed to send message:", error);
@@ -86,19 +84,20 @@ function ChatBox() {
     };
 
     const renderMessages = () => {
-        const currentMessages = userId ? messages : sessionMessages;
-    
+        const uid = userId();
+        const currentMessages = uid ? messages : sessionMessages;
+
         if (currentMessages.length === 0 && !isLoading) {
             return <div className="text-center text-muted">Bắt đầu cuộc trò chuyện mới</div>;
         }
-    
-        const orderedMessages = userId ? currentMessages.slice().reverse() : currentMessages;
-    
+
+        const orderedMessages = uid ? currentMessages.slice().reverse() : currentMessages;
+
         return orderedMessages.map((message, index) => {
-            const sender = userId ? message.metadata.role : message.role;
-            const content = userId ? message.text : message.content;
-            const timestamp = userId ? message.timestamp : message.timestamp;
-    
+            const sender = uid ? message.metadata.role : message.role;
+            const content = uid ? message.text : message.content;
+            const timestamp = uid ? message.timestamp : message.timestamp;
+
             return (
                 <div key={index} className={`mb-3 ${sender === "user" ? "text-end" : "text-start"}`}>
                     <div
@@ -114,7 +113,6 @@ function ChatBox() {
             );
         });
     };
-    
 
     return (
         <div style={{ position: "fixed", bottom: "20px", right: "20px", zIndex: 1000 }}>
@@ -191,10 +189,3 @@ function ChatBox() {
 }
 
 export default ChatBox;
-
-
-
-
-
-
-

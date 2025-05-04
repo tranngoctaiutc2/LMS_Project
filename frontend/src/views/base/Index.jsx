@@ -57,7 +57,6 @@ function Index() {
                     icon: "success",
                 });
 
-                // Set cart count after adding to cart
                 apiInstance.get(`course/cart-list/${CartId()}/`).then((res) => {
                     setCartCount(res.data?.length);
                 });
@@ -259,7 +258,15 @@ function Index() {
                                                         <h5 className="mb-0">${c.price}</h5>
                                                     </div>
                                                     <div className="col-auto">
-                                                        <button type="button" onClick={() => addToCart(c.id, userId, c.price, country, cartId)} className="text-inherit text-decoration-none btn btn-primary me-2">
+                                                        <button type="button" onClick={() => {
+                                                            if (!userId) {
+                                                            Toast().fire({
+                                                                icon: "warning",
+                                                                title: "Login to add to cart!!",
+                                                            });
+                                                            return;
+                                                            }
+                                                            addToCart(c.id, userId, c.price, country, cartId);}} className="text-inherit text-decoration-none btn btn-primary me-2">
                                                             <i className="fas fa-shopping-cart text-primary text-white" />
                                                         </button>
                                                         <Link to={""} className="text-inherit text-decoration-none btn btn-primary">

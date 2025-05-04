@@ -68,27 +68,26 @@ function Checkout() {
     };
 
     const payWithVNPAY = async (event) => {
-        event.preventDefault();  // Ngừng form submit mặc định
+        event.preventDefault();
     
-        setPaymentLoading(true);  // Bắt đầu trạng thái loading
+        setPaymentLoading(true);
     
         try {
-            // Gửi POST request đến API để nhận payment_url
             const response = await apiInstance.post(
                 `http://127.0.0.1:8000/api/v1/payment/vnpay-checkout/${order.oid}/`
             );
     
-            const paymentUrl = response.data.payment_url;  // Lấy payment_url từ response
+            const paymentUrl = response.data.payment_url;
     
             if (paymentUrl) {
-                window.location.href = paymentUrl;  // Chuyển hướng người dùng đến VNPAY
+                window.location.href = paymentUrl;
             } else {
                 console.error("Không nhận được URL thanh toán từ VNPAY.");
             }
         } catch (error) {
             console.error("Lỗi khi gửi yêu cầu thanh toán VNPAY:", error);
         } finally {
-            setPaymentLoading(false);  // Kết thúc trạng thái loading
+            setPaymentLoading(false);
         }
     };
     

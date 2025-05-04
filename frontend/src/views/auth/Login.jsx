@@ -21,7 +21,7 @@ function Login() {
       setIsLoading(false);
       alert(error);
     } else {
-      navigate("/");
+      window.location.href = "/";
       setIsLoading(false);
     }
   };

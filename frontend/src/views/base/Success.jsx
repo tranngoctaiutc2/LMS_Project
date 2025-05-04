@@ -1,19 +1,20 @@
-import React, { useState, useEffect } from "react";
-import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useContext} from "react";
+import { Link, useParams, useLocation, useNavigate} from "react-router-dom";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
+import CartId from "../plugin/CartId";
+import { CartContext } from "../plugin/Context";
 
 import apiInstance from "../../utils/axios";
 
 function Success() {
     const [orderMessage, setOrderMessage] = useState("Processing Payment");
     const [isLoading, setIsLoading] = useState(true);
+    const [cartCount, setCartCount] = useContext(CartContext);
     const navigate = useNavigate();
     
     const param = useParams();
     const location = useLocation();
-    // const CartId = location.state?.cartId;
-    // console.log("Received CartId in Success:", location.state?.cartId);
     const urlParam = new URLSearchParams(location.search);
 
     const paypalOrderId = urlParam.get("paypal_order_id");
@@ -21,15 +22,19 @@ function Success() {
     const vnpResponseCode = urlParam.get("vnp_ResponseCode");
     const vnpTxnRef = urlParam.get("vnp_TxnRef");
 
-    // const deleteCartItemAfterPayment = async (orderOid) => {
-    //     try {
-    //         // Gọi API xoá giỏ hàng hoặc sản phẩm
-    //         await apiInstance.delete(`course/cart-item-delete/${CartId()}/${orderOid}/`);
-    //         console.log('Sản phẩm đã được xoá khỏi giỏ hàng');
-    //     } catch (error) {
-    //         console.error("Lỗi khi xoá sản phẩm sau thanh toán", error);
-    //     }
-    // };
+    const deleteCartItemsAfterPayment = async () => {
+        try {
+            const cartId = CartId();
+    
+            await apiInstance.delete(`course/cart-item-delete/${cartId}/`);
+    
+            localStorage.removeItem("randomString");
+            setCartCount(0);
+            console.log("Delete success");
+        } catch (error) {
+            console.error("Fail to delete", error);
+        }
+    };
     
     
     useEffect(() => {
@@ -56,9 +61,12 @@ function Success() {
             }
 
             try {
-                apiInstance.post(`payment/payment-sucess/`, formdata).then((res) => {
+                apiInstance.post(`payment/payment-success/`, formdata).then((res) => {
                     console.log(res.data);
                     setOrderMessage(res.data.message);
+                    if (res.data.message === "Payment Successful") {
+                        deleteCartItemsAfterPayment();
+                    }
                 });
             } catch (error) {
                 console.error("Payment verification failed full error:", error);

@@ -55,7 +55,6 @@ function Search() {
                     icon: "success",
                 });
 
-                // Set cart count after adding to cart
                 apiInstance.get(`course/cart-list/${CartId()}/`).then((res) => {
                     setCartCount(res.data?.length);
                 });

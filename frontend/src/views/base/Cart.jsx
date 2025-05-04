@@ -20,6 +20,7 @@ function Cart() {
         email: "",
         country: "",
     });
+
     const fetchCartItem = async () => {
         try {
             await apiInstance.get(`course/cart-list/${CartId()}/`).then((res) => {
@@ -27,7 +28,7 @@ function Cart() {
             });
 
             await apiInstance.get(`cart/stats/${CartId()}/`).then((res) => {
-                setCartStats(res.data);
+                 setCartStats(res.data);
             });
         } catch (error) {
             console.log(error);
@@ -37,6 +38,7 @@ function Cart() {
     useEffect(() => {
         fetchCartItem();
     }, []);
+    
 
     const navigate = useNavigate();
 
@@ -47,7 +49,6 @@ function Cart() {
                 icon: "success",
                 title: "Cart Item Deleted",
             });
-            // Set cart count after adding to cart
             apiInstance.get(`course/cart-list/${CartId()}/`).then((res) => {
                 setCartCount(res.data?.length);
             });
@@ -75,7 +76,7 @@ function Cart() {
         formdata.append("email", bioData.email);
         formdata.append("country", bioData.country);
         formdata.append("cart_id", CartId());
-        formdata.append("user_id", userId);
+        formdata.append("user_id", userId());
 
         try {
             await useAxios.post(`order/create-order/`, formdata).then((res) => {
@@ -89,28 +90,19 @@ function Cart() {
             });
         }
     };
+    
     const deleteAllCartItems = async () => {
         try {
-            // Lặp qua từng item trong giỏ hàng và gọi xoá
-            for (const item of cart) {
-                await apiInstance.delete(`course/cart-item-delete/${CartId()}/${item.id}/`);
-            }
-    
-            // Sau khi xoá xong thì làm sạch state
-            fetchCartItem();
+            await apiInstance.delete(`course/cart-item-delete/${CartId()}/`);
             setCartCount(0);
-            Toast().fire({
-                icon: "success",
-                title: "Deleted All Cart Items",
-            });
+            fetchCartItem();
+            Toast().fire({ icon: "success", title: "Deleted All Cart Items" });
         } catch (error) {
-            console.error("Fail to deleted:", error);
-            Toast().fire({
-                icon: "error",
-                title: "Không thể xoá giỏ hàng",
-            });
+            console.error("Fail to delete:", error);
+            Toast().fire({ icon: "error", title: "Fail to delete" });
         }
     };
+    
 
 
     return (
