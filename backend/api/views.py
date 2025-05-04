@@ -187,8 +187,6 @@ class CartAPIView(generics.CreateAPIView):
         country_name = request.data['country_name']
         cart_id = request.data['cart_id']
 
-        print("course_id ==========", course_id)
-
         course = api_models.Course.objects.filter(id=course_id).first()
         
         if user_id != "undefined":
@@ -238,7 +236,7 @@ class CartAPIView(generics.CreateAPIView):
 
 class CartListAPIView(generics.ListAPIView):
     serializer_class = api_serializer.CartSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         cart_id = self.kwargs['cart_id']
@@ -246,15 +244,26 @@ class CartListAPIView(generics.ListAPIView):
         return queryset
     
 
-class CartItemDeleteAPIView(generics.DestroyAPIView):
-    serializer_class = api_serializer.CartSerializer
+class CartItemDeleteAPIView(APIView):
+    serializer_class = api_serializer.CartSerializer  # Thêm lại nếu cần
     permission_classes = [AllowAny]
 
-    def get_object(self):
-        cart_id = self.kwargs['cart_id']
-        item_id = self.kwargs['item_id']
-
-        return api_models.Cart.objects.filter(cart_id=cart_id, id=item_id).first()
+    def delete(self, request, cart_id, item_id=None):
+        if item_id:
+            # Xoá một mục cụ thể trong giỏ hàng
+            cart_item = api_models.Cart.objects.filter(cart_id=cart_id, id=item_id).first()
+            if cart_item:
+                cart_item.delete()
+                return Response({"message": "Xoá mục khỏi giỏ hàng thành công"}, status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({"message": "Không tìm thấy mục trong giỏ hàng"}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            # Xoá toàn bộ các mục trong giỏ hàng
+            deleted_count, _ = api_models.Cart.objects.filter(cart_id=cart_id).delete()
+            return Response(
+                {"message": f"Đã xoá toàn bộ ({deleted_count}) mục trong giỏ hàng"},
+                status=status.HTTP_204_NO_CONTENT
+            )
 
 class CartStatsAPIView(generics.RetrieveAPIView):
     serializer_class = api_serializer.CartSerializer
@@ -477,7 +486,7 @@ class PaymentSuccessAPIView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         order_oid = request.data['order_oid']
-        paypal_order_id = request.data['paypal_order_id']
+        paypal_order_id = request.data.get('paypal_order_id')
         vnp_response_code = request.data.get('vnp_ResponseCode')
         vnp_secure_hash = request.data.get('vnp_SecureHash')
         vnp_params = dict(request.data)
@@ -489,7 +498,7 @@ class PaymentSuccessAPIView(generics.CreateAPIView):
         order_items = api_models.CartOrderItem.objects.filter(order=order)
 
         # Paypal payment success
-        if paypal_order_id != "null":
+        if paypal_order_id:
             paypal_api_url = f"https://api-m.sandbox.paypal.com/v2/checkout/orders/{paypal_order_id}"
             headers = {
                 'Content-Type': 'application/json',
@@ -508,15 +517,16 @@ class PaymentSuccessAPIView(generics.CreateAPIView):
                             api_models.Notification.objects.create(teacher=o.teacher, order=order, order_item=o, type="New Order")
                             api_models.EnrolledCourse.objects.create(course=o.course, user=order.student, teacher=o.teacher, order_item=o)
 
-                        return Response({"message": "Payment Successfull"})
+                        return Response({"message": "Payment Successful"})
                     else:
                         return Response({"message": "Already Paid"})
                 else:
                     return Response({"message": "Payment Failed"})
             else:
+                print("PayPal error response:", response.status_code, response.text)
                 return Response({"message": "PayPal Error Occured"})
 
-        if vnp_response_code != "null" and vnp_secure_hash != "null":
+        if vnp_response_code and vnp_secure_hash:
             vnp_params = {}
             for key in request.data:
                 if key.startswith('vnp_') and key not in ['vnp_SecureHash', 'vnp_SecureHashType']:
