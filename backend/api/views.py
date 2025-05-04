@@ -245,23 +245,21 @@ class CartListAPIView(generics.ListAPIView):
     
 
 class CartItemDeleteAPIView(APIView):
-    serializer_class = api_serializer.CartSerializer  # Thêm lại nếu cần
+    serializer_class = api_serializer.CartSerializer
     permission_classes = [AllowAny]
 
     def delete(self, request, cart_id, item_id=None):
         if item_id:
-            # Xoá một mục cụ thể trong giỏ hàng
             cart_item = api_models.Cart.objects.filter(cart_id=cart_id, id=item_id).first()
             if cart_item:
                 cart_item.delete()
-                return Response({"message": "Xoá mục khỏi giỏ hàng thành công"}, status=status.HTTP_204_NO_CONTENT)
+                return Response({"message": "Delete success"}, status=status.HTTP_204_NO_CONTENT)
             else:
-                return Response({"message": "Không tìm thấy mục trong giỏ hàng"}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"message": "Cant find item in cart"}, status=status.HTTP_404_NOT_FOUND)
         else:
-            # Xoá toàn bộ các mục trong giỏ hàng
             deleted_count, _ = api_models.Cart.objects.filter(cart_id=cart_id).delete()
             return Response(
-                {"message": f"Đã xoá toàn bộ ({deleted_count}) mục trong giỏ hàng"},
+                {"message": f"Delete ({deleted_count}) in cart"},
                 status=status.HTTP_204_NO_CONTENT
             )
 
