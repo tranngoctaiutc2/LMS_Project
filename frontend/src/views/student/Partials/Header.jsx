@@ -1,5 +1,6 @@
 import React, { useContext } from "react";
 import { ProfileContext } from "../../plugin/Context";
+import { Link } from 'react-router-dom'
 
 function Header() {
     const [profile, setProfile] = useContext(ProfileContext);
@@ -31,9 +32,9 @@ function Header() {
                             </div>
                         </div>
                         <div>
-                            <a href="profile-edit.html" className="btn btn-primary btn-sm d-none d-md-block">
+                            <Link to={`/student/profile/`} className="btn btn-primary btn-sm d-none d-md-block">
                                 Account Setting <i className="fas fa-gear fa-spin"></i>
-                            </a>
+                            </Link>
                         </div>
                     </div>
                 </div>

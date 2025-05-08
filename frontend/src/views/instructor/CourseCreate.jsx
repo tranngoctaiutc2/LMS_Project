@@ -221,6 +221,7 @@ function CourseCreate() {
                                                 <select className="form-select" onChange={handleCourseInputChange} name="language">
                                                     <option value="">Select Language</option>
                                                     <option value="English">English</option>
+                                                    <option value="Vietnamese">Vietnamese</option>
                                                     <option value="Spanish">Spanish</option>
                                                     <option value="French">French</option>
                                                 </select>

@@ -13,7 +13,12 @@ import Toast from "../plugin/Toast";
 import { CartContext } from "../plugin/Context";
 import apiInstance from "../../utils/axios";
 
-import backgroundImg from '../../assets/images/background/2.jpg';
+import BackgroundImg from '../../assets/images/background/2.jpg';
+import BackgroundInstructor from '../../assets/images/background/instructor.jpg';
+import Topleft from '../../assets/images/svg/topleft.svg';
+import Topright from '../../assets/images/svg/topright.svg';
+import Botleft from '../../assets/images/svg/botleft.svg';
+import Botright from '../../assets/images/svg/botright.svg';
 
 function Index() {
     const [courses, setCourses] = useState([]);
@@ -123,7 +128,7 @@ function Index() {
                         <div className="col-lg-6 d-flex justify-content-center">
                             {/* images */}
                             <div className="position-relative">
-                                <img src={backgroundImg} alt="girl" className="end-0 bottom-0" />
+                                <img src={BackgroundImg} alt="girl" className="end-0 bottom-0" />
                             </div>
                         </div>
                     </div>
@@ -231,7 +236,7 @@ function Index() {
                                                     </a>
                                                 </div>
                                                 <h4 className="mb-2 text-truncate-line-2 ">
-                                                    <Link to={`/course-detail/slug/`} className="text-inherit text-decoration-none text-dark fs-5">
+                                                    <Link to={`/course-detail/${c.slug}/`} className="text-inherit text-decoration-none text-dark fs-5">
                                                         {c.title}
                                                     </Link>
                                                 </h4>
@@ -322,15 +327,21 @@ function Index() {
                             <div className="d-flex justify-content-center pt-4">
                                 {/* img */}
                                 <div className="position-relative">
-                                    <img src="https://desphixs.com/geeks/assets/images/png/cta-instructor-1.png" alt="image" className="img-fluid mt-n8" />
+                                    <img src={BackgroundInstructor} alt="image" className="img-fluid mt-n8" />
                                     <div className="ms-n8 position-absolute bottom-0 start-0 mb-6">
-                                        <img src="https://desphixs.com/geeks/assets/images/svg/dollor.svg" alt="dollor" />
+                                        <img src={Botleft} alt="dollor" />
                                     </div>
-                                    {/* img */}
+                                    <div className="position-absolute top-0 start-0">
+                                        <img src={Topleft} alt="left corner" />
+                                    </div>
                                     <div className="me-n4 position-absolute top-0 end-0">
-                                        <img src="https://desphixs.com/geeks/assets/images/svg/graph.svg" alt="graph" />
+                                        <img src={Topright} alt="graph" />
                                     </div>
-                                </div>
+                                    <div className="me-n4 position-absolute bottom-0 end-0 mb-6">
+                                        <img src={Botright} alt="right corner" />
+                                    </div>
+                                    </div>
+
                             </div>
                         </div>
                         <div className="col-lg-5 col-12">

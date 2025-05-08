@@ -134,17 +134,17 @@ function Courses() {
                                                         </td>
                                                         <td>
                                                             {c.completed_lesson?.length < 1 && (
-                                                                <button className="btn btn-success btn-sm mt-3">
+                                                                <Link to={`/student/courses/${c.enrollment_id}/`} className="btn btn-success btn-sm mt-3">
                                                                     start Course
                                                                     <i className="fas fa-arrow-right ms-2"></i>
-                                                                </button>
+                                                                </Link>
                                                             )}
 
                                                             {c.completed_lesson?.length > 0 && (
-                                                                <button className="btn btn-primary btn-sm mt-3">
+                                                                <Link to={`/student/courses/${c.enrollment_id}/`} className="btn btn-primary btn-sm mt-3">
                                                                     Continue Course
                                                                     <i className="fas fa-arrow-right ms-2"></i>
-                                                                </button>
+                                                                </Link>
                                                             )}
                                                         </td>
                                                     </tr>

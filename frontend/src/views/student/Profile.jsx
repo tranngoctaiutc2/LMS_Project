@@ -78,6 +78,10 @@ function Profile() {
             .then((res) => {
                 console.log(res.data);
                 setProfile(res.data);
+                Toast().fire({
+                    icon: res.data.icon,
+                    title: res.data.message,
+                });
             });
     };
 

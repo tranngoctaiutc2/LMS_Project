@@ -136,7 +136,7 @@ function Courses() {
                                                         <p className="mt-3 badge bg-success">{c.level}</p>
                                                     </td>
                                                     <td>
-                                                        <p className="mt-3 badge bg-warning text-dark">Intermediate</p>
+                                                        <p className="mt-3 badge bg-warning text-dark">{c.teacher_course_status}</p>
                                                     </td>
                                                     <td>
                                                         <p className="mt-3">{moment(c.date).format("DD MMM, YYYY")}</p>

@@ -44,7 +44,7 @@ function QA() {
             [event.target.name]: event.target.value,
         });
     };
-    console.log(selectedConversation.course);
+    console.log(selectedConversation?.course);
     const sendNewMessage = async (e) => {
         e.preventDefault();
         const formdata = new FormData();
@@ -111,7 +111,7 @@ function QA() {
                                     <div className="vstack gap-3 p-3">
                                         {/* Question item START */}
                                         {questions?.map((q, index) => (
-                                            <div className="shadow rounded-3 p-3" key={1}>
+                                            <div className="shadow rounded-3 p-3" key={q.id || index}>
                                                 <div className="d-sm-flex justify-content-sm-between mb-3">
                                                     <div className="d-flex align-items-center">
                                                         <div className="avatar avatar-sm flex-shrink-0">

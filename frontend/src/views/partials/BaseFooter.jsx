@@ -1,10 +1,12 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import AppStore from "../../assets/images/svg/appstore.svg";
+import PlayStore from "../../assets/images/svg/playstore.svg";
 
 function BaseFooter() {
     const { t, i18n } = useTranslation();
     return (
-        <footer className="pt-lg-8 pt-5 footer bg-dark text-white" style={{ marginTop: "900px" }}>
+        <footer className="pt-lg-8 pt-5 footer bg-dark text-white" style={{ marginTop: "100px" }}>
             <div className="container mt-lg-2">
                 <div className="row">
                     <div className="col-lg-4 col-md-6 col-12 text-white">
@@ -107,9 +109,9 @@ function BaseFooter() {
                             <h3 className="fw-bold mb-3">{t("get_in_touch")}</h3>
                             <p>{t("address")}</p>
                             <p className="mb-1">
-                                {t("email")}:
+                                {t("Email: ")} 
                                 <a href="mailto:support@vdemy.com" className="text-white">
-                                    {" support@vdemy.com"}
+                                    {"support@vdemy.com"}
                                 </a>
                             </p>
                             <p>
@@ -118,10 +120,10 @@ function BaseFooter() {
                             </p>
                             <div className="d-flex">
                                 <a href="#">
-                                    <img src="../../assets/images/svg/appstore.svg" alt="App Store" className="img-fluid" />
+                                    <img src={AppStore} alt="App Store" className="img-fluid" />
                                 </a>
                                 <a href="#" className="ms-2">
-                                    <img src="../../assets/images/svg/playstore.svg" alt="Play Store" className="img-fluid" />
+                                    <img src={PlayStore} alt="Play Store" className="img-fluid" />
                                 </a>
                             </div>
                         </div>

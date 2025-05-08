@@ -38,33 +38,84 @@ function CourseDetail() {
 
     const addToCart = async (courseId, userId, price, country, cartId) => {
         setAddToCartBtn("Adding To Cart");
-        const formdata = new FormData();
-
-        formdata.append("course_id", courseId);
-        formdata.append("user_id", userId);
-        formdata.append("price", price);
-        formdata.append("country_name", country);
-        formdata.append("cart_id", cartId);
-
+    
         try {
-            await useAxios.post(`course/cart/`, formdata).then((res) => {
-                console.log(res.data);
+            const cartRes = await apiInstance.get(`course/cart-list/${cartId}/`);
+            const cartItems = cartRes.data;
+    
+            const alreadyInCart = cartItems.some(item => item.course.id === courseId);
+    
+            if (alreadyInCart) {
                 setAddToCartBtn("Added To Cart");
+    
                 Toast().fire({
-                    title: "Added To Cart",
-                    icon: "success",
+                    title: "Course already in cart",
+                    icon: "info",
                 });
-
-                apiInstance.get(`course/cart-list/${CartId()}/`).then((res) => {
-                    setCartCount(res.data?.length);
-                });
+                return;
+            }
+    
+            const formdata = new FormData();
+            formdata.append("course_id", courseId);
+            formdata.append("user_id", userId);
+            formdata.append("price", price);
+            formdata.append("country_name", country);
+            formdata.append("cart_id", cartId);
+    
+            const res = await useAxios.post(`course/cart/`, formdata);
+            console.log(res.data);
+    
+            setAddToCartBtn("Added To Cart");
+            Toast().fire({
+                title: "Added To Cart",
+                icon: "success",
             });
+
+            const updatedCart = await apiInstance.get(`course/cart-list/${cartId}/`);
+            setCartCount(updatedCart.data?.length);
+    
         } catch (error) {
-            console.log(error);
+            console.error(error);
             setAddToCartBtn("Add To Cart");
         }
     };
-
+    
+    const totalVariantItems = course?.curriculum?.reduce((total, c) => {
+        return total + (c.variant_items?.length || 0);
+    }, 0);
+    
+    const getTotalFormattedDuration = (course) => {
+        if (!course?.curriculum) return "00:00:00";
+    
+        const parseDurationText = (durationText) => {
+            if (!durationText) return 0;
+    
+            const minuteMatch = durationText.match(/(\d+)m/);
+            const secondMatch = durationText.match(/(\d+)s/);
+    
+            const minutes = minuteMatch ? parseInt(minuteMatch[1], 10) : 0;
+            const seconds = secondMatch ? parseInt(secondMatch[1], 10) : 0;
+    
+            return minutes * 60 + seconds;
+        };
+    
+        let totalSeconds = 0;
+        course.curriculum.forEach(c => {
+            c.variant_items?.forEach(l => {
+                totalSeconds += parseDurationText(l.content_duration);
+            });
+        });
+    
+        const formatSeconds = (totalSeconds) => {
+            const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+            const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+            const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+            return `${hours}:${minutes}:${seconds}`;
+        };
+    
+        return formatSeconds(totalSeconds);
+    };
+    
     return (
         <>
             <BaseHeader />
@@ -282,7 +333,7 @@ function CourseDetail() {
                                                                             <div className="d-sm-flex mt-1 mt-md-0 align-items-center">
                                                                                 <h5 className="me-3 mb-0">{r?.profile?.full_name}</h5>({r?.rating}/5)
                                                                             </div>
-                                                                            <p className="small mb-2">5 days ago</p>
+                                                                            <p className="small mb-2">{moment(r?.date).format("DD MMM, YYYY")}</p>
                                                                             <p className="mb-2">{r?.review || ""}</p>
                                                                         </div>
                                                                     </div>
@@ -697,9 +748,9 @@ function CourseDetail() {
                                                                                     <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">
                                                                                         Close
                                                                                     </button>
-                                                                                    <button type="button" className="btn btn-primary">
+                                                                                    {/* <button type="button" className="btn btn-primary">
                                                                                         Save changes
-                                                                                    </button>
+                                                                                    </button> */}
                                                                                 </div>
                                                                             </div>
                                                                         </div>
@@ -762,13 +813,13 @@ function CourseDetail() {
                                                             )}
 
                                                             {addToCartBtn === "Added To Cart" && (
-                                                                <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" onClick={() => addToCart(course.id, 1, course.price, "Nigeria", "8325347")}>
+                                                                <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" onClick={() => addToCart(course?.id, userId, course.price, country, CartId())}>
                                                                     <i className="fas fa-check-circle"></i> Added To Cart
                                                                 </button>
                                                             )}
 
                                                             {addToCartBtn === "Adding To Cart" && (
-                                                                <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" onClick={() => addToCart(course.id, 1, course.price, "Nigeria", "8325347")}>
+                                                                <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" onClick={() => addToCart(course?.id, userId, course.price, country, CartId())}>
                                                                     <i className="fas fa-spinner fa-spin"></i> Adding To Cart
                                                                 </button>
                                                             )}
@@ -786,35 +837,35 @@ function CourseDetail() {
                                                                 <i className="fas fa-fw fa-book-open text-primary me-2" />
                                                                 Lectures
                                                             </span>
-                                                            <span>30</span>
+                                                            <span>{totalVariantItems}</span>
                                                         </li>
-                                                        <li className="list-group-item d-flex justify-content-between align-items-center d-none">
+                                                        <li className="list-group-item d-flex justify-content-between align-items-center">
                                                             <span className="h6 fw-light mb-0">
                                                                 <i className="fas fa-fw fa-clock text-primary me-2" />
                                                                 Duration
                                                             </span>
-                                                            <span>4h 50m</span>
+                                                            <span>{getTotalFormattedDuration(course)}</span>
                                                         </li>
                                                         <li className="list-group-item d-flex justify-content-between align-items-center">
                                                             <span className="h6 fw-light mb-0">
                                                                 <i className="fas fa-fw fa-signal text-primary me-2" />
                                                                 Skills
                                                             </span>
-                                                            <span>Beginner</span>
+                                                            <span>{course.level}</span>
                                                         </li>
                                                         <li className="list-group-item d-flex justify-content-between align-items-center">
                                                             <span className="h6 fw-light mb-0">
                                                                 <i className="fas fa-fw fa-globe text-primary me-2" />
                                                                 Language
                                                             </span>
-                                                            <span>English</span>
+                                                            <span>{course.language}</span>
                                                         </li>
                                                         <li className="list-group-item d-flex justify-content-between align-items-center">
                                                             <span className="h6 fw-light mb-0">
                                                                 <i className="fas fa-fw fa-user-clock text-primary me-2" />
                                                                 Published
                                                             </span>
-                                                            <span>7th August, 2025</span>
+                                                            <span>{moment(course.date).format("DD MMM, YYYY")}</span>
                                                         </li>
                                                     </ul>
                                                 </div>

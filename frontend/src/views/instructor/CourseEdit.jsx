@@ -17,6 +17,8 @@ import Toast from "../plugin/Toast";
 function CourseEdit() {
     const [courseData, setCourseData] = useState({});
     const [imagePreview, setImagePreview] = useState("");
+    const [isLoading, setLoading] = useState(true);
+    const [isFileLoading, setFileLoading] = useState(false);
     const [category, setCategory] = useState([]);
     const navigate = useNavigate();
     const param = useParams();
@@ -214,6 +216,7 @@ function CourseEdit() {
                                             <select className="form-select" onChange={handleCourseInputChange} value={courseData?.language} name="language">
                                                 <option value="">Select Language</option>
                                                 <option value="English">English</option>
+                                                <option value="Vietnamese">Vietnamese</option>
                                                 <option value="Spanish">Spanish</option>
                                                 <option value="French">French</option>
                                             </select>

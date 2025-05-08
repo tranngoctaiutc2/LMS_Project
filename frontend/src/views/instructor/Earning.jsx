@@ -7,8 +7,6 @@ import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 
 import useAxios from "../../utils/useAxios";
-import Useta from "../plugin/UserData";
-import { teacherId } from "../../utils/constants";
 import UserData from "../plugin/UserData";
 
 function Earning() {
@@ -17,17 +15,17 @@ function Earning() {
     const [bestSellingCourse, setBestSellingCourse] = useState([]);
 
     useEffect(() => {
-        useAxios.get(`teacher/summary/${UserData()?.user_id}/`).then((res) => {
+        useAxios.get(`teacher/summary/${UserData()?.teacher_id}/`).then((res) => {
             console.log(res.data[0]);
             setStats(res.data[0]);
         });
 
-        useAxios.get(`teacher/all-months-earning/${UserData()?.user_id}/`).then((res) => {
+        useAxios.get(`teacher/all-months-earning/${UserData()?.teacher_id}/`).then((res) => {
             console.log(res.data);
             setEarning(res.data);
         });
 
-        useAxios.get(`teacher/best-course-earning/${UserData()?.user_id}/`).then((res) => {
+        useAxios.get(`teacher/best-course-earning/${UserData()?.teacher_id}/`).then((res) => {
             console.log(res.data);
             setBestSellingCourse(res.data);
         });
