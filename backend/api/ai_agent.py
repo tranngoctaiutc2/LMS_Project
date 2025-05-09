@@ -6,15 +6,12 @@ from qdrant_client.http.models import Distance, VectorParams, PointStruct, Filte
 import logging
 from django.conf import settings
 
-# Cấu hình logging
 logger = logging.getLogger(__name__)
 
-# Lấy thông tin cấu hình từ biến môi trường
 GEMINI_API_KEY = settings.GEMINI_API_KEY
 QDRANT_API_KEY = settings.QDRANT_API_KEY
 QDRANT_URL = settings.QDRANT_URL
 
-# Cấu hình Gemini nếu đủ thông tin
 if GEMINI_API_KEY and QDRANT_API_KEY and QDRANT_URL:
     genai.configure(api_key=GEMINI_API_KEY)
 

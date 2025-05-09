@@ -512,9 +512,9 @@ class PaymentSuccessAPIView(generics.CreateAPIView):
                         order.save()
                         api_models.Notification.objects.create(user=order.student, order=order, type="Course Enrollment Completed")
                         for o in order_items:
-                            api_models.Notification.objects.create(teacher=o.teacher, order=order, order_item=o, type="New Order")
-                            api_models.EnrolledCourse.objects.create(course=o.course, user=order.student, teacher=o.teacher, order_item=o)
-
+                            api_models.Notification.objects.get_or_create(teacher=o.teacher, order=order, order_item=o, type="New Order")
+                            api_models.EnrolledCourse.objects.get_or_create(course=o.course, user=order.student, defaults={"teacher": o.teacher,"order_item": o}
+                        )
                         return Response({"message": "Payment Successful"})
                     else:
                         return Response({"message": "Already Paid"})
@@ -552,14 +552,14 @@ class PaymentSuccessAPIView(generics.CreateAPIView):
                     order.vnp_TransactionNo = request.data.get('vnp_TransactionNo')
                     order.save()
                     
-                    api_models.Notification.objects.create(
+                    api_models.Notification.objects.get_or_create(
                         user=order.student, 
                         order=order, 
                         type="Course Enrollment Completed"
                     )
                     
                     for o in order_items:
-                        api_models.Notification.objects.create(
+                        api_models.Notification.objects.get_or_create(
                             teacher=o.teacher,
                             order=order,
                             order_item=o,
@@ -568,8 +568,10 @@ class PaymentSuccessAPIView(generics.CreateAPIView):
                         api_models.EnrolledCourse.objects.create(
                             course=o.course,
                             user=order.student,
-                            teacher=o.teacher,
-                            order_item=o
+                            defaults={
+                                "teacher": o.teacher,
+                                "order_item": o
+                            }
                         )
                     
                     return Response({"message": "Payment Successful"})
