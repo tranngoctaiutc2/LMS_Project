@@ -45,7 +45,38 @@ function Index() {
         fetchCourse();
     }, []);
 
+    const isCourseEnrolled = async (courseId) => {
+        try {
+            const res = await useAxios.get(`student/course-list/${userId}/`);
+            const enrolledCourses = res.data;
+    
+            const isEnrolled = enrolledCourses.some(item => item.course?.id === courseId);
+    
+            if (isEnrolled) {
+                Toast().fire({
+                    title: "Bạn đã ghi danh khoá học này rồi",
+                    icon: "warning",
+                });
+            }
+    
+            return isEnrolled;
+        } catch (error) {
+            console.error("Lỗi khi kiểm tra khoá học đã ghi danh:", error);
+            return false;
+        }
+    };
+    
+
     const addToCart = async (courseId, userId, price, country, cartId) => {
+        const alreadyEnrolled = await isCourseEnrolled(courseId);
+
+        if (alreadyEnrolled) {
+            Toast().fire({
+                icon: "info",
+                title: "You are already enrolled in this course",
+            });
+            return;
+    }
         const formdata = new FormData();
 
         formdata.append("course_id", courseId);
@@ -55,19 +86,39 @@ function Index() {
         formdata.append("cart_id", cartId);
 
         try {
-            await apiInstance.post(`course/cart/`, formdata).then((res) => {
-                console.log(res.data);
+            const cartRes = await apiInstance.get(`course/cart-list/${cartId}/`);
+            const cartItems = cartRes.data;
+    
+            const alreadyInCart = cartItems.some(item => item.course.id === courseId);
+    
+            if (alreadyInCart) { 
                 Toast().fire({
-                    title: "Added To Cart",
-                    icon: "success",
+                    title: "Course already in cart",
+                    icon: "info",
                 });
-
-                apiInstance.get(`course/cart-list/${CartId()}/`).then((res) => {
-                    setCartCount(res.data?.length);
-                });
+                return;
+            }
+    
+            const formdata = new FormData();
+            formdata.append("course_id", courseId);
+            formdata.append("user_id", userId);
+            formdata.append("price", price);
+            formdata.append("country_name", country);
+            formdata.append("cart_id", cartId);
+    
+            const res = await useAxios.post(`course/cart/`, formdata);
+            console.log(res.data);
+    
+            Toast().fire({
+                title: "Added To Cart",
+                icon: "success",
             });
+
+            const updatedCart = await apiInstance.get(`course/cart-list/${cartId}/`);
+            setCartCount(updatedCart.data?.length);
+    
         } catch (error) {
-            console.log(error);
+            console.error(error);
         }
     };
 

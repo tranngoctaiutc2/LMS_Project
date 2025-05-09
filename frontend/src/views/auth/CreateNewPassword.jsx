@@ -40,7 +40,7 @@ function CreateNewPassword() {
             setIsLoading(false);
             navigate("/login/");
             Toast().fire({
-              icon: "warning",
+              icon: "success",
               title: res.data.message,
             });
           });

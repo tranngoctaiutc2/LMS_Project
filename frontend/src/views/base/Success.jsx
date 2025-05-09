@@ -116,7 +116,7 @@ function Success() {
                                     <h1 className="text-success">Enrollment Successful!</h1>
                                     <p>Your enrollment was successful, please visit your dashboard to start your course now.</p>
                                     <p>You will be redirected automatically in 5 seconds...</p>
-                                    <Link to="/user/dashboard" className="btn btn-success mb-0 rounded-2">
+                                    <Link to="/student/dashboard" className="btn btn-success mb-0 rounded-2">
                                         Go to Dashboard <i className="fas fa-arrow-right ms-2"></i>
                                     </Link>
                                 </div>

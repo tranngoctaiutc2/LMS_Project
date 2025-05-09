@@ -10,6 +10,7 @@ import Toast from "../plugin/Toast";
 import { ProfileContext } from "../plugin/Context";
 
 function Profile() {
+    const [isLoading, setIsLoading] = useState(false);
     const [profile, setProfile] = useContext(ProfileContext);
     const [profileData, setProfileData] = useState({
         image: "",
@@ -58,6 +59,7 @@ function Profile() {
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
+        setIsLoading(true);
 
         const res = await useAxios.get(`user/profile/${UserData()?.user_id}/`);
         const formdata = new FormData();
@@ -79,9 +81,10 @@ function Profile() {
                 console.log(res.data);
                 setProfile(res.data);
                 Toast().fire({
-                    icon: res.data.icon,
-                    title: res.data.message,
+                    icon: "success",
+                    title: "Profile updated successfully",
                 });
+                setIsLoading(false);
             });
     };
 
@@ -161,9 +164,20 @@ function Profile() {
                                                 <div className="invalid-feedback">Please choose country.</div>
                                             </div>
                                             <div className="col-12">
-                                                {/* Button */}
-                                                <button className="btn btn-primary" type="submit">
-                                                    Update Profile <i className="fas fa-check-circle"></i>
+                                                <button
+                                                    className="btn btn-primary"
+                                                    type="submit"
+                                                    disabled={isLoading}
+                                                >
+                                                    {isLoading ? (
+                                                        <>
+                                                            Updating... <i className="fas fa-spinner fa-spin"></i>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            Update Profile <i className="fas fa-check-circle"></i>
+                                                        </>
+                                                    )}
                                                 </button>
                                             </div>
                                         </div>

@@ -8,8 +8,10 @@ import Header from "./Partials/Header";
 import useAxios from "../../utils/useAxios";
 import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
+import { logout } from "../../utils/auth";
 
 function ChangePassword() {
+    const [isLoading, setIsLoading] = useState(false);
     const [password, setPassword] = useState({
         old_password: "",
         new_password: "",
@@ -37,15 +39,28 @@ function ChangePassword() {
         const formdata = new FormData();
         formdata.append("user_id", UserData()?.user_id);
         formdata.append("old_password", password.old_password);
-        formdata.append("new_password", password.new_passowrd);
+        formdata.append("new_password", password.new_password);
+        setIsLoading(true);
 
-        await useAxios.post(`user/change-password/`, formdata).then((res) => {
-            console.log(res.data);
+        try {
+            const res = await useAxios.post("user/change-password/", formdata);
             Toast().fire({
                 icon: res.data.icon,
                 title: res.data.message,
             });
-        });
+
+            if (res.data.icon === "success") {
+                logout();
+                window.location.href = "/login";
+            }
+        } catch (error) {
+            Toast().fire({
+                icon: "error",
+                title: "An error occurred while changing the password.",
+            });
+        } finally {
+                setIsLoading(false);
+        }
     };
 
     return (
@@ -93,9 +108,20 @@ function ChangePassword() {
                                                 <input type="password" id="password" className="form-control" placeholder="**************" required="" name="confirm_new_password" value={password.confirm_new_password} onChange={handlePasswordChange} />
                                             </div>
                                             <div className="col-12">
-                                                {/* Button */}
-                                                <button className="btn btn-primary" type="submit">
-                                                    Save New Password <i className="fas fa-check-circle"></i>
+                                                <button
+                                                    className="btn btn-primary"
+                                                    type="submit"
+                                                    disabled={isLoading}
+                                                >
+                                                    {isLoading ? (
+                                                        <>
+                                                            Saving... <i className="fas fa-spinner fa-spin"></i>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            Save New Password <i className="fas fa-check-circle"></i>
+                                                        </>
+                                                    )}
                                                 </button>
                                             </div>
                                         </form>

@@ -36,9 +36,40 @@ function CourseDetail() {
         fetchCourse();
     }, []);
 
+    const isCourseEnrolled = async (courseId) => {
+        try {
+            const res = await useAxios.get(`student/course-list/${userId}/`);
+            const enrolledCourses = res.data;
+    
+            const isEnrolled = enrolledCourses.some(item => item.course?.id === courseId);
+    
+            if (isEnrolled) {
+                Toast().fire({
+                    title: "Bạn đã ghi danh khoá học này rồi",
+                    icon: "warning",
+                });
+            }
+    
+            return isEnrolled;
+        } catch (error) {
+            console.error("Lỗi khi kiểm tra khoá học đã ghi danh:", error);
+            return false;
+        }
+    };
+
     const addToCart = async (courseId, userId, price, country, cartId) => {
         setAddToCartBtn("Adding To Cart");
-    
+        const alreadyEnrolled = await isCourseEnrolled(courseId);
+
+        if (alreadyEnrolled) {
+            Toast().fire({
+                icon: "info",
+                title: "You are already enrolled in this course",
+            });
+            setAddToCartBtn("Already enrolled this course");
+            return;
+        }
+
         try {
             const cartRes = await apiInstance.get(`course/cart-list/${cartId}/`);
             const cartItems = cartRes.data;
@@ -813,14 +844,20 @@ function CourseDetail() {
                                                             )}
 
                                                             {addToCartBtn === "Added To Cart" && (
-                                                                <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" onClick={() => addToCart(course?.id, userId, course.price, country, CartId())}>
+                                                                <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" disabled>
                                                                     <i className="fas fa-check-circle"></i> Added To Cart
                                                                 </button>
                                                             )}
 
                                                             {addToCartBtn === "Adding To Cart" && (
-                                                                <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" onClick={() => addToCart(course?.id, userId, course.price, country, CartId())}>
+                                                                <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" disabled>
                                                                     <i className="fas fa-spinner fa-spin"></i> Adding To Cart
+                                                                </button>
+                                                            )}
+
+                                                            {addToCartBtn === "Already enrolled this course" && (
+                                                                <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" disabled>
+                                                                    <i className="fas fa-check-circle"></i> Already enrolled this course
                                                                 </button>
                                                             )}
                                                         </div>
