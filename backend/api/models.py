@@ -134,7 +134,7 @@ class Course(models.Model):
     def students(self):
         return EnrolledCourse.objects.filter(course=self)
     
-    def curriculum(self):
+    def variants(self):
         return Variant.objects.filter(course=self)
     
     def lectures(self):
@@ -151,7 +151,7 @@ class Course(models.Model):
         return Review.objects.filter(course=self, active=True)
     
 class Variant(models.Model):
-    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, related_name='variants',on_delete=models.CASCADE)
     title = models.CharField(max_length=1000)
     variant_id = ShortUUIDField(unique=True, length=6, max_length=20, alphabet="1234567890")
     date = models.DateTimeField(default=timezone.now)
@@ -167,7 +167,7 @@ class Variant(models.Model):
     
     
 class VariantItem(models.Model):
-    variant = models.ForeignKey(Variant, on_delete=models.CASCADE, related_name="variant_items")
+    variant = models.ForeignKey(Variant, on_delete=models.CASCADE, related_name="items")
     title = models.CharField(max_length=1000)
     description = models.TextField(null=True, blank=True)
     file = models.CharField(max_length=200, blank=True, null=True)
@@ -318,7 +318,7 @@ class EnrolledCourse(models.Model):
     def completed_lesson(self):
         return CompletedLesson.objects.filter(course=self.course, user=self.user)
     
-    def curriculum(self):
+    def variants(self):
         return Variant.objects.filter(course=self.course)
     
     def note(self):

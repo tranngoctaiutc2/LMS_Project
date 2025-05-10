@@ -5,7 +5,8 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from userauths.models import Profile, User
-
+from moviepy.editor import VideoFileClip
+import datetime
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -87,12 +88,17 @@ class VariantItemSerializer(serializers.ModelSerializer):
             self.Meta.depth = 3
 
 class VariantSerializer(serializers.ModelSerializer):
-    variant_items = VariantItemSerializer(many=True)
     items = VariantItemSerializer(many=True)
     class Meta:
         fields = '__all__'
         model = api_models.Variant
 
+    def create(self, validated_data):
+        items_data = validated_data.pop('items')
+        variant = api_models.Variant.objects.create(**validated_data)
+        for item_data in items_data:
+            api_models.VariantItem.objects.create(variant=variant, **item_data)
+        return variant
 
     def __init__(self, *args, **kwargs):
         super(VariantSerializer, self).__init__(*args, **kwargs)
@@ -252,7 +258,7 @@ class EnrolledCourseSerializer(serializers.ModelSerializer):
     curriculum =  VariantSerializer(many=True, read_only=True)
     note = NoteSerializer(many=True, read_only=True)
     question_answer = Question_AnswerSerializer(many=True, read_only=True)
-    review = ReviewSerializer(many=False, read_only=True)
+    review = ReviewSerializer(many=True, read_only=True)
 
 
     class Meta:
@@ -269,12 +275,48 @@ class EnrolledCourseSerializer(serializers.ModelSerializer):
 
 class CourseSerializer(serializers.ModelSerializer):
     students = EnrolledCourseSerializer(many=True, required=False, read_only=True,)
-    curriculum = VariantSerializer(many=True, required=False, read_only=True,)
+    variants = VariantSerializer(many=True, required=False)
     lectures = VariantItemSerializer(many=True, required=False, read_only=True,)
     reviews = ReviewSerializer(many=True, read_only=True, required=False)
+
     class Meta:
-        fields = ["id", "category", "teacher", "file", "image", "title", "description", "price", "language", "level", "platform_status", "teacher_course_status", "featured", "course_id", "slug", "date", "students", "curriculum", "lectures", "average_rating", "rating_count", "reviews",]
+        fields = ["id", "category", "teacher", "file", "image", "title", "description", "price", "language", "level", "platform_status", "teacher_course_status", "featured", "course_id", "slug", "date", "students", "variants", "lectures", "average_rating", "rating_count", "reviews"]
         model = api_models.Course
+
+    def create(self, validated_data):
+        variants_data = validated_data.pop('variants', [])
+        course = api_models.Course.objects.create(**validated_data)
+        for variant_data in variants_data:
+            items_data = variant_data.pop('items', [])
+            variant = api_models.Variant.objects.create(course=course, **variant_data)
+            for item_data in items_data:
+                file_url = item_data.get("file")
+                duration = None
+                content_duration = None
+
+                # Nếu có file video, tính duration
+                if file_url:
+                    try:
+                        clip = VideoFileClip(file_url)
+                        total_seconds = int(clip.duration)
+                        duration = datetime.timedelta(seconds=total_seconds)
+                        minutes, seconds = divmod(total_seconds, 60)
+                        hours, minutes = divmod(minutes, 60)
+                        content_duration = f"{hours:02}:{minutes:02}:{seconds:02}"
+                        clip.close()
+                    except Exception as e:
+                        print(f"Lỗi khi xử lý video: {e}")
+
+                api_models.VariantItem.objects.create(
+                    variant=variant,
+                    title=item_data.get("title"),
+                    description=item_data.get("description"),
+                    file=file_url,
+                    preview=item_data.get("preview", False),
+                    duration=duration,
+                    content_duration=content_duration
+                )
+        return course
 
     def __init__(self, *args, **kwargs):
         super(CourseSerializer, self).__init__(*args, **kwargs)
@@ -283,6 +325,8 @@ class CourseSerializer(serializers.ModelSerializer):
             self.Meta.depth = 0
         else:
             self.Meta.depth = 3
+
+
 
 
 
