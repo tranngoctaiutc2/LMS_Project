@@ -51,6 +51,7 @@ import Chatbox from "./views/chat/Chatbox";
 function App() {
     const [cartCount, setCartCount] = useState(0);
     const [profile, setProfile] = useState([]);
+    const [wishlist, setWishlist] = useState([]);
 
     useEffect(() => {
         apiInstance.get(`course/cart-list/${CartId()}/`).then((res) => {
@@ -60,6 +61,10 @@ function App() {
         useAxios.get(`user/profile/${UserData()?.user_id}/`).then((res) => {
             setProfile(res.data);
         });
+
+        apiInstance.get(`student/wishlist/${UserData()?.user_id}/`).then((res) => {
+          setWishlist(res.data.wishlist || []); 
+        })
     }, []);
 
     return (

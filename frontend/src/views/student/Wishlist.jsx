@@ -123,7 +123,7 @@ function Wishlist() {
                                                             </a>
                                                         </div>
                                                         <h4 className="mb-2 text-truncate-line-2 ">
-                                                            <Link to={`/course-detail/slug/`} className="text-inherit text-decoration-none text-dark fs-5">
+                                                            <Link to={`/course-detail/${w.course.slug}/`} className="text-inherit text-decoration-none text-dark fs-5">
                                                                 {w.course.title}
                                                             </Link>
                                                         </h4>
@@ -153,7 +153,7 @@ function Wishlist() {
                                                                 <button type="button" onClick={() => addToCart(w.course.id, UserData()?.user_id, w.course.price, country, CartId())} className="text-inherit text-decoration-none btn btn-primary me-2">
                                                                     <i className="fas fa-shopping-cart text-primary text-white" />
                                                                 </button>
-                                                                <Link to={""} className="text-inherit text-decoration-none btn btn-primary">
+                                                                <Link to={`/course-detail/${w.course.slug}/`} className="text-inherit text-decoration-none btn btn-primary">
                                                                     Enroll Now <i className="fas fa-arrow-right text-primary align-middle me-2 text-white" />
                                                                 </Link>
                                                             </div>

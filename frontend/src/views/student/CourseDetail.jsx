@@ -31,6 +31,9 @@ function CourseDetail() {
 
     const param = useParams();
     const lastElementRef = useRef();
+    // Lấy danh sách variant duy nhất từ lectures
+    const uniqueVariants = [...new Map(course?.lectures?.map(l => [l.variant.variant_id, l.variant])).values()];
+
     // Play Lecture Modal
     const [show, setShow] = useState(false);
     const handleClose = () => setShow(false);
@@ -62,7 +65,10 @@ function CourseDetail() {
             setCourse(res.data);
             setQuestions(res.data.question_answer);
             setStudentReview(res.data.review);
-            const percentageCompleted = (res.data.completed_lesson?.length / res.data.lectures?.length) * 100;
+            const totalLectures = res.data.lectures?.length || 0;
+            const completedLectures = res.data.completed_lesson?.length || 0;
+            const percentageCompleted = (completedLectures / totalLectures) * 100;
+            // const percentageCompleted = (res.data.completed_lesson?.length / res.data.lectures?.length) * 100;
             setCompletionPercentage(percentageCompleted?.toFixed(0));
         });
     };
@@ -329,56 +335,62 @@ function CourseDetail() {
                                                                 </div>
                                                                 {/* Item */}
 
-                                                                {course?.curriculum?.map((c, index) => (
-                                                                    <div className="accordion-item mb-3 p-3 bg-light">
-                                                                        <h6 className="accordion-header font-base" id="heading-1">
+                                                                {uniqueVariants.map((variant, index) => (
+                                                                    <div className="accordion-item mb-3 p-3 bg-light" key={variant.variant_id}>
+                                                                        <h6 className="accordion-header font-base" id={`heading-${index}`}>
                                                                             <button
                                                                                 className="accordfion-button p-3 w-100 bg-light btn border fw-bold rounded d-sm-flex d-inline-block collapsed"
                                                                                 type="button"
                                                                                 data-bs-toggle="collapse"
-                                                                                data-bs-target={`#collapse-${c.variant_id}`}
+                                                                                data-bs-target={`#collapse-${variant.variant_id}`}
                                                                                 aria-expanded="true"
-                                                                                aria-controls={`collapse-${c.variant_id}`}
+                                                                                aria-controls={`collapse-${variant.variant_id}`}
                                                                             >
-                                                                                {c.title}
+                                                                                {variant.title}
                                                                                 <span className="small ms-0 ms-sm-2">
-                                                                                    ({c.variant_items?.length} Lecture
-                                                                                    {c.variant_items?.length > 1 && "s"})
+                                                                                    (
+                                                                                    {
+                                                                                        course.lectures.filter(l => l.variant.variant_id === variant.variant_id).length
+                                                                                    } Lecture
+                                                                                    {course.lectures.filter(l => l.variant.variant_id === variant.variant_id).length > 1 && "s"}
+                                                                                    )
                                                                                 </span>
                                                                             </button>
                                                                         </h6>
 
-                                                                        <div id={`collapse-${c.variant_id}`} className="accordion-collapse collapse show" aria-labelledby="heading-1" data-bs-parent="#accordionExample2">
+                                                                        <div id={`collapse-${variant.variant_id}`} className="accordion-collapse collapse show" aria-labelledby={`heading-${index}`} data-bs-parent="#accordionExample2">
                                                                             <div className="accordion-body mt-3">
-                                                                                {/* Course lecture */}
-                                                                                {c.variant_items?.map((l, index) => (
-                                                                                    <>
-                                                                                        <div className="d-flex justify-content-between align-items-center">
-                                                                                            <div className="position-relative d-flex align-items-center">
-                                                                                                <button onClick={() => handleShow(l)} className="btn btn-danger-soft btn-round btn-sm mb-0 stretched-link position-static">
-                                                                                                    <i className="fas fa-play me-0" />
-                                                                                                </button>
-                                                                                                <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light w-100px w-sm-200px w-md-400px">{l.title}</span>
+                                                                                {course.lectures
+                                                                                    .filter(l => l.variant.variant_id === variant.variant_id)
+                                                                                    .map(l => (
+                                                                                        <div key={l.id}>
+                                                                                            <div className="d-flex justify-content-between align-items-center">
+                                                                                                <div className="position-relative d-flex align-items-center">
+                                                                                                    <button onClick={() => handleShow(l)} className="btn btn-danger-soft btn-round btn-sm mb-0 stretched-link position-static">
+                                                                                                        <i className="fas fa-play me-0" />
+                                                                                                    </button>
+                                                                                                    <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light w-100px w-sm-200px w-md-400px">
+                                                                                                        {l.title}
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                                <div className="d-flex">
+                                                                                                    <p className="mb-0">{l.content_duration || "0m 0s"}</p>
+                                                                                                    <input
+                                                                                                        type="checkbox"
+                                                                                                        className="form-check-input ms-2"
+                                                                                                        onChange={() => handleMarkLessonAsCompleted(l.variant_item_id)}
+                                                                                                        checked={course.completed_lesson?.some((cl) => cl.variant_item.id === l.id)}
+                                                                                                    />
+                                                                                                </div>
                                                                                             </div>
-                                                                                            <div className="d-flex">
-                                                                                                <p className="mb-0">{l.content_duration || "0m 0s"}</p>
-                                                                                                <input
-                                                                                                    type="checkbox"
-                                                                                                    className="form-check-input ms-2"
-                                                                                                    name=""
-                                                                                                    id=""
-                                                                                                    onChange={() => handleMarkLessonAsCompleted(l.variant_item_id)}
-                                                                                                    checked={course.completed_lesson?.some((cl) => cl.variant_item.id === l.id)}
-                                                                                                />
-                                                                                            </div>
+                                                                                            <hr />
                                                                                         </div>
-                                                                                        <hr />
-                                                                                    </>
-                                                                                ))}
+                                                                                    ))}
                                                                             </div>
                                                                         </div>
                                                                     </div>
                                                                 ))}
+
                                                             </div>
                                                             {/* Accordion END */}
                                                         </div>

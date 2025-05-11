@@ -131,19 +131,69 @@ function Index() {
     const totalPages = Math.ceil(courses.length / itemsPerPage);
     const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
 
-    const addToWishlist = (courseId) => {
+    const [wishlist, setWishlist] = useState([]);
+
+    useEffect(() => {
+    const fetchWishlist = async () => {
+        try {
+        const userId = UserData()?.user_id;
+        if (userId) {
+            const res = await apiInstance.get(`student/wishlist/${userId}/`);
+            const wishlistCourseIds = res.data.map(item => item.course?.id || item.course_id);
+            setWishlist(wishlistCourseIds);
+        }
+        } catch (error) {
+        console.error("Error fetching wishlist:", error);
+        }
+    };
+
+    fetchWishlist();
+    }, []);
+
+    const addToWishlist = async (courseId) => {
+    try {
+        const userId = UserData()?.user_id;
+        if (!userId) {
+        Toast().fire({
+            icon: "warning",
+            title: "Please login to add to wishlist!",
+        });
+        return;
+        }
+
         const formdata = new FormData();
-        formdata.append("user_id", UserData()?.user_id);
+        formdata.append("user_id", userId);
         formdata.append("course_id", courseId);
 
-        apiInstance.post(`student/wishlist/${UserData()?.user_id}/`, formdata).then((res) => {
-            console.log(res.data);
-            Toast().fire({
-                icon: "success",
-                title: res.data.message,
-            });
+        const isInWishlist = wishlist.includes(courseId);
+
+        const res = await apiInstance.post(
+        `student/wishlist/${userId}/`,
+        formdata
+        );
+
+        if (isInWishlist) {
+        setWishlist((prev) => prev.filter((id) => id !== courseId));
+        Toast().fire({
+            icon: "success",
+            title: "Removed from wishlist",
         });
+        } else {
+        setWishlist((prev) => [...prev, courseId]);
+        Toast().fire({
+            icon: "success",
+            title: "Added to wishlist",
+        });
+        }
+    } catch (error) {
+        Toast().fire({
+        icon: "error",
+        title: "Failed to update wishlist!",
+        });
+        console.error(error);
+    }
     };
+
 
     return (
         <>
@@ -283,7 +333,11 @@ function Index() {
                                                         <span className="badge bg-success ms-2">{c.language}</span>
                                                     </div>
                                                     <a onClick={() => addToWishlist(c.id)} className="fs-5">
-                                                        <i className="fas fa-heart text-danger align-middle" />
+                                                        {wishlist.includes(c.id) ? (
+                                                            <i className="fas fa-heart text-danger align-middle" />
+                                                        ) : (
+                                                            <i className="far fa-heart text-secondary align-middle" />
+                                                        )}
                                                     </a>
                                                 </div>
                                                 <h4 className="mb-2 text-truncate-line-2 ">
@@ -325,7 +379,7 @@ function Index() {
                                                             addToCart(c.id, userId, c.price, country, cartId);}} className="text-inherit text-decoration-none btn btn-primary me-2">
                                                             <i className="fas fa-shopping-cart text-primary text-white" />
                                                         </button>
-                                                        <Link to={""} className="text-inherit text-decoration-none btn btn-primary">
+                                                        <Link to={`/course-detail/${c.slug}/`} className="text-inherit text-decoration-none btn btn-primary">
                                                             Enroll Now <i className="fas fa-arrow-right text-primary align-middle me-2 text-white" />
                                                         </Link>
                                                     </div>

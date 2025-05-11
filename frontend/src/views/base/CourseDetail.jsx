@@ -111,29 +111,40 @@ function CourseDetail() {
         }
     };
     
-    const totalVariantItems = course?.curriculum?.reduce((total, c) => {
-        return total + (c.variant_items?.length || 0);
-    }, 0);
+    const totalVariantItems = course?.variants?.reduce((total, variant) => {
+        return total + (variant.items?.length || 0);
+    }, 0);    
     
     const getTotalFormattedDuration = (course) => {
-        if (!course?.curriculum) return "00:00:00";
+        if (!course?.variants) return "00:00:00";
     
         const parseDurationText = (durationText) => {
             if (!durationText) return 0;
     
+            const hhmmssMatch = durationText.match(/^(\d{1,2}):(\d{1,2}):(\d{1,2})$/);
+            if (hhmmssMatch) {
+                const hours = parseInt(hhmmssMatch[1], 10);
+                const minutes = parseInt(hhmmssMatch[2], 10);
+                const seconds = parseInt(hhmmssMatch[3], 10);
+                return hours * 3600 + minutes * 60 + seconds;
+            }
+    
+            const hourMatch = durationText.match(/(\d+)h/);
             const minuteMatch = durationText.match(/(\d+)m/);
             const secondMatch = durationText.match(/(\d+)s/);
     
+            const hours = hourMatch ? parseInt(hourMatch[1], 10) : 0;
             const minutes = minuteMatch ? parseInt(minuteMatch[1], 10) : 0;
             const seconds = secondMatch ? parseInt(secondMatch[1], 10) : 0;
     
-            return minutes * 60 + seconds;
+            return hours * 3600 + minutes * 60 + seconds;
         };
     
         let totalSeconds = 0;
-        course.curriculum.forEach(c => {
-            c.variant_items?.forEach(l => {
-                totalSeconds += parseDurationText(l.content_duration);
+        course.variants.forEach((variant) => {
+            const items = variant.items || variant.variant_items || [];
+            items.forEach((item) => {
+                totalSeconds += parseDurationText(item.content_duration);
             });
         });
     
@@ -146,6 +157,7 @@ function CourseDetail() {
     
         return formatSeconds(totalSeconds);
     };
+    
     
     return (
         <>
@@ -268,7 +280,7 @@ function CourseDetail() {
                                                         {/* Course accordion START */}
                                                         <div className="accordion accordion-icon accordion-bg-light" id="accordionExample2">
                                                             {/* Item */}
-                                                            {course?.curriculum?.map((c, index) => (
+                                                            {course?.variants?.map((c, index) => (
                                                                 <div className="accordion-item mb-3">
                                                                     <h6 className="accordion-header font-base" id="heading-1">
                                                                         <button
@@ -285,16 +297,61 @@ function CourseDetail() {
                                                                     <div id={`collapse-${c.variant_id}`} className="accordion-collapse collapse show" aria-labelledby="heading-1" data-bs-parent="#accordionExample2">
                                                                         <div className="accordion-body mt-3">
                                                                             {/* Course lecture */}
-                                                                            {c.variant_items?.map((l, index) => (
+                                                                            {c.items?.map((l, index) => (
                                                                                 <>
                                                                                     <div className="d-flex justify-content-between align-items-center">
                                                                                         <div className="position-relative d-flex align-items-center">
-                                                                                            <a href="#" className="btn btn-danger-soft btn-round btn-sm mb-0 stretched-link position-static">
-                                                                                                {l.preview === true ? <i className="fas fa-play me-0" /> : <i className="fas fa-lock me-0" />}
-                                                                                            </a>
+                                                                                        {l.preview === true || l.preview === 'true' ? (
+                                                                                            <div>
+                                                                                                <div className="m-auto rounded-2 mt-2 d-flex justify-content-center align-items-center" style={{ backgroundColor: "#ededed" }}>
+                                                                                                    <a
+                                                                                                        data-bs-toggle="modal"
+                                                                                                        data-bs-target={`#videoModal-${l.variant_item_id}`}
+                                                                                                        href={l.file || '#'}
+                                                                                                        className="btn btn-lg text-danger btn-round btn-white-shadow mb-0"
+                                                                                                    >
+                                                                                                        <i className="fas fa-play" />
+                                                                                                    </a>
+                                                                                                    <span data-bs-toggle="modal" data-bs-target={`#videoModal-${l.variant_item_id}`} className="fw-bold">
+                                                                                                    </span>
+                                                                                                    <div className="modal fade" id={`videoModal-${l.variant_item_id}`} tabIndex={-1} aria-labelledby="exampleModalLabel" aria-hidden="true">
+                                                                                                        <div className="modal-dialog">
+                                                                                                            <div className="modal-content">
+                                                                                                                <div className="modal-header">
+                                                                                                                    <h1 className="modal-title fs-5" id="exampleModalLabel">
+                                                                                                                        {l.title}
+                                                                                                                    </h1>
+                                                                                                                    <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
+                                                                                                                </div>
+                                                                                                                <div className="modal-body">
+                                                                                                                    <video
+                                                                                                                        src={l.file || ''}
+                                                                                                                        width="100%"
+                                                                                                                        className="w-100 rounded-3"
+                                                                                                                        height="240"
+                                                                                                                        controls
+                                                                                                                    />
+                                                                                                                </div>
+                                                                                                                <div className="modal-footer">
+                                                                                                                    <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">
+                                                                                                                        Close
+                                                                                                                    </button>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            <i className="fas fa-lock me-0" />
+                                                                                        )}
                                                                                             <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light w-100px w-sm-200px w-md-400px">{l.title}</span>
                                                                                         </div>
-                                                                                        <p className="mb-0">{c.content_duration}</p>
+                                                                                        {l.content_duration && (
+                                                                                            <p className="mb-0 text-muted">
+                                                                                                <strong>Duration:</strong> {l.content_duration}
+                                                                                            </p>
+                                                                                        )}
                                                                                     </div>
                                                                                     <hr />
                                                                                 </>
