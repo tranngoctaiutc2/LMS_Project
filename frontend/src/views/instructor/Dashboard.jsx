@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import moment from "moment";
-
+import _ from "lodash";
 import Sidebar from "./Partials/Sidebar";
 import Header from "./Partials/Header";
 import BaseHeader from "../partials/BaseHeader";
@@ -8,20 +8,21 @@ import BaseFooter from "../partials/BaseFooter";
 
 import useAxios from "../../utils/useAxios";
 import UserData from "../plugin/UserData";
+import { Link } from "react-router-dom";
 
 function Dashboard() {
-    const [stats, setStats] = useState([]);
+    const [stats, setStats] = useState({});
     const [courses, setCourses] = useState([]);
+    const [originalCourses, setOriginalCourses] = useState([]);
 
     const fetchCourseData = () => {
         useAxios.get(`teacher/summary/${UserData()?.teacher_id}/`).then((res) => {
-            console.log(res.data[0]);
             setStats(res.data[0]);
         });
 
         useAxios.get(`teacher/course-lists/${UserData()?.teacher_id}/`).then((res) => {
-            console.log(res.data);
             setCourses(res.data);
+            setOriginalCourses(res.data);
         });
     };
 
@@ -29,17 +30,23 @@ function Dashboard() {
         fetchCourseData();
     }, []);
 
+    const debouncedSearch = useCallback(
+        _.debounce((query) => {
+            if (!query.trim()) {
+                setCourses(originalCourses);
+                return;
+            }
+            const filtered = originalCourses.filter((c) =>
+                c?.title?.toLowerCase().includes(query)
+            );
+            setCourses(filtered);
+        }, 300),
+        [originalCourses]
+    );
+
     const handleSearch = (event) => {
         const query = event.target.value.toLowerCase();
-        console.log(query);
-        if (query === "") {
-            fetchCourseData();
-        } else {
-            const filtered = courses.filter((c) => {
-                return c.title.toLowerCase().includes(query);
-            });
-            setCourses(filtered);
-        }
+        debouncedSearch(query);
     };
 
     return (
@@ -48,76 +55,61 @@ function Dashboard() {
 
             <section className="pt-5 pb-5">
                 <div className="container">
-                    {/* Header Here */}
                     <Header />
                     <div className="row mt-0 mt-md-4">
-                        {/* Sidebar Here */}
                         <Sidebar />
                         <div className="col-lg-9 col-md-8 col-12">
                             <div className="row mb-4">
                                 <h4 className="mb-0 mb-4">
-                                    {" "}
-                                    <i className="bi bi-grid-fill"></i> Dashboard
+                                    <i className="bi bi-grid-fill text-primary"></i> Dashboard
                                 </h4>
-                                {/* Counter item */}
 
-                                <div className="col-sm-6 col-lg-4 mb-3 mb-lg-0">
-                                    <div className="d-flex justify-content-center align-items-center p-4 bg-warning bg-opacity-10 rounded-3">
-                                        <span className="display-6 lh-1 text-orange mb-0">
-                                            <i className="fas fa-tv fa-fw text-warning" />
-                                        </span>
+                                {/* Stats */}
+                                <div className="col-sm-6 col-lg-4 mb-3">
+                                    <div className="d-flex align-items-center p-4 bg-warning bg-opacity-10 rounded-3">
+                                        <i className="fas fa-tv fa-fw text-warning display-6" />
                                         <div className="ms-4">
-                                            <div className="d-flex">
-                                                <h5 className="purecounter mb-0 fw-bold">{stats.total_courses}</h5>
-                                            </div>
+                                            <h5 className="fw-bold mb-0">{stats.total_courses}</h5>
                                             <p className="mb-0 h6 fw-light">Total Courses</p>
                                         </div>
                                     </div>
                                 </div>
-                                {/* Counter item */}
-                                <div className="col-sm-6 col-lg-4 mb-3 mb-lg-0">
-                                    <div className="d-flex justify-content-center align-items-center p-4 bg-danger bg-opacity-10 rounded-3">
-                                        <span className="display-6 lh-1 text-purple mb-0">
-                                            <i className="fas fa-graduation-cap text-danger fa-fw" />
-                                        </span>
+                                <div className="col-sm-6 col-lg-4 mb-3">
+                                    <div className="d-flex align-items-center p-4 bg-danger bg-opacity-10 rounded-3">
+                                        <i className="fas fa-graduation-cap text-danger display-6" />
                                         <div className="ms-4">
-                                            <div className="d-flex">
-                                                <h5 className="purecounter mb-0 fw-bold">{stats.total_students}</h5>
-                                            </div>
+                                            <h5 className="fw-bold mb-0">{stats.total_students}</h5>
                                             <p className="mb-0 h6 fw-light">Total Students</p>
                                         </div>
                                     </div>
                                 </div>
-                                {/* Counter item */}
-                                <div className="col-sm-6 col-lg-4 mb-3 mb-lg-0">
-                                    <div className="d-flex justify-content-center align-items-center p-4 bg-success bg-opacity-10 rounded-3">
-                                        <span className="display-6 lh-1 text-success mb-0">
-                                            <i className="fas fa-dollar-sign fa-fw" />
-                                        </span>
+                                <div className="col-sm-6 col-lg-4 mb-3">
+                                    <div className="d-flex align-items-center p-4 bg-success bg-opacity-10 rounded-3">
+                                        <i className="fas fa-dollar-sign text-success display-6" />
                                         <div className="ms-4">
-                                            <div className="d-flex">
-                                                <h5 className="purecounter mb-0 fw-bold">${stats.total_revenue?.toFixed(2)}</h5>
-                                            </div>
+                                            <h5 className="fw-bold mb-0">${stats.total_revenue?.toFixed(2)}</h5>
                                             <p className="mb-0 h6 fw-light">Total Revenue</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
+                            {/* Courses */}
                             <div className="card mb-4">
                                 <div className="card-header">
                                     <h3 className="mb-0">Courses</h3>
-                                    <span>Manage your courses from here, earch, view, edit or delete courses.</span>
+                                    <span>Manage your courses: search, view, edit or delete.</span>
                                 </div>
                                 <div className="card-body">
-                                    <form className="row gx-3">
-                                        <div className="col-lg-12 col-md-12 col-12 mb-lg-0 mb-2">
-                                            <input type="search" className="form-control" placeholder="Search Your Courses" onChange={handleSearch} />
-                                        </div>
-                                    </form>
+                                    <input
+                                        type="search"
+                                        className="form-control"
+                                        placeholder="Search your courses..."
+                                        onChange={handleSearch}
+                                    />
                                 </div>
                                 <div className="table-responsive overflow-y-hidden">
-                                    <table className="table mb-0 text-nowrap table-hover table-centered text-nowrap">
+                                    <table className="table table-hover text-nowrap">
                                         <thead className="table-light">
                                             <tr>
                                                 <th>Courses</th>
@@ -126,78 +118,41 @@ function Dashboard() {
                                                 <th>Status</th>
                                                 <th>Date Created</th>
                                                 <th>Action</th>
-                                                <th />
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {courses?.map((c, index) => (
-                                                <tr>
+                                                <tr key={index}>
                                                     <td>
                                                         <div className="d-flex align-items-center">
-                                                            <div>
-                                                                <a href="#">
-                                                                    <img
-                                                                        src={c.image}
-                                                                        alt="course"
-                                                                        className="rounded img-4by3-lg"
-                                                                        style={{
-                                                                            width: "100px",
-                                                                            height: "70px",
-                                                                            borderRadius: "50%",
-                                                                            objectFit: "cover",
-                                                                        }}
-                                                                    />
-                                                                </a>
-                                                            </div>
+                                                            <img
+                                                                src={c.image}
+                                                                alt="course"
+                                                                style={{
+                                                                    width: "100px",
+                                                                    height: "70px",
+                                                                    borderRadius: "10px",
+                                                                    objectFit: "cover",
+                                                                }}
+                                                            />
                                                             <div className="ms-3">
-                                                                <h4 className="mb-1 h6">
-                                                                    <a href="#" className="text-inherit text-decoration-none text-dark">
-                                                                        {c.title}
-                                                                    </a>
-                                                                </h4>
-                                                                <ul className="list-inline fs-6 mb-0">
-                                                                    <li className="list-inline-item">
-                                                                        <small>
-                                                                            <i className="fas fa-user"></i>
-                                                                            <span className="ms-1">{c.language}</span>
-                                                                        </small>
-                                                                    </li>
-                                                                    <li className="list-inline-item">
-                                                                        <small>
-                                                                            <i className="bi bi-reception-4"></i>
-                                                                            <span className="ms-1">{c.level}</span>
-                                                                        </small>
-                                                                    </li>
-                                                                    <li className="list-inline-item">
-                                                                        <small>
-                                                                            <i className="fas fa-dollar-sign"></i>
-                                                                            <span>{c.price}</span>
-                                                                        </small>
-                                                                    </li>
-                                                                </ul>
+                                                                <h6 className="mb-1">{c.title}</h6>
+                                                                <small className="text-muted">{c.language}</small>
                                                             </div>
                                                         </div>
                                                     </td>
+                                                    <td>{c.students?.length}</td>
+                                                    <td><span className="badge bg-success">{c.level}</span></td>
+                                                    <td><span className="badge bg-warning text-dark">{c.teacher_course_status}</span></td>
+                                                    <td>{moment(c.date).format("DD MMM, YYYY")}</td>
                                                     <td>
-                                                        <p className="mt-3">{c.students?.length}</p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mt-3 badge bg-success">{c.level}</p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mt-3 badge bg-warning text-dark">Intermediate</p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mt-3">{moment(c.date).format("DD MMM, YYYY")}</p>
-                                                    </td>
-                                                    <td>
-                                                        <button className="btn btn-primary btn-sm mt-3 me-1">
+                                                        <Link to={`/instructor/edit-course/${c.course_id}/`} className="btn btn-sm btn-primary me-1">
                                                             <i className="fas fa-edit"></i>
-                                                        </button>
-                                                        <button className="btn btn-danger btn-sm mt-3 me-1">
+                                                        </Link>
+                                                        <button className="btn btn-sm btn-danger me-1">
                                                             <i className="fas fa-trash"></i>
                                                         </button>
-                                                        <button className="btn btn-secondary btn-sm mt-3 me-1">
+                                                        <button className="btn btn-sm btn-secondary">
                                                             <i className="fas fa-eye"></i>
                                                         </button>
                                                     </td>
@@ -207,6 +162,7 @@ function Dashboard() {
                                     </table>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 </div>

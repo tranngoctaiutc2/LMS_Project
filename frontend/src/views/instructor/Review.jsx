@@ -9,7 +9,6 @@ import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 
 import useAxios from "../../utils/useAxios";
-import UserData from "../plugin/UserData";
 import { teacherId } from "../../utils/constants";
 import Toast from "../plugin/Toast";
 
@@ -17,13 +16,22 @@ function Review() {
     const [reviews, setReviews] = useState([]);
     const [reply, setReply] = useState("");
     const [filteredReviews, setFilteredReview] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    const fetchReviewsData = () => {
-        useAxios.get(`teacher/review-lists/${teacherId}/`).then((res) => {
+    const fetchReviewsData = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await useAxios.get(`teacher/review-lists/${teacherId}/`);
             console.log(res.data);
             setReviews(res.data);
             setFilteredReview(res.data);
-        });
+        } catch (err) {
+            setError(err.message || "Failed to load reviews.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -47,6 +55,11 @@ function Review() {
                 });
         } catch (error) {
             console.log(error);
+            Toast().fire({
+                icon: "error",
+                title: "Failed to send reply.",
+                text: error.message || "Something went wrong.",
+            });
         }
     };
 
@@ -58,7 +71,6 @@ function Review() {
         } else {
             sortedReview.sort((a, b) => new Date(a.date) - new Date(b.date));
         }
-
         setFilteredReview(sortedReview);
     };
 
@@ -66,7 +78,7 @@ function Review() {
         const rating = parseInt(e.target.value);
         console.log(rating);
         if (rating === 0) {
-            fetchReviewsData();
+            setFilteredReview(reviews);
         } else {
             const filtered = reviews.filter((review) => review.rating === rating);
             setFilteredReview(filtered);
@@ -76,140 +88,194 @@ function Review() {
     const handleFilterByCourse = (e) => {
         const query = e.target.value.toLowerCase();
         if (query === "") {
-            fetchReviewsData();
+            setFilteredReview(reviews);
         } else {
-            const filtered = reviews.filter((review) => {
-                return review.course.title.toLowerCase().includes(query);
-            });
+            const filtered = reviews.filter((review) =>
+                review.course.title.toLowerCase().includes(query)
+            );
             setFilteredReview(filtered);
         }
     };
+
+    if (loading) {
+        return (
+            <>
+                <BaseHeader />
+                <section className="pt-5 pb-5 bg-light">
+                    <div className="container">
+                        <Header />
+                        <div className="row mt-0 mt-md-4">
+                            <Sidebar />
+                            <div className="col-lg-9 col-md-8 col-12">
+                                <div className="card border-0 shadow-sm rounded-4">
+                                    <div className="card-body p-5 text-center">
+                                        <div className="spinner-border text-primary" role="status">
+                                            <span className="visually-hidden">Loading...</span>
+                                        </div>
+                                        <p className="mt-3 text-muted">Loading reviews...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <BaseFooter />
+            </>
+        );
+    }
+
+    if (error) {
+        return (
+            <>
+                <BaseHeader />
+                <section className="pt-5 pb-5 bg-light">
+                    <div className="container">
+                        <Header />
+                        <div className="row mt-0 mt-md-4">
+                            <Sidebar />
+                            <div className="col-lg-9 col-md-8 col-12">
+                                <div className="card border-0 shadow-sm rounded-4">
+                                    <div className="card-body p-5 text-center text-danger">
+                                        <i className="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                                        <p className="h5">Error loading reviews</p>
+                                        <p className="text-muted">{error}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <BaseFooter />
+            </>
+        );
+    }
 
     return (
         <>
             <BaseHeader />
 
-            <section className="pt-5 pb-5">
+            <section className="pt-5 pb-5 bg-light">
                 <div className="container">
-                    {/* Header Here */}
                     <Header />
                     <div className="row mt-0 mt-md-4">
-                        {/* Sidebar Here */}
                         <Sidebar />
                         <div className="col-lg-9 col-md-8 col-12">
-                            {/* Card */}
-                            <div className="card mb-4">
-                                {/* Card header */}
-                                <div className="card-header d-lg-flex align-items-center justify-content-between">
-                                    <div className="mb-3 mb-lg-0">
-                                        <h3 className="mb-0">Reviews</h3>
-                                        <span>You have full control to manage your own account setting.</span>
+                            <div className="card border-0 shadow-sm rounded-4">
+                                <div className="card-header bg-white border-bottom rounded-top-4 p-4">
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <h4 className="mb-0 fw-bold text-dark"><i className="fas fa-star text-warning"></i> Manage Reviews</h4>
                                     </div>
-                                </div>
-                                {/* Card body */}
-                                <div className="card-body">
-                                    {/* Form */}
-                                    <form className="row mb-4 gx-2">
-                                        <div className="col-xl-7 col-lg-6 col-md-4 col-12 mb-2 mb-lg-0">
-                                            <input type="text" className="form-control" placeholder="Search By Couse" onChange={handleFilterByCourse} />
+                                    <form className="row mt-3 gx-2">
+                                        <div className="col-xl-7 col-lg-6 col-md-6 col-12 mb-2 mb-md-0">
+                                            <input
+                                                type="text"
+                                                className="form-control form-control-lg bg-light border-0 shadow-sm"
+                                                placeholder="🔍 Search by Course"
+                                                onChange={handleFilterByCourse}
+                                            />
                                         </div>
-                                        <div className="col-xl-2 col-lg-2 col-md-4 col-12 mb-2 mb-lg-0">
-                                            {/* Custom select */}
-                                            <select className="form-select" onChange={handleSortByRatingChange}>
-                                                <option value={0}>Rating</option>
-                                                <option value={1}>1</option>
-                                                <option value={2}>2</option>
-                                                <option value={3}>3</option>
-                                                <option value={4}>4</option>
-                                                <option value={5}>5</option>
+                                        <div className="col-xl-2 col-lg-2 col-md-3 col-6 mb-2 mb-md-0">
+                                            <select className="form-select form-select-lg bg-light border-0 shadow-sm" onChange={handleSortByRatingChange}>
+                                                <option value={0}>⭐ Rating</option>
+                                                <option value={1}>1 Star</option>
+                                                <option value={2}>2 Stars</option>
+                                                <option value={3}>3 Stars</option>
+                                                <option value={4}>4 Stars</option>
+                                                <option value={5}>5 Stars</option>
                                             </select>
                                         </div>
-                                        <div className="col-xl-3 col-lg-3 col-md-4 col-12 mb-2 mb-lg-0">
-                                            {/* Custom select */}
-                                            <select className="form-select" onChange={handleSortByDate}>
-                                                <option value="">Sort by</option>
-                                                <option value="Newest">Newest</option>
-                                                <option value="Oldest">Oldest</option>
+                                        <div className="col-xl-3 col-lg-3 col-md-3 col-6">
+                                            <select className="form-select form-select-lg bg-light border-0 shadow-sm" onChange={handleSortByDate}>
+                                                <option value=""><i className="fas fa-sort-amount-down me-1"></i> Sort By</option>
+                                                <option value="Newest"><i className="fas fa-arrow-down me-1"></i> Newest First</option>
+                                                <option value="Oldest"><i className="fas fa-arrow-up me-1"></i> Oldest First</option>
                                             </select>
                                         </div>
                                     </form>
-                                    {/* List group */}
-                                    <ul className="list-group list-group-flush">
-                                        {/* List group item */}
-                                        {filteredReviews?.map((r, index) => (
-                                            <li className="list-group-item p-4 shadow rounded-3 mb-4">
-                                                <div className="d-flex">
+                                </div>
+
+                                <ul className="list-group list-group-flush mt-4">
+                                    {filteredReviews?.map((r, index) => (
+                                        <li key={r.id} className="list-group-item p-4 shadow-sm rounded-4 mb-3 bg-white border-0">
+                                            <div className="d-flex align-items-start">
+                                                <div className="flex-shrink-0">
                                                     <img
                                                         src={r.profile.image}
                                                         alt="avatar"
-                                                        className="rounded-circle avatar-lg"
-                                                        style={{
-                                                            width: "70px",
-                                                            height: "70px",
-                                                            borderRadius: "50%",
-                                                            objectFit: "cover",
-                                                        }}
+                                                        className="rounded-circle avatar-md"
+                                                        style={{ width: "50px", height: "50px", objectFit: "cover" }}
+                                                        onError={(e) => { e.target.onerror = null; e.target.src = '/default-user.png'; }}
                                                     />
-                                                    <div className="ms-3 mt-2">
-                                                        <div className="d-flex align-items-center justify-content-between">
-                                                            <div>
-                                                                <h4 className="mb-0">{r.profile.full_name}</h4>
-                                                                <span>{moment(r.date).format("DD MMM, YYYY")}</span>
-                                                            </div>
-                                                            <div>
-                                                                <a href="#" data-bs-toggle="tooltip" data-placement="top" title="Report Abuse">
-                                                                    <i className="fe fe-flag" />
-                                                                </a>
-                                                            </div>
+                                                </div>
+                                                <div className="ms-3 flex-grow-1">
+                                                    <div className="d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <h6 className="mb-1 fw-bold text-dark">{r.profile.full_name}</h6>
+                                                            <p className="text-muted small mb-0">{moment(r.date).format("DD MMM, YYYY")}</p>
                                                         </div>
-                                                        <div className="mt-2">
-                                                            <span className="fs-6 me-1 align-top">
-                                                                <Rater total={5} rating={r.rating || 0} />
-                                                            </span>
-                                                            <span className="me-1">for</span>
-                                                            <span className="h5">{r.course?.title}</span>
+                                                        <a href="#" className="text-muted" data-bs-toggle="tooltip" data-placement="top" title="Report Abuse">
+                                                            <i className="fas fa-flag"></i>
+                                                        </a>
+                                                    </div>
+                                                    <div className="mt-2">
+                                                        <Rater total={5} rating={r.rating || 0} interactive={false} />
+                                                        <span className="ms-2 text-muted small">for</span>
+                                                        <span className="fw-bold text-dark ms-1">{r.course?.title}</span>
+                                                        <p className="mt-2 mb-1 text-dark">{r.review}</p>
+                                                        {r.reply && (
+                                                            <div className="mt-2 p-3 bg-light rounded-3 border">
+                                                                <span className="fw-bold text-primary"><i className="fas fa-reply me-2"></i>Your Response:</span>
+                                                                <p className="mb-0 text-dark">{r.reply}</p>
+                                                            </div>
+                                                        )}
+                                                        {!r.reply && (
                                                             <p className="mt-2">
-                                                                <span className="fw-bold me-2">
-                                                                    Review <i className="fas fa-arrow-right"></i>
-                                                                </span>
-                                                                {r.review}
-                                                            </p>
-                                                            <p className="mt-2">
-                                                                <span className="fw-bold me-2">
-                                                                    Response <i className="fas fa-arrow-right"></i>
-                                                                </span>
-                                                                {r.reply || "No Reply"}
-                                                            </p>
-                                                            <p>
-                                                                <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target={`#collapse${r.id}`} aria-expanded="false" aria-controls={`collapse${r.id}`}>
-                                                                    Send Response
+                                                                <button
+                                                                    className="btn btn-sm btn-outline-secondary rounded-pill"
+                                                                    type="button"
+                                                                    data-bs-toggle="collapse"
+                                                                    data-bs-target={`#collapse${r.id}`}
+                                                                    aria-expanded="false"
+                                                                    aria-controls={`collapse${r.id}`}
+                                                                >
+                                                                    <i className="fas fa-reply me-1"></i> Reply
                                                                 </button>
                                                             </p>
-                                                            <div class="collapse" id={`collapse${r.id}`}>
-                                                                <div class="card card-body">
-                                                                    <div>
-                                                                        <div class="mb-3">
-                                                                            <label for="exampleInputEmail1" class="form-label">
-                                                                                Write Response
-                                                                            </label>
-                                                                            <textarea name="" id="" cols="30" className="form-control" rows="4" value={reply} onChange={(e) => setReply(e.target.value)}></textarea>
-                                                                        </div>
-
-                                                                        <button type="submit" class="btn btn-primary" onClick={() => handleSubmitReply(r.id)}>
-                                                                            Send Response <i className="fas fa-paper-plane"> </i>
-                                                                        </button>
-                                                                    </div>
+                                                        )}
+                                                        <div className="collapse mt-3" id={`collapse${r.id}`}>
+                                                            <div className="card card-body border-0 shadow-sm">
+                                                                <div className="mb-3">
+                                                                    <label htmlFor={`replyText${r.id}`} className="form-label fw-bold">Write your response:</label>
+                                                                    <textarea
+                                                                        className="form-control form-control-sm"
+                                                                        id={`replyText${r.id}`}
+                                                                        rows="3"
+                                                                        value={reply}
+                                                                        onChange={(e) => setReply(e.target.value)}
+                                                                    ></textarea>
                                                                 </div>
+                                                                <button
+                                                                    type="submit"
+                                                                    className="btn btn-sm btn-primary rounded-pill"
+                                                                    onClick={() => handleSubmitReply(r.id)}
+                                                                >
+                                                                    <i className="fas fa-paper-plane me-1"></i> Send Reply
+                                                                </button>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </li>
-                                        ))}
-
-                                        {filteredReviews?.length < 1 && <p className="mt-4 p-3">No reviews</p>}
-                                    </ul>
-                                </div>
+                                            </div>
+                                        </li>
+                                    ))}
+                                    {filteredReviews?.length < 1 && !loading && (
+                                        <li className="list-group-item p-4 bg-white border-0 shadow-sm rounded-4 text-center text-muted">
+                                            <i className="fas fa-comment-slash fa-2x mb-3"></i>
+                                            <p className="h5">No reviews yet</p>
+                                            <p className="small">Student reviews for your courses will appear here.</p>
+                                        </li>
+                                    )}
+                                </ul>
                             </div>
                         </div>
                     </div>

@@ -1,40 +1,54 @@
 import React, { useContext } from "react";
 import { ProfileContext } from "../../plugin/Context";
+import { Link } from 'react-router-dom'
+import moment from "moment";
 
 function Header() {
   const [profile, setProfile] = useContext(ProfileContext);
 
   return (
     <div className="row align-items-center">
-      <div className="col-xl-12 col-lg-12 col-md-12 col-12">
-        <div className="card px-4 pt-2 pb-4 shadow-sm rounded-3">
-          <div className="d-flex align-items-end justify-content-between">
-            <div className="d-flex align-items-center">
-              <div className="me-2 position-relative d-flex justify-content-end align-items-end mt-n5">
-                <img
-                  src={profile.image}
-                  className="avatar-xl rounded-circle border border-4 border-white"
-                  alt="avatar"
-                  style={{
-                    width: "70px",
-                    height: "70px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                  }}
-                />
-              </div>
-              <div className="lh-1">
-                <h2 className="mb-0"> {profile.full_name}</h2>
-                <p className="mb-0 d-block">{profile.about}</p>
+      <div className="col-12">
+        <div className="card px-4 pt-4 pb-4 shadow rounded-4 bg-white border-0">
+          <div className="d-flex justify-content-between align-items-center flex-wrap">
+            {/* Profile Info */}
+            <div className="d-flex align-items-center mb-3 mb-md-0">
+              {profile.image && (
+                <div className="me-3 position-relative">
+                  <img
+                    src={profile.image}
+                    alt="Profile"
+                    className="rounded-circle shadow border border-3 border-white"
+                    style={{
+                      width: "80px",
+                      height: "80px",
+                      objectFit: "cover",
+                    }}
+                  />
+                </div>
+              )}
+              <div>
+                <h4 className="fw-bold text-primary mb-1">{profile.full_name}</h4>
+                <p className="text-muted mb-1">
+                  {profile.about || "No bio provided."}
+                </p>
+                <small className="text-muted">
+                  <i className="fas fa-globe me-1 text-secondary"></i>
+                  {profile.country || "Unknown"} &nbsp;|&nbsp;
+                  <i className="fas fa-calendar-alt me-1 text-secondary"></i>
+                  {moment(profile.date).format("MMM YYYY")}
+                </small>
               </div>
             </div>
+
+            {/* Action */}
             <div>
-              <a
-                href="profile-edit.html"
-                className="btn btn-primary btn-sm d-none d-md-block"
+              <Link
+                to="/instructor/profile/"
+                className="btn btn-outline-primary btn-sm px-4 py-2 rounded-pill"
               >
-                Account Setting <i className="fas fa-gear fa-spin"></i>
-              </a>
+                <i className="fas fa-gear fa-spin me-2"></i> Account Settings
+              </Link>
             </div>
           </div>
         </div>
@@ -42,5 +56,5 @@ function Header() {
     </div>
   );
 }
-
 export default Header;
+

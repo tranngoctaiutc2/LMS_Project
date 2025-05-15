@@ -295,132 +295,181 @@ function Index() {
                 </div>
             </section>
 
-            <section className="mb-5">
-                <div className="container mb-lg-8 ">
-                    <div className="row mb-5 mt-3">
-                        {/* col */}
-                        <div className="col-12">
-                            <div className="mb-6">
-                                <h2 className="mb-1 h1">🔥Most Popular Courses</h2>
-                                <p>These are the most popular courses among Geeks Courses learners worldwide in year 2022</p>
-                            </div>
+            <section className="py-6 bg-light">
+                <div className="container">
+                    {/* Header */}
+                    <div className="row mb-5">
+                    <div className="col-12 text-center text-md-start">
+                        <div className="mb-4">
+                        <h2 className="display-5 fw-bold mb-3">🔥 Most Popular Courses</h2>
+                        <p className="lead text-muted">
+                            Discover the top-rated courses among our learners worldwide
+                        </p>
                         </div>
                     </div>
-                    <div className="row">
-                        <div className="col-md-12">
-                            <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
-                                {currentItems?.map((c, index) => (
-                                    <div className="col">
-                                        {/* Card */}
-                                        <div className="card card-hover">
-                                            <Link to={`/course-detail/${c.slug}/`}>
-                                                <img
-                                                    src={c.image}
-                                                    alt="course"
-                                                    className="card-img-top"
-                                                    style={{
-                                                        width: "100%",
-                                                        height: "200px",
-                                                        objectFit: "cover",
-                                                    }}
-                                                />
-                                            </Link>
-                                            {/* Card Body */}
-                                            <div className="card-body">
-                                                <div className="d-flex justify-content-between align-items-center mb-3">
-                                                    <div>
-                                                        <span className="badge bg-info">{c.level}</span>
-                                                        <span className="badge bg-success ms-2">{c.language}</span>
-                                                    </div>
-                                                    <a onClick={() => addToWishlist(c.id)} className="fs-5">
-                                                        {wishlist.includes(c.id) ? (
-                                                            <i className="fas fa-heart text-danger align-middle" />
-                                                        ) : (
-                                                            <i className="far fa-heart text-secondary align-middle" />
-                                                        )}
-                                                    </a>
-                                                </div>
-                                                <h4 className="mb-2 text-truncate-line-2 ">
-                                                    <Link to={`/course-detail/${c.slug}/`} className="text-inherit text-decoration-none text-dark fs-5">
-                                                        {c.title}
-                                                    </Link>
-                                                </h4>
-                                                <small>By: {c.teacher.full_name}</small> <br />
-                                                <small>
-                                                    {c.students?.length} Student
-                                                    {c.students?.length > 1 && "s"}
-                                                </small>{" "}
-                                                <br />
-                                                <div className="lh-1 mt-3 d-flex">
-                                                    <span className="align-text-top">
-                                                        <span className="fs-6">
-                                                            <Rater total={5} rating={c.average_rating || 0} />
-                                                        </span>
-                                                    </span>
-                                                    <span className="text-warning">4.5</span>
-                                                    <span className="fs-6 ms-2">({c.reviews?.length} Reviews)</span>
-                                                </div>
-                                            </div>
-                                            {/* Card Footer */}
-                                            <div className="card-footer">
-                                                <div className="row align-items-center g-0">
-                                                    <div className="col">
-                                                        <h5 className="mb-0">${c.price}</h5>
-                                                    </div>
-                                                    <div className="col-auto">
-                                                        <button type="button" onClick={() => {
-                                                            if (!userId) {
-                                                            Toast().fire({
-                                                                icon: "warning",
-                                                                title: "Login to add to cart!!",
-                                                            });
-                                                            return;
-                                                            }
-                                                            addToCart(c.id, userId, c.price, country, cartId);}} className="text-inherit text-decoration-none btn btn-primary me-2">
-                                                            <i className="fas fa-shopping-cart text-primary text-white" />
-                                                        </button>
-                                                        <Link to={`/course-detail/${c.slug}/`} className="text-inherit text-decoration-none btn btn-primary">
-                                                            Enroll Now <i className="fas fa-arrow-right text-primary align-middle me-2 text-white" />
-                                                        </Link>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            <nav className="d-flex mt-5">
-                                <ul className="pagination">
-                                    <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
-                                        <button className="page-link me-1" onClick={() => setCurrentPage(currentPage - 1)}>
-                                            <i className="ci-arrow-left me-2" />
-                                            Previous
-                                        </button>
-                                    </li>
-                                </ul>
-                                <ul className="pagination">
-                                    {pageNumbers.map((number) => (
-                                        <li key={number} className={`page-item ${currentPage === number ? "active" : ""}`}>
-                                            <button className="page-link" onClick={() => setCurrentPage(number)}>
-                                                {number}
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
+                    </div>
 
-                                <ul className="pagination">
-                                    <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
-                                        <button className="page-link ms-1" onClick={() => setCurrentPage(currentPage + 1)}>
-                                            Next
-                                            <i className="ci-arrow-right ms-3" />
-                                        </button>
-                                    </li>
-                                </ul>
-                            </nav>
+                    {/* Courses Grid */}
+                    <div className="row g-4">
+                    {currentItems?.map((c, index) => (
+                        <div className="col-12 col-md-6 col-lg-4 col-xl-3" key={c.id || index}>
+                        {/* Course Card */}
+                        <div className="card h-100 border-0 shadow-sm rounded-3 overflow-hidden hover-shadow transition-all">
+                            {/* Course Image */}
+                            <Link to={`/course-detail/${c.slug}/`} className="text-decoration-none">
+                            <div className="position-relative">
+                                <img
+                                src={c.image}
+                                alt={c.title}
+                                className="card-img-top"
+                                style={{ height: "180px", objectFit: "cover" }}
+                                onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = '/default-course.png';
+                                }}
+                                />
+                                {/* Wishlist Button */}
+                                <button
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    addToWishlist(c.id);
+                                }}
+                                className="btn btn-sm btn-light rounded-circle shadow-sm position-absolute top-0 end-0 m-3"
+                                aria-label={wishlist.includes(c.id) ? "Remove from wishlist" : "Add to wishlist"}
+                                >
+                                <i className={`fas fa-heart ${wishlist.includes(c.id) ? "text-danger" : "text-secondary"}`} />
+                                </button>
+                            </div>
+                            </Link>
+
+                            {/* Card Body */}
+                            <div className="card-body pb-0">
+                            {/* Badges */}
+                            <div className="d-flex gap-2 mb-3">
+                                <span className="badge bg-info bg-opacity-10 text-info">{c.level}</span>
+                                <span className="badge bg-success bg-opacity-10 text-success">{c.language}</span>
+                            </div>
+
+                            {/* Course Title */}
+                            <h5 className="card-title mb-2">
+                                <Link 
+                                to={`/course-detail/${c.slug}/`} 
+                                className="text-dark text-decoration-none"
+                                >
+                                {c.title}
+                                </Link>
+                            </h5>
+
+                            {/* Instructor */}
+                            <p className="text-muted small mb-3">
+                                By: {c.teacher?.full_name || 'Unknown Instructor'}
+                            </p>
+
+                            {/* Rating and Students */}
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                <i className="fas fa-users text-muted me-1"></i>
+                                <span className="small text-muted">
+                                    {c.students?.length || 0} Student{c.students?.length !== 1 ? 's' : ''}
+                                </span>
+                                </div>
+                                <div className="text-warning small">
+                                <Rater 
+                                    total={5} 
+                                    rating={c.average_rating || 0} 
+                                    interactive={false}
+                                />
+                                <span className="ms-1">
+                                    ({c.reviews?.length || 0} Reviews)
+                                </span>
+                                </div>
+                            </div>
+                            </div>
+
+                            {/* Card Footer */}
+                            <div className="card-footer bg-transparent border-0 pt-0 pb-3">
+                            <div className="d-flex justify-content-between align-items-center">
+                                <h5 className="mb-0 text-primary">
+                                ${c.price || '0.00'}
+                                </h5>
+                                <div>
+                                <button 
+                                    onClick={(e) => {
+                                    e.preventDefault();
+                                    if (!userId) {
+                                        Toast().fire({
+                                        icon: "warning",
+                                        title: "Please login to add to cart",
+                                        });
+                                        return;
+                                    }
+                                    addToCart(c.id, userId, c.price, country, cartId);
+                                    }}
+                                    className="btn btn-sm btn-outline-primary me-2"
+                                    aria-label="Add to cart"
+                                >
+                                    <i className="fas fa-shopping-cart"></i>
+                                </button>
+                                <Link 
+                                    to={`/course-detail/${c.slug}/`}
+                                    className="btn btn-sm btn-primary"
+                                >
+                                    Enroll Now
+                                </Link>
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                        </div>
+                    ))}
+                    </div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                    <div className="row mt-5">
+                        <div className="col-12">
+                        <nav aria-label="Page navigation">
+                            <ul className="pagination justify-content-center">
+                            <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+                                <button 
+                                className="page-link rounded-start" 
+                                onClick={() => setCurrentPage(currentPage - 1)}
+                                aria-label="Previous"
+                                >
+                                <i className="fas fa-chevron-left me-2"></i> Previous
+                                </button>
+                            </li>
+                            
+                            {pageNumbers.map((number) => (
+                                <li 
+                                key={number} 
+                                className={`page-item ${currentPage === number ? "active" : ""}`}
+                                >
+                                <button 
+                                    className="page-link" 
+                                    onClick={() => setCurrentPage(number)}
+                                >
+                                    {number}
+                                </button>
+                                </li>
+                            ))}
+                            
+                            <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
+                                <button 
+                                className="page-link rounded-end" 
+                                onClick={() => setCurrentPage(currentPage + 1)}
+                                aria-label="Next"
+                                >
+                                Next <i className="fas fa-chevron-right ms-2"></i>
+                                </button>
+                            </li>
+                            </ul>
+                        </nav>
                         </div>
                     </div>
+                    )}
                 </div>
-            </section>
+                </section>
 
             <section className="my-8 py-lg-8">
                 {/* container */}

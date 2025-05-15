@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import moment from "moment";
-
+import _ from 'lodash';
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 import Sidebar from "./Partials/Sidebar";
@@ -11,151 +11,190 @@ import UserData from "../plugin/UserData";
 
 function Courses() {
     const [courses, setCourses] = useState([]);
-    const [stats, setStats] = useState([]);
+    const [originalCourses, setOriginalCourses] = useState([]);
     const [fetching, setFetching] = useState(true);
 
-    const fetchData = () => {
+    const fetchData = useCallback(async () => {
         setFetching(true);
-
-        useAxios.get(`student/course-list/${UserData()?.user_id}/`).then((res) => {
-            console.log(res.data);
+        try {
+            const res = await useAxios.get(`student/course-list/${UserData()?.user_id}/`);
             setCourses(res.data);
+            setOriginalCourses(res.data);
+        } catch (error) {
+            console.error('Fetch error:', error);
+        } finally {
             setFetching(false);
-        });
-    };
+        }
+    }, []);
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]);
+
+    const debouncedSearch = useCallback(
+        _.debounce((query) => {
+            if (!query.trim()) {
+                setCourses(originalCourses);
+                return;
+            }
+            const filtered = originalCourses.filter((c) => 
+                c?.course?.title?.toLowerCase().includes(query)
+            );
+            setCourses(filtered);
+        }, 300),
+        [originalCourses]
+    );
 
     const handleSearch = (event) => {
-        const query = event.target.value.toLowerCase();
-        console.log(query);
-        if (query === "") {
-            fetchData();
-        } else {
-            const filtered = courses.filter((c) => {
-                return c.course.title.toLowerCase().includes(query);
-            });
-            setCourses(filtered);
-        }
+        const query = event?.target?.value?.toLowerCase() || '';
+        debouncedSearch(query);
     };
+
     return (
         <>
             <BaseHeader />
 
-            <section className="pt-5 pb-5">
+            <section className="pt-5 pb-5 bg-light">
                 <div className="container">
-                    {/* Header Here */}
                     <Header />
                     <div className="row mt-0 mt-md-4">
-                        {/* Sidebar Here */}
                         <Sidebar />
                         <div className="col-lg-9 col-md-8 col-12">
-                            <h4 className="mb-0 mb-4">
-                                {" "}
-                                <i className="fas fa-shopping-cart"></i> My Courses
+                            <h4 className="mb-3">
+                                <i className="fas fa-book text-success"></i> My Courses
                             </h4>
 
-                            {fetching === true && <p className="mt-3 p-3">Loading...</p>}
+                            <div className="card border-0 shadow-sm rounded-4">
+                                <div className="card-header bg-white border-bottom rounded-top-4 p-4">
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <h4 className="mb-0 fw-bold text-dark">📚 My Learning Journey</h4>
+                                    </div>
+                                    <form className="mt-3">
+                                        <input
+                                            type="search"
+                                            className="form-control form-control-lg bg-light border-0 shadow-sm"
+                                            placeholder="🔍 Search Courses"
+                                            onChange={handleSearch}
+                                            disabled={fetching}
+                                        />
+                                    </form>
+                                </div>
 
-                            {fetching === false && (
-                                <div className="card mb-4">
-                                    <div className="card-header">
-                                        <h3 className="mb-0">Courses</h3>
-                                        <span>Start watching courses now from your dashboard page.</span>
+                                {fetching ? (
+                                    <div className="card-body bg-white p-5 text-center">
+                                        <div className="spinner-border text-primary" role="status">
+                                            <span className="visually-hidden">Loading...</span>
+                                        </div>
+                                        <p className="mt-3 text-muted">Loading your courses...</p>
                                     </div>
-                                    <div className="card-body">
-                                        <form className="row gx-3">
-                                            <div className="col-lg-12 col-md-12 col-12 mb-lg-0 mb-2">
-                                                <input type="search" className="form-control" placeholder="Search Your Courses" onChange={handleSearch} />
-                                            </div>
-                                        </form>
-                                    </div>
-                                    <div className="table-responsive overflow-y-hidden">
-                                        <table className="table mb-0 text-nowrap table-hover table-centered text-nowrap">
-                                            <thead className="table-light">
-                                                <tr>
-                                                    <th>Courses</th>
-                                                    <th>Date Enrolled</th>
-                                                    <th>Lectures</th>
-                                                    <th>Completed</th>
-                                                    <th>Action</th>
-                                                    <th />
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {courses?.map((c, index) => (
+                                ) : (
+                                    <div className="card-body bg-white p-4">
+                                        <div className="table-responsive">
+                                            <table className="table table-hover table-borderless">
+                                                <thead className="table-light">
                                                     <tr>
-                                                        <td>
-                                                            <div className="d-flex align-items-center">
-                                                                <div>
-                                                                    <a href="#">
+                                                        <th className="ps-4">Course</th>
+                                                        <th>Enrolled</th>
+                                                        <th>Progress</th>
+                                                        <th className="text-end pe-4">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {courses?.map((c, index) => (
+                                                        <tr key={index} className="align-middle">
+                                                            <td className="ps-4">
+                                                                <div className="d-flex align-items-center">
+                                                                    <div className="flex-shrink-0">
                                                                         <img
                                                                             src={c.course.image}
-                                                                            alt="course"
-                                                                            className="rounded img-4by3-lg"
+                                                                            alt={c.course.title}
+                                                                            className="rounded-3"
                                                                             style={{
-                                                                                width: "100px",
-                                                                                height: "70px",
-                                                                                borderRadius: "50%",
-                                                                                objectFit: "cover",
+                                                                                width: "80px",
+                                                                                height: "60px",
+                                                                                objectFit: "cover"
+                                                                            }}
+                                                                            onError={(e) => {
+                                                                                e.target.onerror = null;
+                                                                                e.target.src = '/default-course.png';
                                                                             }}
                                                                         />
-                                                                    </a>
-                                                                </div>
-                                                                <div className="ms-3">
-                                                                    <h4 className="mb-1 h5">
-                                                                        <a href="#" className="text-inherit text-decoration-none text-dark">
+                                                                    </div>
+                                                                    <div className="flex-grow-1 ms-3">
+                                                                        <h6 className="mb-1 fw-bold text-dark">
                                                                             {c.course.title}
-                                                                        </a>
-                                                                    </h4>
-                                                                    <ul className="list-inline fs-6 mb-0">
-                                                                        <li className="list-inline-item">
-                                                                            <i className="fas fa-user"></i>
-                                                                            <span className="ms-1">{c.course.language}</span>
-                                                                        </li>
-                                                                        <li className="list-inline-item">
-                                                                            <i className="bi bi-reception-4"></i>
-                                                                            <span className="ms-1"> {c.course.level}</span>
-                                                                        </li>
-                                                                    </ul>
+                                                                        </h6>
+                                                                        <div className="d-flex flex-wrap gap-2 mt-1">
+                                                                            <span className="badge bg-light text-dark border">
+                                                                                <i className="fas fa-language me-1"></i>
+                                                                                {c.course.language}
+                                                                            </span>
+                                                                            <span className="badge bg-light text-dark border">
+                                                                                <i className="fas fa-chart-line me-1"></i>
+                                                                                {c.course.level}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        </td>
-                                                        <td>
-                                                            <p className="mt-3">{moment(c.date).format("D MMM, YYYY")}</p>
-                                                        </td>
-                                                        <td>
-                                                            <p className="mt-3">{c.lectures?.length}</p>
-                                                        </td>
-                                                        <td>
-                                                            <p className="mt-3">{c.completed_lesson?.length}</p>
-                                                        </td>
-                                                        <td>
-                                                            {c.completed_lesson?.length < 1 && (
-                                                                <Link to={`/student/courses/${c.enrollment_id}/`} className="btn btn-success btn-sm mt-3">
-                                                                    Start Course
-                                                                    <i className="fas fa-arrow-right ms-2"></i>
+                                                            </td>
+                                                            <td>
+                                                                <span className="text-muted">
+                                                                    {moment(c.date).format("MMM D, YYYY")}
+                                                                </span>
+                                                            </td>
+                                                            <td>
+                                                                <div className="d-flex align-items-center">
+                                                                    <div className="progress flex-grow-1" style={{ height: "8px" }}>
+                                                                        <div
+                                                                            className="progress-bar bg-success"
+                                                                            role="progressbar"
+                                                                            style={{
+                                                                                width: `${(c.completed_lesson?.length / c.lectures?.length) * 100 || 0}%`
+                                                                            }}
+                                                                            aria-valuenow={(c.completed_lesson?.length / c.lectures?.length) * 100 || 0}
+                                                                            aria-valuemin="0"
+                                                                            aria-valuemax="100"
+                                                                        ></div>
+                                                                    </div>
+                                                                    <small className="ms-2 text-muted">
+                                                                        {Math.round((c.completed_lesson?.length / c.lectures?.length) * 100) || 0}%
+                                                                    </small>
+                                                                </div>
+                                                            </td>
+                                                            <td className="text-end pe-4">
+                                                                <Link
+                                                                    to={`/student/courses/${c.enrollment_id}/`}
+                                                                    className={`btn btn-sm ${c.completed_lesson?.length > 0 ? 'btn-primary' : 'btn-success'}`}
+                                                                >
+                                                                    {c.completed_lesson?.length > 0 ? (
+                                                                        <>
+                                                                            Continue <i className="fas fa-arrow-right ms-1"></i>
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            Start <i className="fas fa-play ms-1"></i>
+                                                                        </>
+                                                                    )}
                                                                 </Link>
-                                                            )}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
 
-                                                            {c.completed_lesson?.length > 0 && (
-                                                                <Link to={`/student/courses/${c.enrollment_id}/`} className="btn btn-primary btn-sm mt-3">
-                                                                    Continue Course
-                                                                    <i className="fas fa-arrow-right ms-2"></i>
-                                                                </Link>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-
-                                                {courses?.length < 1 && <p className="mt-4 p-4">No courses found</p>}
-                                            </tbody>
-                                        </table>
+                                                    {courses?.length === 0 && (
+                                                        <tr>
+                                                            <td colSpan="4" className="text-center p-5 text-muted">
+                                                                <i className="fas fa-book-open fa-2x mb-3"></i>
+                                                                <p className="h5">No courses found</p>
+                                                                <p className="small">When you enroll in courses, they will appear here</p>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

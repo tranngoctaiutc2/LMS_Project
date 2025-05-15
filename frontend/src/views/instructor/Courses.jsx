@@ -1,162 +1,179 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import moment from "moment";
-
-import Sidebar from "./Partials/Sidebar";
-import Header from "./Partials/Header";
+import _ from 'lodash';
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
-
+import Sidebar from "./Partials/Sidebar";
+import Header from "./Partials/Header";
 import useAxios from "../../utils/useAxios";
 import UserData from "../plugin/UserData";
-import { Link } from "react-router-dom";
 
 function Courses() {
     const [courses, setCourses] = useState([]);
+    const [originalCourses, setOriginalCourses] = useState([]);
+    const [fetching, setFetching] = useState(true);
 
-    const fetchCourseData = () => {
-        useAxios.get(`teacher/course-lists/${UserData()?.teacher_id}/`).then((res) => {
-            console.log(res.data);
+    const fetchData = useCallback(async () => {
+        setFetching(true);
+        try {
+            const res = await useAxios.get(`teacher/course-lists/${UserData()?.teacher_id}/`);
             setCourses(res.data);
-        });
-    };
-
-    useEffect(() => {
-        fetchCourseData();
+            setOriginalCourses(res.data);
+        } catch (error) {
+            console.error('Fetch error:', error);
+        } finally {
+            setFetching(false);
+        }
     }, []);
 
-    const handleSearch = (event) => {
-        const query = event.target.value.toLowerCase();
-        console.log(query);
-        if (query === "") {
-            fetchCourseData();
-        } else {
-            const filtered = courses.filter((c) => {
-                return c.title.toLowerCase().includes(query);
-            });
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    const debouncedSearch = useCallback(
+        _.debounce((query) => {
+            if (!query.trim()) {
+                setCourses(originalCourses);
+                return;
+            }
+            const filtered = originalCourses.filter((c) =>
+                c?.title?.toLowerCase().includes(query)
+            );
             setCourses(filtered);
-        }
+        }, 300),
+        [originalCourses]
+    );
+
+    const handleSearch = (event) => {
+        const query = event?.target?.value?.toLowerCase() || '';
+        debouncedSearch(query);
     };
 
     return (
         <>
             <BaseHeader />
 
-            <section className="pt-5 pb-5">
+            <section className="pt-5 pb-5 bg-light">
                 <div className="container">
-                    {/* Header Here */}
                     <Header />
                     <div className="row mt-0 mt-md-4">
-                        {/* Sidebar Here */}
                         <Sidebar />
                         <div className="col-lg-9 col-md-8 col-12">
-                            <div className="row mb-4">
-                                <h4 className="mb-0 mb-2 mt-4">
-                                    {" "}
-                                    <i className="bi bi-grid-fill"></i> Courses
-                                </h4>
-                            </div>
-                            <div className="card mb-4">
-                                <div className="card-header">
-                                    <h3 className="mb-0">Courses</h3>
-                                    <span>Manage your courses from here, earch, view, edit or delete courses.</span>
-                                </div>
-                                <div className="card-body">
-                                    <form className="row gx-3">
-                                        <div className="col-lg-12 col-md-12 col-12 mb-lg-0 mb-2">
-                                            <input type="search" className="form-control" placeholder="Search Your Courses" onChange={handleSearch} />
-                                        </div>
+                            <h4 className="mb-3">
+                                <i className="fas fa-graduation-cap text-primary"></i> Manage Courses
+                            </h4>
+
+                            <div className="card border-0 shadow-sm rounded-4">
+                                <div className="card-header bg-white border-bottom rounded-top-4 p-4">
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <h4 className="mb-0 fw-bold text-dark">⚙️ Course Management</h4>
+                                    </div>
+                                    <form className="mt-3">
+                                        <input
+                                            type="search"
+                                            className="form-control form-control-lg bg-light border-0 shadow-sm"
+                                            placeholder="🔍 Search Your Courses"
+                                            onChange={handleSearch}
+                                            disabled={fetching}
+                                        />
                                     </form>
                                 </div>
-                                <div className="table-responsive overflow-y-hidden">
-                                    <table className="table mb-0 text-nowrap table-hover table-centered text-nowrap">
-                                        <thead className="table-light">
-                                            <tr>
-                                                <th>Courses</th>
-                                                <th>Enrolled</th>
-                                                <th>Level</th>
-                                                <th>Status</th>
-                                                <th>Date Created</th>
-                                                <th>Action</th>
-                                                <th />
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {courses?.map((c, index) => (
-                                                <tr>
-                                                    <td>
-                                                        <div className="d-flex align-items-center">
-                                                            <div>
-                                                                <a href="#">
-                                                                    <img
-                                                                        src={c.image}
-                                                                        alt="course"
-                                                                        className="rounded img-4by3-lg"
-                                                                        style={{
-                                                                            width: "100px",
-                                                                            height: "70px",
-                                                                            borderRadius: "50%",
-                                                                            objectFit: "cover",
-                                                                        }}
-                                                                    />
-                                                                </a>
-                                                            </div>
-                                                            <div className="ms-3">
-                                                                <h4 className="mb-1 h6">
-                                                                    <a href="#" className="text-inherit text-decoration-none text-dark">
-                                                                        {c.title}
-                                                                    </a>
-                                                                </h4>
-                                                                <ul className="list-inline fs-6 mb-0">
-                                                                    <li className="list-inline-item">
-                                                                        <small>
-                                                                            <i className="fas fa-user"></i>
-                                                                            <span className="ms-1">{c.language}</span>
-                                                                        </small>
-                                                                    </li>
-                                                                    <li className="list-inline-item">
-                                                                        <small>
-                                                                            <i className="bi bi-reception-4"></i>
-                                                                            <span className="ms-1">{c.level}</span>
-                                                                        </small>
-                                                                    </li>
-                                                                    <li className="list-inline-item">
-                                                                        <small>
-                                                                            <i className="fas fa-dollar-sign"></i>
-                                                                            <span>{c.price}</span>
-                                                                        </small>
-                                                                    </li>
-                                                                </ul>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mt-3">{c.students?.length}</p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mt-3 badge bg-success">{c.level}</p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mt-3 badge bg-warning text-dark">{c.teacher_course_status}</p>
-                                                    </td>
-                                                    <td>
-                                                        <p className="mt-3">{moment(c.date).format("DD MMM, YYYY")}</p>
-                                                    </td>
-                                                    <td>
-                                                        <Link to={`/instructor/edit-course/${c.course_id}/`} className="btn btn-primary btn-sm mt-3 me-1">
-                                                            <i className="fas fa-edit"></i>
-                                                        </Link>
-                                                        <button className="btn btn-danger btn-sm mt-3 me-1">
-                                                            <i className="fas fa-trash"></i>
-                                                        </button>
-                                                        <button className="btn btn-secondary btn-sm mt-3 me-1">
-                                                            <i className="fas fa-eye"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+
+                                {fetching ? (
+                                    <div className="card-body bg-white p-5 text-center">
+                                        <div className="spinner-border text-primary" role="status">
+                                            <span className="visually-hidden">Loading...</span>
+                                        </div>
+                                        <p className="mt-3 text-muted">Fetching your courses...</p>
+                                    </div>
+                                ) : (
+                                    <div className="card-body bg-white p-4">
+                                        <div className="table-responsive">
+                                            <table className="table table-hover table-borderless">
+                                                <thead className="table-light">
+                                                    <tr>
+                                                        <th className="ps-4">Course</th>
+                                                        <th>Enrolled</th>
+                                                        <th>Level</th>
+                                                        <th>Status</th>
+                                                        <th>Created Date</th>
+                                                        <th className="text-end pe-4">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {courses?.map((c, index) => (
+                                                        <tr key={index} className="align-middle">
+                                                            <td className="ps-4">
+                                                                <div className="d-flex align-items-center">
+                                                                    <div className="flex-shrink-0">
+                                                                        <img
+                                                                            src={c.image}
+                                                                            alt={c.title}
+                                                                            className="rounded-3"
+                                                                            style={{ width: "80px", height: "60px", objectFit: "cover" }}
+                                                                            onError={(e) => {
+                                                                                e.target.onerror = null;
+                                                                                e.target.src = '/default-course.png'; // Đường dẫn ảnh mặc định
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="flex-grow-1 ms-3">
+                                                                        <h6 className="mb-1 fw-bold text-dark">{c.title}</h6>
+                                                                        <div className="d-flex flex-wrap gap-2 mt-1">
+                                                                            <span className="badge bg-light text-dark border">
+                                                                                <i className="fas fa-language me-1"></i> {c.language}
+                                                                            </span>
+                                                                            <span className="badge bg-light text-dark border">
+                                                                                <i className="fas fa-chart-line me-1"></i> {c.level}
+                                                                            </span>
+                                                                            <span className="badge bg-light text-dark border">
+                                                                                <i className="fas fa-dollar-sign me-1"></i> {c.price}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td>{c.students?.length}</td>
+                                                            <td>
+                                                                <span className={`badge bg-success`}>{c.level}</span>
+                                                            </td>
+                                                            <td>
+                                                                <span className={`badge bg-warning text-dark`}>{c.teacher_course_status}</span>
+                                                            </td>
+                                                            <td>
+                                                                <span className="text-muted">{moment(c.date).format("MMM D, YYYY")}</span>
+                                                            </td>
+                                                            <td className="text-end pe-4">
+                                                                <Link to={`/instructor/edit-course/${c.course_id}/`} className="btn btn-sm btn-outline-primary me-2" title="Edit">
+                                                                    <i className="fas fa-edit"></i>
+                                                                </Link>
+                                                                <button className="btn btn-sm btn-outline-danger me-2" title="Delete" onClick={() => { if (window.confirm(`Are you sure you want to delete "${c.title}"?`)) { console.log(`Delete course ${c.course_id}`); } }}>
+                                                                    <i className="fas fa-trash"></i>
+                                                                </button>
+                                                                <button className="btn btn-sm btn-outline-secondary" title="View">
+                                                                    <i className="fas fa-eye"></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                    {courses?.length === 0 && !fetching && (
+                                                        <tr>
+                                                            <td colSpan="6" className="text-center p-5 text-muted">
+                                                                <i className="fas fa-folder-open fa-2x mb-3"></i>
+                                                                <p className="h5">No courses found</p>
+                                                                <p className="small">Add your first course to start teaching!</p>
+                                                                <Link to="/instructor/create-course" className="btn btn-primary btn-sm mt-2">
+                                                                    <i className="fas fa-plus-circle me-1"></i> Add New Course
+                                                                </Link>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

@@ -45,6 +45,8 @@ import Profile from "./views/instructor/Profile";
 import CourseCreate from "./views/instructor/CourseCreate";
 import CourseEdit from "./views/instructor/CourseEdit";
 import CourseEditCurriculum from "./views/instructor/CourseEditCurriculum";
+import StudentQA from "./views/student/QA";
+import AITeaching from "./views/student/AITeachingTeam";
 
 import Chatbox from "./views/chat/Chatbox";
 
@@ -136,17 +138,25 @@ function App() {
                                     </PrivateRoute>
                                 }
                             />
-
-                            {/* Teacher Routes */}
-
                             <Route
-                                path="/instructor/dashboard/"
+                                path="/student/question-answer/"
                                 element={
                                     <PrivateRoute>
-                                        <Dashboard />
+                                        <StudentQA />
                                     </PrivateRoute>
                                 }
                             />
+                            <Route
+                                path="/student/ai-teaching-agent/"
+                                element={
+                                    <PrivateRoute>
+                                        <AITeaching />
+                                    </PrivateRoute>
+                                }
+                            />
+
+                            {/* Teacher Routes */}
+
                             <Route
                                 path="/instructor/dashboard/"
                                 element={
@@ -239,7 +249,7 @@ function App() {
                                 path="/instructor/create-course/"
                                 element={
                                     <PrivateRoute>
-                                        <CourseCreate />
+                                        <CourseCreate/>
                                     </PrivateRoute>
                                 }
                             />

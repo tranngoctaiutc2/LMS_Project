@@ -10,6 +10,7 @@ import Toast from "../plugin/Toast";
 import { ProfileContext } from "../plugin/Context";
 
 function Profile() {
+    const [isLoading, setIsLoading] = useState(false);
     const [profile, setProfile] = useContext(ProfileContext);
     const [profileData, setProfileData] = useState({
         image: "",
@@ -58,6 +59,7 @@ function Profile() {
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
+        setIsLoading(true);
 
         const res = await useAxios.get(`user/profile/${UserData()?.user_id}/`);
         const formdata = new FormData();
@@ -78,6 +80,11 @@ function Profile() {
             .then((res) => {
                 console.log(res.data);
                 setProfile(res.data);
+                Toast().fire({
+                    icon: "success",
+                    title: "Profile updated successfully",
+                });
+                setIsLoading(false);
             });
     };
 
@@ -86,80 +93,101 @@ function Profile() {
     return (
         <>
             <BaseHeader />
-
-            <section className="pt-5 pb-5">
+    
+            <section className="pt-6 pb-6 bg-light min-vh-100">
                 <div className="container">
-                    {/* Header Here */}
+                    {/* Header */}
                     <Header />
-                    <div className="row mt-0 mt-md-4">
-                        {/* Sidebar Here */}
+                    <div className="row mt-4">
                         <Sidebar />
                         <div className="col-lg-9 col-md-8 col-12">
-                            {/* Card */}
-                            <div className="card">
-                                {/* Card header */}
-                                <div className="card-header">
-                                    <h3 className="mb-0">Profile Details</h3>
-                                    <p className="mb-0">You have full control to manage your own account setting.</p>
+                            <div className="card shadow-sm border-0 rounded-4">
+                                <div className="card-header bg-white border-bottom-0 rounded-top-4 px-4 py-3">
+                                <h4 className="mb-3">
+                                    <i className="fas fa-user-edit text-warning"></i> Profile Details
+                                </h4>
+                                    <p className="text-muted mb-0">You have full control to manage your own account setting.</p>
                                 </div>
-                                {/* Card body */}
-                                <form className="card-body" onSubmit={handleFormSubmit}>
-                                    <div className="d-lg-flex align-items-center justify-content-between">
-                                        <div className="d-flex align-items-center mb-4 mb-lg-0">
-                                            <img
-                                                src={imagePreview}
-                                                id="img-uploaded"
-                                                className="avatar-xl rounded-circle"
-                                                alt="avatar"
-                                                style={{
-                                                    width: "100px",
-                                                    height: "100px",
-                                                    borderRadius: "50%",
-                                                    objectFit: "cover",
-                                                }}
+                                <form className="card-body px-4 py-4" onSubmit={handleFormSubmit}>
+                                    <div className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center mb-5 gap-4">
+                                        <img
+                                            src={imagePreview}
+                                            alt="avatar"
+                                            className="rounded-circle border"
+                                            style={{
+                                                width: "100px",
+                                                height: "100px",
+                                                objectFit: "cover",
+                                            }}
+                                        />
+                                        <div>
+                                            <h5 className="mb-1">Your Avatar</h5>
+                                            <p className="text-muted mb-2">PNG or JPG up to 800px wide and tall.</p>
+                                            <input
+                                                type="file"
+                                                className="form-control"
+                                                name="image"
+                                                onChange={handleFileChange}
                                             />
-                                            <div className="ms-3">
-                                                <h4 className="mb-0">Your avatar</h4>
-                                                <p className="mb-0">PNG or JPG no bigger than 800px wide and tall.</p>
-                                                <input type="file" className="form-control mt-3" name="image" onChange={handleFileChange} id="" />
-                                            </div>
                                         </div>
                                     </div>
-                                    <hr className="my-5" />
+    
+                                    <hr className="my-4" />
+    
                                     <div>
-                                        <h4 className="mb-0">Personal Details</h4>
-                                        <p className="mb-4">Edit your personal information and address.</p>
-                                        {/* Form */}
-                                        <div className="row gx-3">
-                                            {/* First name */}
-                                            <div className="mb-3 col-12 col-md-12">
-                                                <label className="form-label" htmlFor="fname">
-                                                    Full Name
-                                                </label>
-                                                <input type="text" id="fname" className="form-control" placeholder="First Name" required="" value={profileData.full_name} onChange={handleProfileChange} name="full_name" />
-                                                <div className="invalid-feedback">Please enter first name.</div>
-                                            </div>
-                                            {/* Last name */}
-                                            <div className="mb-3 col-12 col-md-12">
-                                                <label className="form-label" htmlFor="lname">
-                                                    About Me
-                                                </label>
-                                                <textarea onChange={handleProfileChange} name="about" id="" cols="30" rows="5" className="form-control" value={profileData.about}></textarea>
-                                                <div className="invalid-feedback">Please enter last name.</div>
-                                            </div>
-
-                                            {/* Country */}
-                                            <div className="mb-3 col-12 col-md-12">
-                                                <label className="form-label" htmlFor="editCountry">
-                                                    Country
-                                                </label>
-                                                <input type="text" id="country" className="form-control" placeholder="Country" required="" value={profileData.country} onChange={handleProfileChange} name="country" />
-                                                <div className="invalid-feedback">Please choose country.</div>
+                                        <h5 className="mb-1">Personal Details</h5>
+                                        <p className="text-muted mb-4">Edit your personal information and address.</p>
+                                        <div className="row g-3">
+                                            <div className="col-12">
+                                                <label className="form-label">Full Name</label>
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    placeholder="Your full name"
+                                                    required
+                                                    name="full_name"
+                                                    value={profileData.full_name}
+                                                    onChange={handleProfileChange}
+                                                />
                                             </div>
                                             <div className="col-12">
-                                                {/* Button */}
-                                                <button className="btn btn-primary" type="submit">
-                                                    Update Profile <i className="fas fa-check-circle"></i>
+                                                <label className="form-label">About Me</label>
+                                                <textarea
+                                                    className="form-control"
+                                                    rows="5"
+                                                    placeholder="Tell something about yourself"
+                                                    name="about"
+                                                    value={profileData.about}
+                                                    onChange={handleProfileChange}
+                                                />
+                                            </div>
+                                            <div className="col-12">
+                                                <label className="form-label">Country</label>
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    placeholder="Your country"
+                                                    required
+                                                    name="country"
+                                                    value={profileData.country}
+                                                    onChange={handleProfileChange}
+                                                />
+                                            </div>
+                                            <div className="col-12 text-end mt-3">
+                                                <button
+                                                    className="btn btn-primary px-4 py-2 rounded-pill"
+                                                    type="submit"
+                                                    disabled={isLoading}
+                                                >
+                                                    {isLoading ? (
+                                                        <>
+                                                            Updating... <i className="fas fa-spinner fa-spin ms-2"></i>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            Update Profile <i className="fas fa-check-circle ms-2"></i>
+                                                        </>
+                                                    )}
                                                 </button>
                                             </div>
                                         </div>
@@ -170,10 +198,9 @@ function Profile() {
                     </div>
                 </div>
             </section>
-
+    
             <BaseFooter />
         </>
     );
 }
-
-export default Profile;
+export default Profile;    

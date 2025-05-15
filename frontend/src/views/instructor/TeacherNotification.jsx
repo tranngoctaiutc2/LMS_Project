@@ -1,104 +1,194 @@
 import { useState, useEffect } from "react";
 import moment from "moment";
-
 import Modal from "react-bootstrap/Modal";
 import Button from "react-bootstrap/Button";
-
 import Sidebar from "./Partials/Sidebar";
 import Header from "./Partials/Header";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
-
 import useAxios from "../../utils/useAxios";
 import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
 
 function TeacherNotification() {
     const [noti, setNoti] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(5);
 
-    const fetchNoti = () => {
-        useAxios.get(`teacher/noti-list/${UserData()?.teacher_id}/`).then((res) => {
-            setNoti(res.data);
-            console.log(res.data);
-        });
+    const fetchNoti = async () => {
+        try {
+            setLoading(true);
+            const response = await useAxios.get(`teacher/noti-list/${UserData()?.teacher_id}/`);
+            setNoti(response.data);
+        } catch (err) {
+            setError("Failed to fetch notifications. Please try again later.");
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
         fetchNoti();
     }, []);
 
-    const handleMarkAsSeen = (notiId) => {
-        const formdata = new FormData();
+    const handleMarkAsSeen = async (notiId) => {
+        try {
+            const formdata = new FormData();
+            formdata.append("teacher", UserData()?.teacher_id);
+            formdata.append("pk", notiId);
+            formdata.append("seen", true);
 
-        formdata.append("teacher", UserData()?.teacher_id);
-        formdata.append("pk", notiId);
-        formdata.append("seen", true);
-
-        useAxios.patch(`teacher/noti-detail/${UserData()?.teacher_id}/${notiId}`, formdata).then((res) => {
-            console.log(res.data);
+            await useAxios.patch(`teacher/noti-detail/${UserData()?.teacher_id}/${notiId}`, formdata);
             fetchNoti();
             Toast().fire({
                 icon: "success",
-                title: "Notication Seen",
+                title: "Notification marked as seen",
             });
-        });
+        } catch (err) {
+            Toast().fire({
+                icon: "error",
+                title: "Failed to update notification",
+            });
+            console.error(err);
+        }
     };
+
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = noti.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(noti.length / itemsPerPage);
+
+    const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
     return (
         <>
             <BaseHeader />
 
-            <section className="pt-5 pb-5">
+            <section className="pt-5 pb-5 bg-light">
                 <div className="container">
-                    {/* Header Here */}
                     <Header />
                     <div className="row mt-0 mt-md-4">
-                        {/* Sidebar Here */}
                         <Sidebar />
                         <div className="col-lg-9 col-md-8 col-12">
-                            {/* Card */}
-                            <div className="card mb-4">
-                                {/* Card header */}
-                                <div className="card-header d-lg-flex align-items-center justify-content-between">
-                                    <div className="mb-3 mb-lg-0">
-                                        <h3 className="mb-0">Notifications</h3>
-                                        <span>Manage all your notifications from here</span>
+                            <div className="card mb-4 border-0 shadow-sm">
+                                <div className="card-header bg-white border-bottom-0">
+                                    <div className="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <h3 className="mb-1">
+                                                <i className="fas fa-bell text-danger me-2"></i>
+                                                Notifications
+                                            </h3>
+                                            <p className="mb-0 text-muted">Manage all your notifications from here</p>
+                                        </div>
+                                        <div className="badge bg-primary bg-opacity-10 text-primary p-2">
+                                            {loading ? '...' : noti.length} Notifications
+                                        </div>
                                     </div>
                                 </div>
-                                {/* Card body */}
-                                <div className="card-body">
-                                    {/* List group */}
-                                    <ul className="list-group list-group-flush">
-                                        {/* List group item */}
-                                        {noti?.map((n, index) => (
-                                            <li className="list-group-item p-4 shadow rounded-3 mb-3" key={index}>
-                                                <div className="d-flex">
-                                                    <div className="ms-3 mt-2">
-                                                        <div className="d-flex align-items-center justify-content-between">
-                                                            <div>
-                                                                <h4 className="mb-0">{n.type}</h4>
+                                
+                                {loading ? (
+                                    <div className="card-body text-center py-5">
+                                        <div className="spinner-border text-primary" role="status">
+                                            <span className="visually-hidden">Loading...</span>
+                                        </div>
+                                        <p className="mt-3 mb-0">Loading notifications...</p>
+                                    </div>
+                                ) : error ? (
+                                    <div className="card-body text-center py-5">
+                                        <div className="alert alert-danger">{error}</div>
+                                        <button 
+                                            className="btn btn-primary"
+                                            onClick={fetchNoti}
+                                        >
+                                            Retry
+                                        </button>
+                                    </div>
+                                ) : noti.length === 0 ? (
+                                    <div className="card-body text-center py-5">
+                                        <img 
+                                            src="/static/empty-notification.svg" 
+                                            alt="No notifications" 
+                                            className="img-fluid mb-3"
+                                            style={{maxWidth: '200px'}}
+                                        />
+                                        <h5>No notifications yet</h5>
+                                        <p className="text-muted">Your notifications will appear here</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="card-body p-0">
+                                            <ul className="list-group list-group-flush">
+                                                {currentItems.map((n, index) => (
+                                                    <li className="list-group-item p-4 border-bottom" key={index}>
+                                                        <div className="d-flex justify-content-between align-items-start">
+                                                            <div className="flex-grow-1">
+                                                                <div className="d-flex align-items-center mb-2">
+                                                                    <span className="badge bg-info bg-opacity-10 text-info me-2">
+                                                                        {n.type}
+                                                                    </span>
+                                                                    <small className="text-muted">
+                                                                        {moment(n.date).fromNow()}
+                                                                    </small>
+                                                                </div>
+                                                                <p className="text-muted mb-0">
+                                                                    {moment(n.date).format("DD MMM, YYYY h:mm A")}
+                                                                </p>
                                                             </div>
+                                                            <button 
+                                                                className="btn btn-sm btn-outline-secondary ms-3"
+                                                                onClick={() => handleMarkAsSeen(n.id)}
+                                                                title="Mark as seen"
+                                                            >
+                                                                <i className="fas fa-check"></i>
+                                                            </button>
                                                         </div>
-                                                        <div className="mt-2">
-                                                            <p className="mt-1">
-                                                                <span className="me-2 fw-bold">
-                                                                    Date: <span className="fw-light">{moment(n.date).format("DD MMM, YYYY")}</span>
-                                                                </span>
-                                                            </p>
-                                                            <p>
-                                                                <button class="btn btn-outline-secondary" type="button" onClick={() => handleMarkAsSeen(n.id)}>
-                                                                    Mark as Seen <i className="fas fa-check"></i>
-                                                                </button>
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </li>
-                                        ))}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
 
-                                        {noti?.length < 1 && <p>No notifications</p>}
-                                    </ul>
-                                </div>
+                                        {/* Pagination */}
+                                        {totalPages > 1 && (
+                                            <div className="card-footer bg-white border-top-0">
+                                                <nav aria-label="Notifications pagination">
+                                                    <ul className="pagination justify-content-center mb-0">
+                                                        <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                                                            <button 
+                                                                className="page-link" 
+                                                                onClick={() => paginate(currentPage - 1)}
+                                                            >
+                                                                Previous
+                                                            </button>
+                                                        </li>
+                                                        
+                                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(number => (
+                                                            <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
+                                                                <button 
+                                                                    className="page-link" 
+                                                                    onClick={() => paginate(number)}
+                                                                >
+                                                                    {number}
+                                                                </button>
+                                                            </li>
+                                                        ))}
+                                                        
+                                                        <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                                                            <button 
+                                                                className="page-link" 
+                                                                onClick={() => paginate(currentPage + 1)}
+                                                            >
+                                                                Next
+                                                            </button>
+                                                        </li>
+                                                    </ul>
+                                                </nav>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

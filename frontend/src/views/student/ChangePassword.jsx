@@ -66,76 +66,89 @@ function ChangePassword() {
     return (
         <>
             <BaseHeader />
-
-            <section className="pt-5 pb-5">
+    
+            <section className="pt-6 pb-6 bg-light min-vh-100">
                 <div className="container">
-                    {/* Header Here */}
+                    {/* Header */}
                     <Header />
-                    <div className="row mt-0 mt-md-4">
-                        {/* Sidebar Here */}
+                    <div className="row mt-4">
+                        {/* Sidebar */}
                         <Sidebar />
+    
                         <div className="col-lg-9 col-md-8 col-12">
-                            {/* Card */}
-                            <div className="card">
-                                {/* Card header */}
-                                <div className="card-header">
-                                    <h3 className="mb-0">Change Password</h3>
+                            <div className="card shadow-sm border-0 rounded-4">
+                                <div className="card-header bg-white border-bottom-0 rounded-top-4 px-4 py-3">
+                                    <h4 className="mb-3">
+                                        <i className="fas fa-lock text-secondary"></i> Change Password
+                                    </h4>
                                 </div>
-                                {/* Card body */}
-                                <div className="card-body">
-                                    <div>
-                                        <form className="row gx-3 needs-validation" noValidate="" onSubmit={changePasswordSubmit}>
-                                            {/* First name */}
-                                            <div className="mb-3 col-12 col-md-12">
-                                                <label className="form-label" htmlFor="fname">
-                                                    Old Password
-                                                </label>
-                                                <input type="password" id="password" className="form-control" placeholder="**************" required="" name="old_password" value={password.old_password} onChange={handlePasswordChange} />
-                                            </div>
-                                            {/* Last name */}
-                                            <div className="mb-3 col-12 col-md-12">
-                                                <label className="form-label" htmlFor="lname">
-                                                    New Password
-                                                </label>
-                                                <input type="password" id="password" className="form-control" placeholder="**************" required="" name="new_password" value={password.new_passowrd} onChange={handlePasswordChange} />
-                                            </div>
-
-                                            {/* Country */}
-                                            <div className="mb-3 col-12 col-md-12">
-                                                <label className="form-label" htmlFor="editCountry">
-                                                    Confirm New Password
-                                                </label>
-                                                <input type="password" id="password" className="form-control" placeholder="**************" required="" name="confirm_new_password" value={password.confirm_new_password} onChange={handlePasswordChange} />
-                                            </div>
-                                            <div className="col-12">
-                                                <button
-                                                    className="btn btn-primary"
-                                                    type="submit"
-                                                    disabled={isLoading}
-                                                >
-                                                    {isLoading ? (
-                                                        <>
-                                                            Saving... <i className="fas fa-spinner fa-spin"></i>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            Save New Password <i className="fas fa-check-circle"></i>
-                                                        </>
-                                                    )}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
+    
+                                <div className="card-body px-4 py-4">
+                                    <form className="row g-3 needs-validation" noValidate onSubmit={changePasswordSubmit}>
+                                        <div className="col-12">
+                                            <label className="form-label">Old Password</label>
+                                            <input
+                                                type="password"
+                                                className="form-control"
+                                                placeholder="**************"
+                                                required
+                                                name="old_password"
+                                                value={password.old_password}
+                                                onChange={handlePasswordChange}
+                                            />
+                                        </div>
+                                        <div className="col-12">
+                                            <label className="form-label">New Password</label>
+                                            <input
+                                                type="password"
+                                                className="form-control"
+                                                placeholder="**************"
+                                                required
+                                                name="new_password"
+                                                value={password.new_password}
+                                                onChange={handlePasswordChange}
+                                            />
+                                        </div>
+                                        <div className="col-12">
+                                            <label className="form-label">Confirm New Password</label>
+                                            <input
+                                                type="password"
+                                                className="form-control"
+                                                placeholder="**************"
+                                                required
+                                                name="confirm_new_password"
+                                                value={password.confirm_new_password}
+                                                onChange={handlePasswordChange}
+                                            />
+                                        </div>
+    
+                                        <div className="col-12 text-end mt-2">
+                                            <button
+                                                className="btn btn-primary px-4 py-2 rounded-pill"
+                                                type="submit"
+                                                disabled={isLoading}
+                                            >
+                                                {isLoading ? (
+                                                    <>
+                                                        Saving... <i className="fas fa-spinner fa-spin ms-2"></i>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        Save New Password <i className="fas fa-check-circle ms-2"></i>
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
-
+    
             <BaseFooter />
         </>
     );
 }
-
-export default ChangePassword;
+export default ChangePassword;    

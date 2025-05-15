@@ -135,6 +135,11 @@ function BaseHeader() {
                                             <i className="fas fa-gear"></i> {t("settings_profile")}
                                         </Link>
                                     </li>
+                                    <li>
+                                        <Link className="dropdown-item flex items-center gap-2" to="/student/ai-teaching-team/">
+                                            <i className="fas fa-robot"></i> {t("ai_teaching_team")}
+                                        </Link>
+                                    </li>
                                 </ul>
                             </li>
                         </ul>

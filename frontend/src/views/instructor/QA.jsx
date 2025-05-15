@@ -89,7 +89,7 @@ function QA() {
                         <div className="col-lg-9 col-md-8 col-12">
                             <h4 className="mb-0 mb-1">
                                 {" "}
-                                <i className="fas fa-envelope"></i> Question and Answer
+                                <i className="fas fa-envelope text-info"></i> Question and Answer
                             </h4>
 
                             <div className="card">
@@ -111,42 +111,44 @@ function QA() {
                                     <div className="vstack gap-3 p-3">
                                         {/* Question item START */}
                                         {questions?.map((q, index) => (
-                                            <div className="shadow rounded-3 p-3" key={q.id || index}>
-                                                <div className="d-sm-flex justify-content-sm-between mb-3">
-                                                    <div className="d-flex align-items-center">
-                                                        <div className="avatar avatar-sm flex-shrink-0">
-                                                            <img
-                                                                src={q.profile.image}
-                                                                className="avatar-img rounded-circle"
-                                                                alt="avatar"
-                                                                style={{
-                                                                    width: "60px",
-                                                                    height: "60px",
-                                                                    borderRadius: "50%",
-                                                                    objectFit: "cover",
-                                                                }}
-                                                            />
-                                                        </div>
-                                                        <div className="ms-2">
-                                                            <h6 className="mb-0">
-                                                                <a href="#" className="text-decoration-none text-dark">
-                                                                    {q.profile.full_name}
-                                                                </a>
-                                                            </h6>
-                                                            <small>{moment(q.date).format("DD MMM, YYYY")}</small>
-                                                        </div>
+                                            <div className="shadow rounded-4 p-4 border border-light bg-white" key={q.id || index}>
+                                                <div className="d-sm-flex justify-content-between align-items-center mb-3">
+                                                <div className="d-flex align-items-center">
+                                                    <img
+                                                    src={q.profile.image}
+                                                    alt="avatar"
+                                                    className="rounded-circle me-3"
+                                                    style={{
+                                                        width: "60px",
+                                                        height: "60px",
+                                                        objectFit: "cover",
+                                                        border: "2px solid #007bff"
+                                                    }}
+                                                    />
+                                                    <div>
+                                                    <h6 className="mb-1 text-primary fw-bold">{q.profile.full_name}</h6>
+                                                    <small className="text-muted">{moment(q.date).format("DD MMM, YYYY")}</small>
                                                     </div>
                                                 </div>
-                                                <h5>
-                                                    {q.title} {""}
-                                                    <span className="badge bg-success">{q.messages?.length}</span>
-                                                </h5>
-                                                <button className="btn btn-primary btn-sm mb-3 mt-3" onClick={() => handleConversationShow(q)}>
-                                                    Join Conversation <i className="fas fa-arrow-right"></i>
-                                                </button>
-                                            </div>
-                                        ))}
+                                                {q.messages?.length > 0 && (
+                                                    <span className="badge rounded-pill bg-info text-dark fw-semibold px-3 py-2">
+                                                    📘 {q.messages[0].course_name}
+                                                    </span>
+                                                )}
+                                                </div>
 
+                                                <h5 className="fw-bold text-dark">
+                                                {q.title}{" "}
+                                                <span className="badge bg-success ms-2">{q.messages?.length}</span>
+                                                </h5>
+
+                                                <div className="text-end">
+                                                <button className="btn btn-outline-primary btn-sm mt-3" onClick={() => handleConversationShow(q)}>
+                                                    <i className="fas fa-comments me-1"></i> Join Conversation
+                                                </button>
+                                                </div>
+                                            </div>
+                                            ))}
                                         {/* {questions?.length < 1 && <p>No Questions</p>} */}
                                     </div>
                                 </div>
