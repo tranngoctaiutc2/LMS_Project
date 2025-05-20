@@ -8,7 +8,7 @@ import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 import { Link } from "react-router-dom";
 
-import useAxios from "../../utils/useAxios";
+import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
 
 function QA() {
@@ -21,7 +21,7 @@ function QA() {
     });
 
     const fetchQuestions = async () => {
-        useAxios.get(`teacher/question-answer-list/${UserData()?.teacher_id}/`).then((res) => {
+        apiInstance.get(`teacher/question-answer-list/${UserData()?.teacher_id}/`).then((res) => {
             console.log(res.data);
             setQuestions(res.data);
         });
@@ -53,7 +53,7 @@ function QA() {
         formdata.append("message", createMessage.message);
         formdata.append("qa_id", selectedConversation?.qa_id);
 
-        useAxios.post(`student/question-answer-message-create/`, formdata).then((res) => {
+        apiInstance.post(`student/question-answer-message-create/`, formdata).then((res) => {
             setSelectedConversation(res.data.question);
         });
     };

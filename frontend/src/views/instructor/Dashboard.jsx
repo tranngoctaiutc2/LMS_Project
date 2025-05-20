@@ -6,7 +6,7 @@ import Header from "./Partials/Header";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 
-import useAxios from "../../utils/useAxios";
+import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
 import { Link } from "react-router-dom";
 
@@ -16,11 +16,11 @@ function Dashboard() {
     const [originalCourses, setOriginalCourses] = useState([]);
 
     const fetchCourseData = () => {
-        useAxios.get(`teacher/summary/${UserData()?.teacher_id}/`).then((res) => {
+        apiInstance.get(`teacher/summary/${UserData()?.teacher_id}/`).then((res) => {
             setStats(res.data[0]);
         });
 
-        useAxios.get(`teacher/course-lists/${UserData()?.teacher_id}/`).then((res) => {
+        apiInstance.get(`teacher/course-lists/${UserData()?.teacher_id}/`).then((res) => {
             setCourses(res.data);
             setOriginalCourses(res.data);
         });

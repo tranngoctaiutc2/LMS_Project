@@ -8,7 +8,7 @@ import Header from "./Partials/Header";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 
-import useAxios from "../../utils/useAxios";
+import apiInstance from "../../utils/axios";
 import { teacherId } from "../../utils/constants";
 import Toast from "../plugin/Toast";
 
@@ -23,7 +23,7 @@ function Review() {
         setLoading(true);
         setError(null);
         try {
-            const res = await useAxios.get(`teacher/review-lists/${teacherId}/`);
+            const res = await apiInstance.get(`teacher/review-lists/${teacherId}/`);
             console.log(res.data);
             setReviews(res.data);
             setFilteredReview(res.data);
@@ -40,7 +40,7 @@ function Review() {
 
     const handleSubmitReply = async (reviewId) => {
         try {
-            await useAxios
+            await apiInstance
                 .patch(`teacher/review-detail/${teacherId}/${reviewId}/`, {
                     reply: reply,
                 })

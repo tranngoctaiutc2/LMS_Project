@@ -4,7 +4,7 @@ import BaseFooter from "../partials/BaseFooter";
 import Sidebar from "./Partials/Sidebar";
 import Header from "./Partials/Header";
 
-import useAxios from "../../utils/useAxios";
+import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
 import { ProfileContext } from "../plugin/Context";
@@ -21,7 +21,7 @@ function Profile() {
     const [imagePreview, setImagePreview] = useState("");
 
     const fetchProfile = () => {
-        useAxios.get(`user/profile/${UserData()?.user_id}/`).then((res) => {
+        apiInstance.get(`user/profile/${UserData()?.user_id}/`).then((res) => {
             console.log(res.data);
             setProfile(res.data);
             setProfileData(res.data);
@@ -61,7 +61,7 @@ function Profile() {
         e.preventDefault();
         setIsLoading(true);
 
-        const res = await useAxios.get(`user/profile/${UserData()?.user_id}/`);
+        const res = await apiInstance.get(`user/profile/${UserData()?.user_id}/`);
         const formdata = new FormData();
         if (profileData.image && profileData.image !== res.data.image) {
             formdata.append("image", profileData.image);
@@ -71,7 +71,7 @@ function Profile() {
         formdata.append("about", profileData.about);
         formdata.append("country", profileData.country);
 
-        await useAxios
+        await apiInstance
             .patch(`user/profile/${UserData()?.user_id}/`, formdata, {
                 headers: {
                     "Content-Type": "multipart/form-data",

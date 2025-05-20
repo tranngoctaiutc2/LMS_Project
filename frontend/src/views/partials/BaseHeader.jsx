@@ -136,7 +136,7 @@ function BaseHeader() {
                                         </Link>
                                     </li>
                                     <li>
-                                        <Link className="dropdown-item flex items-center gap-2" to="/student/ai-teaching-team/">
+                                        <Link className="dropdown-item flex items-center gap-2" to="/student/ai-teaching-agent/">
                                             <i className="fas fa-robot"></i> {t("ai_teaching_team")}
                                         </Link>
                                     </li>

@@ -7,7 +7,7 @@ import Header from "./Partials/Header";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 
-import useAxios from "../../utils/useAxios";
+import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
 
@@ -31,7 +31,7 @@ function Coupon() {
     const fetchCoupons = async () => {
         try {
             setIsLoading(true);
-            const res = await useAxios.get(`teacher/coupon-list/${UserData()?.teacher_id}/`);
+            const res = await apiInstance.get(`teacher/coupon-list/${UserData()?.teacher_id}/`);
             setCoupons(res.data);
         } catch (err) {
             setError("Failed to fetch coupons. Please try again later.");
@@ -65,7 +65,7 @@ function Coupon() {
             formdata.append("max_uses", createCoupon.max_uses);
             formdata.append("active", createCoupon.active ? "true" : "false"); 
 
-            await useAxios.post(`teacher/coupon-list/${UserData()?.teacher_id}/`, formdata);
+            await apiInstance.post(`teacher/coupon-list/${UserData()?.teacher_id}/`, formdata);
             fetchCoupons();
             setShowAddModal(false);
             setCreateCoupon({ code: "", discount: "", date: "", end_date: "", max_uses: "", active: true,});
@@ -85,7 +85,7 @@ function Coupon() {
     const handleDeleteCoupon = async (couponId) => {
         if (window.confirm("Are you sure you want to delete this coupon?")) {
             try {
-                await useAxios.delete(`teacher/coupon-detail/${UserData()?.teacher_id}/${couponId}/`);
+                await apiInstance.delete(`teacher/coupon-detail/${UserData()?.teacher_id}/${couponId}/`);
                 fetchCoupons();
                 Toast().fire({
                     icon: "success",
@@ -111,7 +111,7 @@ function Coupon() {
             formdata.append("max_uses", createCoupon.max_uses);
             formdata.append("active", createCoupon.active ? "true" : "false");
 
-            await useAxios.patch(`teacher/coupon-detail/${UserData()?.teacher_id}/${selectedCoupon.id}/`, formdata);
+            await apiInstance.patch(`teacher/coupon-detail/${UserData()?.teacher_id}/${selectedCoupon.id}/`, formdata);
             fetchCoupons();
             setShowModal(false);
             Toast().fire({

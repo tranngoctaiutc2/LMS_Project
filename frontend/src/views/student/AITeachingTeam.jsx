@@ -11,7 +11,6 @@ const agents = [
       'Organizes content with proper headings and sections',
       'Includes detailed explanations and examples',
     ],
-    output: 'Comprehensive knowledge base document with table of contents',
   },
   {
     icon: '🗺️',
@@ -21,7 +20,6 @@ const agents = [
       'Creates progressive milestone markers',
       'Includes time estimates and prerequisites',
     ],
-    output: 'Visual roadmap document with clear progression paths',
   },
   {
     icon: '📚',
@@ -31,7 +29,6 @@ const agents = [
       'Includes links to academic papers and tutorials',
       'Adds descriptions and difficulty levels',
     ],
-    output: 'Categorized resource list with quality ratings',
   },
   {
     icon: '✍️',
@@ -41,7 +38,6 @@ const agents = [
       'Creates structured practice sections',
       'Includes solution guides',
     ],
-    output: 'Complete practice workbook with answers',
   },
 ];
 
@@ -59,14 +55,11 @@ const AITeachingAgents = () => {
                 <h4 className="mb-3">
                   <span className="me-2">{agent.icon}</span> {agent.title}
                 </h4>
-                <ul className="mb-2">
+                <ul className="mb-0">
                   {agent.description.map((item, i) => (
                     <li key={i}>{item}</li>
                   ))}
                 </ul>
-                <div className="mt-2">
-                  <strong>Output:</strong> <em>{agent.output}</em>
-                </div>
               </div>
             </div>
           ))}

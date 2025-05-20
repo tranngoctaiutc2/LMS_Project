@@ -28,7 +28,6 @@ import StudentCourses from "./views/student/Courses";
 import StudentCourseDetail from "./views/student/CourseDetail";
 import Wishlist from "./views/student/Wishlist";
 import StudentProfile from "./views/student/Profile";
-import useAxios from "./utils/useAxios";
 import UserData from "./views/plugin/UserData";
 import StudentChangePassword from "./views/student/ChangePassword";
 import Dashboard from "./views/instructor/Dashboard";
@@ -44,11 +43,10 @@ import ChangePassword from "./views/instructor/ChangePassword";
 import Profile from "./views/instructor/Profile";
 import CourseCreate from "./views/instructor/CourseCreate";
 import CourseEdit from "./views/instructor/CourseEdit";
-import CourseEditCurriculum from "./views/instructor/CourseEditCurriculum";
 import StudentQA from "./views/student/QA";
 import AITeaching from "./views/student/AITeachingTeam";
 
-import Chatbox from "./views/chat/Chatbox";
+import Chatbot from "./views/chat/Chatbot";
 
 function App() {
     const [cartCount, setCartCount] = useState(0);
@@ -60,7 +58,7 @@ function App() {
             setCartCount(res.data?.length);
         });
 
-        useAxios.get(`user/profile/${UserData()?.user_id}/`).then((res) => {
+        apiInstance.get(`user/profile/${UserData()?.user_id}/`).then((res) => {
             setProfile(res.data);
         });
 
@@ -261,16 +259,8 @@ function App() {
                                     </PrivateRoute>
                                 }
                             />
-                            <Route
-                                path="/instructor/edit-course/:course_id/curriculum/"
-                                element={
-                                    <PrivateRoute>
-                                        <CourseEditCurriculum />
-                                    </PrivateRoute>
-                                }
-                            />
                         </Routes>
-                        <Chatbox/>
+                        <Chatbot/>
                     </MainWrapper>
                 </BrowserRouter>
             </ProfileContext.Provider>

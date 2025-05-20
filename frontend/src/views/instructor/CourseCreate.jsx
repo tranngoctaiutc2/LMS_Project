@@ -6,254 +6,190 @@ import Header from "./Partials/Header";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 import { Link, useNavigate } from "react-router-dom";
-import useAxios from "../../utils/useAxios";
+import apiInstance from "../../utils/axios";
 import Swal from "sweetalert2";
 import { teacherId } from "../../utils/constants";
 
 function CourseCreate() {
-    const [courseData, setCourseData] = useState({
-        title: "",
-        description: "",
-        image: null,
-        file: "",
-        level: "Beginner",
-        language: "English",
-        price: "",
-        category: "",
-        teacher_course_status: "Published",
-        featured: false,
-        variants: [],
+  const [courseData, setCourseData] = useState({
+    title: "",
+    description: "",
+    image: null,
+    file: "",
+    level: "Beginner",
+    language: "English",
+    price: "",
+    category: "",
+    teacher_course_status: "Published",
+    featured: false,
+    variants: [],
+  });
+
+  const [imagePreview, setImagePreview] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState({ image: false, file: false });
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    apiInstance
+      .get("course/category/")
+      .then((res) => setCategories(res.data))
+      .catch(() =>
+        Swal.fire({ icon: "error", title: "Error", text: "Failed to load categories!" })
+      );
+  }, []);
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImagePreview(URL.createObjectURL(file));
+    setCourseData((prev) => ({ ...prev, image: file }));
+    setErrors((prev) => ({ ...prev, image: "" }));
+  };
+
+  const handleFileUpload = async (e, variantIndex = null, itemIndex = null) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("video/")) {
+      const key = variantIndex !== null ? `item_${variantIndex}_${itemIndex}_file` : "file";
+      setErrors((prev) => ({ ...prev, [key]: "Invalid video format." }));
+      return;
+    }
+
+    setLoading((prev) => ({ ...prev, file: true }));
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await apiInstance.post("/file-upload/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const url = response?.data?.url;
+      if (url) {
+        setCourseData((prev) => {
+          const updated = { ...prev };
+          if (variantIndex !== null && itemIndex !== null) {
+            updated.variants[variantIndex].items[itemIndex].file = url;
+          } else {
+            updated.file = url;
+          }
+          return updated;
+        });
+        setErrors((prev) => ({ ...prev, file: "" }));
+      }
+    } catch {
+      setErrors((prev) => ({ ...prev, file: "File upload failed." }));
+    }
+    setLoading((prev) => ({ ...prev, file: false }));
+  };
+
+  const handleCourseInputChange = ({ target }) => {
+    const { name, value, type, checked } = target;
+    setCourseData((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+    setErrors((prev) => ({ ...prev, [name]: "" }));
+  };
+
+  const handleVariantChange = (i, field, val) => {
+    const variants = [...courseData.variants];
+    variants[i][field] = val;
+    setCourseData((prev) => ({ ...prev, variants }));
+    setErrors((prev) => ({ ...prev, [`variant_${i}_${field}`]: "" }));
+  };
+
+  const handleItemChange = (vi, ii, field, val) => {
+    const variants = [...courseData.variants];
+    variants[vi].items[ii][field] = val;
+    setCourseData((prev) => ({ ...prev, variants }));
+    setErrors((prev) => ({ ...prev, [`item_${vi}_${ii}_${field}`]: "" }));
+  };
+
+  const addVariant = () => {
+    setCourseData((prev) => ({ ...prev, variants: [...prev.variants, { title: "", items: [] }] }));
+  };
+
+  const addItem = (vi) => {
+    const variants = [...courseData.variants];
+    variants[vi].items.push({ title: "", description: "", file: "", preview: false });
+    setCourseData((prev) => ({ ...prev, variants }));
+  };
+
+  const removeVariant = (i) => {
+    setCourseData((prev) => ({ ...prev, variants: prev.variants.filter((_, idx) => idx !== i) }));
+  };
+
+  const removeItem = (vi, ii) => {
+    const variants = [...courseData.variants];
+    variants[vi].items.splice(ii, 1);
+    setCourseData((prev) => ({ ...prev, variants }));
+  };
+
+  const validateForm = () => {
+    const e = {};
+    if (!courseData.title) e.title = "Title required.";
+    if (!courseData.category) e.category = "Select category.";
+    if (!courseData.level) e.level = "Select level.";
+    if (!courseData.language) e.language = "Select language.";
+    if (!courseData.price || isNaN(courseData.price)) e.price = "Enter valid price.";
+    if (!courseData.description) e.description = "Description required.";
+    if (!courseData.teacher_course_status) e.teacher_course_status = "Select status.";
+    if (courseData.variants.length === 0) e.variants = "At least 1 module.";
+    courseData.variants.forEach((v, i) => {
+      if (!v.title) e[`variant_${i}_title`] = "Module title required.";
+      v.items.forEach((it, j) => {
+        if (!it.title) e[`item_${i}_${j}_title`] = "Lesson title required.";
+      });
     });
-    const [imagePreview, setImagePreview] = useState("");
-    const [categories, setCategories] = useState([]);
-    const [loading, setLoading] = useState({ image: false, file: false });
-    const [errors, setErrors] = useState({});
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const navigate = useNavigate();
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
-    useEffect(() => {
-        useAxios
-            .get(`course/category/`)
-            .then((res) => setCategories(res.data))
-            .catch(() =>
-                Swal.fire({
-                    icon: "error",
-                    title: "Error",
-                    text: "Failed to load categories!",
-                })
-            );
-    }, []);
+  const getCookie = (name) => {
+    const cookie = document.cookie.split(";").find((c) => c.trim().startsWith(`${name}=`));
+    return cookie ? decodeURIComponent(cookie.split("=")[1]) : null;
+  };
 
-    const handleImageUpload = (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-        setImagePreview(URL.createObjectURL(file));
-        setCourseData({ ...courseData, image: file });
-        setErrors((prev) => ({ ...prev, image: "" }));
-    };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) {
+      Swal.fire({ icon: "error", title: "Error", text: "Please fill required fields." });
+      return;
+    }
 
-    const handleFileUpload = async (event, variantIndex = null, itemIndex = null) => {
-        const file = event.target.files[0];
-        if (!file) return;
+    setIsSubmitting(true);
+    try {
+      const formData = new FormData();
+      Object.entries({
+        ...courseData,
+        teacher: teacherId,
+        platform_status: "Published",
+      }).forEach(([key, val]) => {
+        if (key === "image" && val instanceof File) formData.append(key, val);
+        else if (key === "variants") formData.append(key, JSON.stringify(val));
+        else formData.append(key, val);
+      });
 
-        const allowedTypes = ["video/mp4", "video/avi", "video/mov"];
-        if (!allowedTypes.includes(file.type)) {
-            setErrors((prev) => ({
-                ...prev,
-                [variantIndex !== null ? `item_${variantIndex}_${itemIndex}_file` : "file"]: "Please select a valid video file.",
-            }));
-            return;
-        }
+      await apiInstance.post("/teacher/course-create/", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          "X-CSRFToken": getCookie("csrftoken"),
+        },
+      });
 
-        setLoading((prev) => ({ ...prev, file: true }));
-        try {
-            const formData = new FormData();
-            formData.append("file", file);
-            const response = await useAxios.post("/file-upload/", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-
-            if (response?.data?.url) {
-                if (variantIndex !== null && itemIndex !== null) {
-                    setCourseData((prev) => {
-                        const newVariants = [...prev.variants];
-                        newVariants[variantIndex].items[itemIndex].file = response.data.url;
-                        return { ...prev, variants: newVariants };
-                    });
-                    setErrors((prev) => ({
-                        ...prev,
-                        [`item_${variantIndex}_${itemIndex}_file`]: "",
-                    }));
-                } else {
-                    setCourseData((prev) => ({ ...prev, file: response.data.url }));
-                    setErrors((prev) => ({ ...prev, file: "" }));
-                }
-            }
-        } catch (error) {
-            setErrors((prev) => ({
-                ...prev,
-                [variantIndex !== null ? `item_${variantIndex}_${itemIndex}_file` : "file"]: "Error uploading file.",
-            }));
-        }
-        setLoading((prev) => ({ ...prev, file: false }));
-    };
-
-    const handleCourseInputChange = (event) => {
-        const { name, value, type, checked } = event.target;
-        const finalValue = name === "price" ? (value ? String(Number(value).toFixed(2)) : "") : value;
-        setCourseData({ ...courseData, [name]: type === "checkbox" ? checked : finalValue });
-        setErrors((prev) => ({ ...prev, [name]: "" }));
-    };
-
-    const handleVariantChange = (index, field, value) => {
-        setCourseData((prev) => {
-            const newVariants = [...prev.variants];
-            newVariants[index][field] = value;
-            return { ...prev, variants: newVariants };
-        });
-        setErrors((prev) => ({ ...prev, [`variant_${index}_${field}`]: "" }));
-    };
-
-    const handleItemChange = (variantIndex, itemIndex, field, value) => {
-        setCourseData((prev) => {
-            const newVariants = [...prev.variants];
-            newVariants[variantIndex].items[itemIndex][field] = value;
-            return { ...prev, variants: newVariants };
-        });
-        setErrors((prev) => ({ ...prev, [`item_${variantIndex}_${itemIndex}_${field}`]: "" }));
-    };
-
-    const addVariant = () => {
-        setCourseData((prev) => ({
-            ...prev,
-            variants: [...prev.variants, { title: "", items: [] }],
-        }));
-    };
-
-    const addItem = (variantIndex) => {
-        setCourseData((prev) => {
-            const newVariants = [...prev.variants];
-            newVariants[variantIndex].items.push({
-                title: "",
-                description: "",
-                file: "",
-                preview: false,
-            });
-            return { ...prev, variants: newVariants };
-        });
-    };
-
-    const removeVariant = (index) => {
-        setCourseData((prev) => ({
-            ...prev,
-            variants: prev.variants.filter((_, i) => i !== index),
-        }));
-    };
-
-    const removeItem = (variantIndex, itemIndex) => {
-        setCourseData((prev) => {
-            if (
-                variantIndex < 0 ||
-                variantIndex >= prev.variants.length ||
-                itemIndex < 0 ||
-                itemIndex >= prev.variants[variantIndex].items.length
-            ) {
-                return prev;
-            }
-            const newVariants = [...prev.variants];
-            newVariants[variantIndex].items = newVariants[variantIndex].items.filter((_, i) => i !== itemIndex);
-            return { ...prev, variants: newVariants };
-        });
-    };
-
-    const validateForm = () => {
-        const newErrors = {};
-        if (!courseData.title || courseData.title.length > 60) newErrors.title = "Title is required, max 60 characters.";
-        if (!courseData.category || isNaN(Number(courseData.category))) newErrors.category = "Select a valid category.";
-        if (!courseData.level) newErrors.level = "Select a level.";
-        if (!courseData.language) newErrors.language = "Select a language.";
-        if (!courseData.price || !/^\d+\.\d{2}$/.test(courseData.price)) newErrors.price = "Price must be like 99.99.";
-        if (!courseData.description) newErrors.description = "Description is required.";
-        if (!courseData.teacher_course_status) newErrors.teacher_course_status = "Select a course status.";
-        if (courseData.variants.length === 0) newErrors.variants = "At least one module is required.";
-        courseData.variants.forEach((variant, i) => {
-            if (!variant.title) newErrors[`variant_${i}_title`] = "Module title is required.";
-            if (variant.items.length === 0) newErrors[`variant_${i}_items`] = "At least one lesson is required.";
-            variant.items.forEach((item, j) => {
-                if (!item.title) newErrors[`item_${i}_${j}_title`] = "Lesson title is required.";
-                if (!item.file) newErrors[`item_${i}_${j}_file`] = "Lesson video is required.";
-                if (item.file && !item.file.startsWith("http")) newErrors[`item_${i}_${j}_file`] = "Invalid video URL.";
-            });
-        });
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-    const getCookie = (name) => {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== "") {
-            const cookies = document.cookie.split(";");
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === name + "=") {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!validateForm()) {
-            Swal.fire({
-                icon: "error",
-                title: "Error",
-                text: "Please fill all required fields!",
-            });
-            return;
-        }
-
-        setIsSubmitting(true);
-        try {
-            const formData = new FormData();
-            formData.append("title", courseData.title);
-            formData.append("description", courseData.description);
-            if (courseData.image instanceof File) formData.append("image", courseData.image);
-            if (typeof courseData.file === "string" && courseData.file) formData.append("file", courseData.file);
-            formData.append("level", courseData.level);
-            formData.append("language", courseData.language);
-            formData.append("price", courseData.price);
-            formData.append("category", courseData.category);
-            formData.append("teacher", teacherId);
-            formData.append("teacher_course_status", courseData.teacher_course_status);
-            formData.append("featured", courseData.featured);
-            formData.append("platform_status", "Published");
-            formData.append("variants", JSON.stringify(courseData.variants));
-
-            const response = await useAxios.post(`/teacher/course-create/`, formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                    "X-CSRFToken": getCookie("csrftoken"),
-                },
-            });
-
-            Swal.fire({
-                icon: "success",
-                title: "Course Created Successfully",
-            });
-            navigate(`/instructor/edit-course/${response?.data?.course_id}/`);
-        } catch (error) {
-            Swal.fire({
-                icon: "error",
-                title: "Failed to Create Course",
-                text: error.response?.data ? JSON.stringify(error.response.data) : "Please try again.",
-            });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+      Swal.fire({ icon: "success", title: "Course Created" });
+      navigate("/instructor/courses/");
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Creation Failed",
+        text: error.response?.data?.message || "Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
     return (
         <>

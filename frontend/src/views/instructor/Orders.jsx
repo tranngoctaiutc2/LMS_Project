@@ -6,7 +6,7 @@ import Header from "./Partials/Header";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 
-import useAxios from "../../utils/useAxios";
+import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
 
 function Orders() {
@@ -19,7 +19,7 @@ function Orders() {
     useEffect(() => {
         const fetchOrders = async () => {
             try {
-                const response = await useAxios.get(`teacher/course-order-list/${UserData()?.teacher_id}/`);
+                const response = await apiInstance.get(`teacher/course-order-list/${UserData()?.teacher_id}/`);
                 setOrders(response.data);
             } catch (err) {
                 setError("Failed to fetch orders. Please try again later.");

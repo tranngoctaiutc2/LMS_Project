@@ -5,7 +5,7 @@ import BaseFooter from "../partials/BaseFooter";
 import Sidebar from "./Partials/Sidebar";
 import Header from "./Partials/Header";
 
-import useAxios from "../../utils/useAxios";
+import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
 import { logout } from "../../utils/auth";
@@ -43,7 +43,7 @@ function ChangePassword() {
         setIsLoading(true);
 
         try {
-            const res = await useAxios.post("user/change-password/", formdata);
+            const res = await apiInstance.post("user/change-password/", formdata);
             Toast().fire({
                 icon: res.data.icon,
                 title: res.data.message,

@@ -1,133 +1,150 @@
 import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 import apiInstance from "../../utils/axios";
-import { useNavigate, useSearchParams } from "react-router-dom";
 import Toast from "../plugin/Toast";
+import zxcvbn from "zxcvbn";
+
 function CreateNewPassword() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
   const [searchParam] = useSearchParams();
 
-  const otp = searchParam.get("otp");
-  const uuidb64 = searchParam.get("uuidb64");
-  const refresh_token = searchParam.get("refresh_token");
+  const otp = searchParam.get("otp") || "";
+  const uuidb64 = searchParam.get("uuidb64") || "";
+  const refreshToken = searchParam.get("refresh_token") || "";
+
+  useEffect(() => {
+    if (!otp || !uuidb64 || !refreshToken) {
+      Toast.error("Invalid or expired reset link");
+      navigate("/login");
+    }
+  }, [otp, uuidb64, refreshToken, navigate]);
 
   const handleCreatePassword = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    if (confirmPassword !== password) {
-      Toast().fire({
-        icon: "warning",
-        title: "Passwords does not match",
-      });
-      return;
-    } else {
-      const formdata = new FormData();
-      formdata.append("password", password);
-      formdata.append("otp", otp);
-      formdata.append("uuidb64", uuidb64);
-      formdata.append("refresh_token", refresh_token);
 
-      try {
-        await apiInstance
-          .post(`user/password-change/`, formdata)
-          .then((res) => {
-            console.log(res.data);
-            setIsLoading(false);
-            navigate("/login/");
-            Toast().fire({
-              icon: "success",
-              title: res.data.message,
-            });
-          });
-      } catch (error) {
-        console.log(error);
-        setIsLoading(false);
-      }
+    const trimmedPassword = password.trim();
+    const trimmedConfirm = confirmPassword.trim();
+
+    const strength = zxcvbn(trimmedPassword);
+
+    if (!trimmedPassword || !trimmedConfirm) {
+      Toast.warning("Please fill in both fields.");
+      return;
     }
 
-    console.log("Password Created");
+    if (trimmedPassword !== trimmedConfirm) {
+      Toast.warning("Passwords do not match.");
+      return;
+    }
+
+    if (strength.score < 2) {
+      Toast.warning("Password is too weak. Try using more unique characters.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("password", trimmedPassword);
+    formData.append("otp", otp);
+    formData.append("uuidb64", uuidb64);
+    formData.append("refresh_token", refreshToken);
+
+    setIsLoading(true);
+
+    try {
+      const res = await apiInstance.post("user/password-change/", formData);
+      Toast.success(res.data.message || "Password updated successfully");
+      navigate("/login");
+    } catch (error) {
+      Toast.error(
+        error?.response?.data?.message || "Failed to reset password. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const passwordStrength = zxcvbn(password);
+
   return (
     <>
       <BaseHeader />
-
-      <section
-        className="container d-flex flex-column vh-100"
-        style={{ marginTop: "150px" }}
-      >
-        <div className="row align-items-center justify-content-center g-0 h-lg-100 py-8">
-          <div className="col-lg-5 col-md-8 py-8 py-xl-0">
-            <div className="card shadow">
-              <div className="card-body p-6">
-                <div className="mb-4">
-                  <h1 className="mb-1 fw-bold">Create New Password</h1>
-                  <span>Choose a new password for your account</span>
+      <section className="container d-flex flex-column vh-100 justify-content-center align-items-center">
+        <div className="row w-100 justify-content-center">
+          <div className="col-lg-5 col-md-8 col-sm-10">
+            <div className="card shadow rounded-4 border-0">
+              <div className="card-body p-5">
+                <div className="mb-4 text-center">
+                  <h1 className="fw-bold mb-2">Create New Password</h1>
+                  <p className="text-muted">Choose a strong password for your account</p>
                 </div>
-                <form
-                  className="needs-validation"
-                  noValidate=""
-                  onSubmit={handleCreatePassword}
-                >
-                  <div className="mb-3">
-                    <label htmlFor="password" className="form-label">
-                      Enter New Password
+                <form onSubmit={handleCreatePassword} noValidate>
+                  <div className="mb-4 position-relative">
+                    <label htmlFor="new-password" className="form-label fw-semibold">
+                      New Password
                     </label>
-                    <input
-                      type="password"
-                      id="password"
-                      className="form-control"
-                      name="password"
-                      placeholder="**************"
-                      required=""
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                    <div className="invalid-feedback">
-                      Please enter valid password.
+                    <div className="input-group">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        id="new-password"
+                        className="form-control rounded-start py-2"
+                        placeholder="**************"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                      <span
+                        className="input-group-text bg-white border-start-0"
+                        style={{ cursor: "pointer" }}
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                      <i className={`fas ${showPassword ? "fa-eye-slash" : "fa-eye"}`}></i>
+                      </span>
                     </div>
+                    {password && (
+                      <small
+                        className={`text-${
+                          passwordStrength.score >= 3 ? "success" : "danger"
+                        }`}
+                      >
+                        Strength: {["Very Weak", "Weak", "Fair", "Good", "Strong"][passwordStrength.score]}
+                      </small>
+                    )}
                   </div>
 
-                  <div className="mb-3">
-                    <label htmlFor="password" className="form-label">
-                      Confirm New Password
+                  <div className="mb-4">
+                    <label htmlFor="confirm-password" className="form-label fw-semibold">
+                      Confirm Password
                     </label>
                     <input
                       type="password"
-                      id="password"
-                      className="form-control"
-                      name="password"
+                      id="confirm-password"
+                      className="form-control rounded-3 py-2"
                       placeholder="**************"
-                      required=""
+                      value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
                     />
-                    <div className="invalid-feedback">
-                      Please enter valid password.
-                    </div>
                   </div>
 
-                  <div>
-                    <div className="d-grid">
-                      {isLoading === true && (
-                        <button
-                          disabled
-                          type="submit"
-                          className="btn btn-primary"
-                        >
-                          Processing <i className="fas fa-spinner fa-spin"></i>
-                        </button>
+                  <div className="d-grid">
+                    <button type="submit" className="btn btn-primary rounded-3 py-2 fw-semibold" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          Processing <i className="fas fa-spinner fa-spin ms-2"></i>
+                        </>
+                      ) : (
+                        <>
+                          Save New Password <i className="fas fa-check-circle ms-2"></i>
+                        </>
                       )}
-
-                      {isLoading === false && (
-                        <button type="submit" className="btn btn-primary">
-                          Save New Password{" "}
-                          <i className="fas fa-check-circle"></i>
-                        </button>
-                      )}
-                    </div>
+                    </button>
                   </div>
                 </form>
               </div>
@@ -135,7 +152,6 @@ function CreateNewPassword() {
           </div>
         </div>
       </section>
-
       <BaseFooter />
     </>
   );

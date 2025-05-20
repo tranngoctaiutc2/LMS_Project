@@ -4,10 +4,12 @@ import moment from "moment";
 import _ from 'lodash';
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
+import Toast from "../plugin/Toast";
 import Sidebar from "./Partials/Sidebar";
 import Header from "./Partials/Header";
-import useAxios from "../../utils/useAxios";
+import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
+import Swal from 'sweetalert2';
 
 function Courses() {
     const [courses, setCourses] = useState([]);
@@ -17,7 +19,7 @@ function Courses() {
     const fetchData = useCallback(async () => {
         setFetching(true);
         try {
-            const res = await useAxios.get(`teacher/course-lists/${UserData()?.teacher_id}/`);
+            const res = await apiInstance.get(`teacher/course-lists/${UserData()?.teacher_id}/`);
             setCourses(res.data);
             setOriginalCourses(res.data);
         } catch (error) {
@@ -49,6 +51,36 @@ function Courses() {
         const query = event?.target?.value?.toLowerCase() || '';
         debouncedSearch(query);
     };
+
+    const handleDeleteCourse = async (courseId, title) => {
+        const result = await Swal.fire({
+            title: `Delete course "${title}"?`,
+            text: "You will not be able to restore this action!",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            cancelButtonColor: "#3085d6",
+            confirmButtonText: "Delete",
+            cancelButtonText: "Cancel",
+        });
+
+        if (result.isConfirmed) {
+            try {
+                await apiInstance.delete(`teacher/course-delete/${UserData()?.teacher_id}/${courseId}/`);
+                fetchData();
+                Toast().fire({
+                    icon: "success",
+                    title: `Delete "${title}" successfully`,
+                });
+            } catch (err) {
+                Toast().fire({
+                    icon: "error",
+                    title: `Fail to delete "${title}"`,
+                });
+            }
+        }
+    };
+
 
     return (
         <>
@@ -148,7 +180,11 @@ function Courses() {
                                                                 <Link to={`/instructor/edit-course/${c.course_id}/`} className="btn btn-sm btn-outline-primary me-2" title="Edit">
                                                                     <i className="fas fa-edit"></i>
                                                                 </Link>
-                                                                <button className="btn btn-sm btn-outline-danger me-2" title="Delete" onClick={() => { if (window.confirm(`Are you sure you want to delete "${c.title}"?`)) { console.log(`Delete course ${c.course_id}`); } }}>
+                                                                <button
+                                                                    className="btn btn-sm btn-outline-danger me-2"
+                                                                    title="Delete"
+                                                                    onClick={() => handleDeleteCourse(c.course_id, c.title)}
+                                                                >
                                                                     <i className="fas fa-trash"></i>
                                                                 </button>
                                                                 <button className="btn btn-sm btn-outline-secondary" title="View">

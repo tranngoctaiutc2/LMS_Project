@@ -1,12 +1,9 @@
 import { useState, useEffect, useContext } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import moment from "moment";
-import Swal from "sweetalert2";
 
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
-import { useParams } from "react-router-dom";
-import useAxios from "../../utils/useAxios";
 import CartId from "../plugin/CartId";
 import GetCurrentAddress from "../plugin/UserCountry";
 import UserData from "../plugin/UserData";
@@ -20,16 +17,19 @@ function CourseDetail() {
     const [addToCartBtn, setAddToCartBtn] = useState("Add To Cart");
     const [cartCount, setCartCount] = useContext(CartContext);
 
-    const param = useParams();
-
+    const { slug } = useParams();
     const country = GetCurrentAddress().country;
     const userId = UserData()?.user_id || 0;
 
     const fetchCourse = async () => {
-        await useAxios.get(`course/course-detail/${param.slug}/`).then((res) => {
-            setCourse(res.data);
-            setIsLoading();
-        });
+        try {
+        const res = await apiInstance.get(`course/course-detail/${slug}/`);
+        setCourse(res.data);
+        } catch (err) {
+        Toast.error("Failed to fetch course details.");
+        } finally {
+        setIsLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -38,22 +38,18 @@ function CourseDetail() {
 
     const isCourseEnrolled = async (courseId) => {
         try {
-            const res = await useAxios.get(`student/course-list/${userId}/`);
-            const enrolledCourses = res.data;
-    
-            const isEnrolled = enrolledCourses.some(item => item.course?.id === courseId);
-    
-            if (isEnrolled) {
-                Toast().fire({
-                    title: "Bạn đã ghi danh khoá học này rồi",
-                    icon: "warning",
-                });
-            }
-    
-            return isEnrolled;
+        const res = await apiInstance.get(`student/course-list/${userId}/`);
+        const enrolledCourses = res.data;
+        const isEnrolled = enrolledCourses.some(item => item.course?.id === courseId);
+
+        if (isEnrolled) {
+            Toast.warning("You are already enrolled in this course");
+        }
+
+        return isEnrolled;
         } catch (error) {
-            console.error("Lỗi khi kiểm tra khoá học đã ghi danh:", error);
-            return false;
+        Toast.error("Failed to check enrollment status");
+        return false;
         }
     };
 
@@ -62,113 +58,97 @@ function CourseDetail() {
         const alreadyEnrolled = await isCourseEnrolled(courseId);
 
         if (alreadyEnrolled) {
-            Toast().fire({
-                icon: "info",
-                title: "You are already enrolled in this course",
-            });
-            setAddToCartBtn("Already enrolled this course");
-            return;
+        setAddToCartBtn("Already Enrolled");
+        return;
         }
 
         try {
-            const cartRes = await apiInstance.get(`course/cart-list/${cartId}/`);
-            const cartItems = cartRes.data;
-    
-            const alreadyInCart = cartItems.some(item => item.course.id === courseId);
-    
-            if (alreadyInCart) {
-                setAddToCartBtn("Added To Cart");
-    
-                Toast().fire({
-                    title: "Course already in cart",
-                    icon: "info",
-                });
-                return;
-            }
-    
-            const formdata = new FormData();
-            formdata.append("course_id", courseId);
-            formdata.append("user_id", userId);
-            formdata.append("price", price);
-            formdata.append("country_name", country);
-            formdata.append("cart_id", cartId);
-    
-            const res = await useAxios.post(`course/cart/`, formdata);
-            console.log(res.data);
-    
-            setAddToCartBtn("Added To Cart");
-            Toast().fire({
-                title: "Added To Cart",
-                icon: "success",
-            });
+        const cartRes = await apiInstance.get(`course/cart-list/${cartId}/`);
+        const cartItems = cartRes.data;
 
-            const updatedCart = await apiInstance.get(`course/cart-list/${cartId}/`);
-            setCartCount(updatedCart.data?.length);
-    
+        const alreadyInCart = cartItems.some(item => item.course.id === courseId);
+
+        if (alreadyInCart) {
+            setAddToCartBtn("Already In Cart");
+            Toast.info("Course is already in your cart.");
+            return;
+        }
+
+        const formdata = new FormData();
+        formdata.append("course_id", courseId);
+        formdata.append("user_id", userId);
+        formdata.append("price", price);
+        formdata.append("country_name", country);
+        formdata.append("cart_id", cartId);
+
+        await apiInstance.post(`course/cart/`, formdata);
+
+        setAddToCartBtn("Added To Cart");
+        Toast.success("Course added to cart");
+
+        const updatedCart = await apiInstance.get(`course/cart-list/${cartId}/`);
+        setCartCount(updatedCart.data?.length);
         } catch (error) {
-            console.error(error);
-            setAddToCartBtn("Add To Cart");
+        Toast.error("Failed to add course to cart");
+        setAddToCartBtn("Add To Cart");
         }
     };
-    
+
     const totalVariantItems = course?.variants?.reduce((total, variant) => {
         return total + (variant.items?.length || 0);
-    }, 0);    
-    
+    }, 0);
+
     const getTotalFormattedDuration = (course) => {
         if (!course?.variants) return "00:00:00";
-    
+
         const parseDurationText = (durationText) => {
-            if (!durationText) return 0;
-    
-            const hhmmssMatch = durationText.match(/^(\d{1,2}):(\d{1,2}):(\d{1,2})$/);
-            if (hhmmssMatch) {
-                const hours = parseInt(hhmmssMatch[1], 10);
-                const minutes = parseInt(hhmmssMatch[2], 10);
-                const seconds = parseInt(hhmmssMatch[3], 10);
-                return hours * 3600 + minutes * 60 + seconds;
-            }
-    
-            const hourMatch = durationText.match(/(\d+)h/);
-            const minuteMatch = durationText.match(/(\d+)m/);
-            const secondMatch = durationText.match(/(\d+)s/);
-    
-            const hours = hourMatch ? parseInt(hourMatch[1], 10) : 0;
-            const minutes = minuteMatch ? parseInt(minuteMatch[1], 10) : 0;
-            const seconds = secondMatch ? parseInt(secondMatch[1], 10) : 0;
-    
+        if (!durationText) return 0;
+
+        const hhmmssMatch = durationText.match(/^(\d{1,2}):(\d{1,2}):(\d{1,2})$/);
+        if (hhmmssMatch) {
+            const [hours, minutes, seconds] = hhmmssMatch.slice(1).map(Number);
             return hours * 3600 + minutes * 60 + seconds;
+        }
+
+        const hourMatch = durationText.match(/(\d+)h/);
+        const minuteMatch = durationText.match(/(\d+)m/);
+        const secondMatch = durationText.match(/(\d+)s/);
+
+        const hours = hourMatch ? parseInt(hourMatch[1], 10) : 0;
+        const minutes = minuteMatch ? parseInt(minuteMatch[1], 10) : 0;
+        const seconds = secondMatch ? parseInt(secondMatch[1], 10) : 0;
+
+        return hours * 3600 + minutes * 60 + seconds;
         };
-    
+
         let totalSeconds = 0;
         course.variants.forEach((variant) => {
-            const items = variant.items || variant.variant_items || [];
-            items.forEach((item) => {
-                totalSeconds += parseDurationText(item.content_duration);
-            });
+        const items = variant.items || variant.variant_items || [];
+        items.forEach((item) => {
+            totalSeconds += parseDurationText(item.content_duration);
         });
-    
-        const formatSeconds = (totalSeconds) => {
-            const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
-            const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
-            const seconds = (totalSeconds % 60).toString().padStart(2, '0');
-            return `${hours}:${minutes}:${seconds}`;
-        };
-    
-        return formatSeconds(totalSeconds);
+        });
+
+        const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+        const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+        const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+
+        return `${hours}:${minutes}:${seconds}`;
     };
-    
-    
-    return (
+
+  return (
         <>
             <BaseHeader />
 
             <>
-                {isLoading === true ? (
-                    <p>
-                        Loading <i className="fas fa-spinner fa-spin"></i>
-                    </p>
-                ) : (
+                {isLoading ? (
+                    <div className="d-flex justify-content-center align-items-center py-5">
+                        <div className="spinner-border text-primary me-3" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <span className="h5 mb-0 text-muted">Loading course data...</span>
+                    </div>
+                    ) : (
                     <>
                         <section className="bg-light py-0 py-sm-5">
                             <div className="container">

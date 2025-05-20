@@ -8,258 +8,232 @@ import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 import Sidebar from "./Partials/Sidebar";
 import Header from "./Partials/Header";
-import useAxios from "../../utils/useAxios";
+import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
 import moment from "moment";
 
 function CourseDetail() {
-    const [course, setCourse] = useState([]);
-    const [variantItem, setVariantItem] = useState(null);
-    const [completionPercentage, setCompletionPercentage] = useState(0);
-    const [markAsCompletedStatus, setMarkAsCompletedStatus] = useState({});
-    const [createNote, setCreateNote] = useState({ title: "", note: "" });
-    const [selectedNote, setSelectedNote] = useState(null);
-    const [createMessage, setCreateMessage] = useState({
-        title: "",
-        message: "",
-    });
-    const [questions, setQuestions] = useState([]);
-    const [selectedConversation, setSelectedConversation] = useState(null);
-    const [createReview, setCreateReview] = useState({ rating: 1, review: "" });
-    const [studentReview, setStudentReview] = useState([]);
+  const [course, setCourse] = useState([]);
+  const [variantItem, setVariantItem] = useState(null);
+  const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [markAsCompletedStatus, setMarkAsCompletedStatus] = useState({});
+  const [createNote, setCreateNote] = useState({ title: "", note: "" });
+  const [selectedNote, setSelectedNote] = useState(null);
+  const [createMessage, setCreateMessage] = useState({ title: "", message: "" });
+  const [questions, setQuestions] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [createReview, setCreateReview] = useState({ rating: 1, review: "" });
+  const [studentReview, setStudentReview] = useState([]);
 
-    const param = useParams();
-    const lastElementRef = useRef();
-    // Lấy danh sách variant duy nhất từ lectures
-    const uniqueVariants = [...new Map(course?.lectures?.map(l => [l.variant.variant_id, l.variant])).values()];
+  const param = useParams();
+  const lastElementRef = useRef();
+  const uniqueVariants = [...new Map(course?.lectures?.map(l => [l.variant.variant_id, l.variant])).values()];
 
-    // Play Lecture Modal
-    const [show, setShow] = useState(false);
-    const handleClose = () => setShow(false);
-    const handleShow = (variant_item) => {
-        setShow(true);
-        setVariantItem(variant_item);
-    };
+  const [show, setShow] = useState(false);
+  const handleClose = () => setShow(false);
+  const handleShow = (variant_item) => {
+    setShow(true);
+    setVariantItem(variant_item);
+  };
 
-    const [noteShow, setNoteShow] = useState(false);
-    const handleNoteClose = () => setNoteShow(false);
-    const handleNoteShow = (note) => {
-        setNoteShow(true);
-        setSelectedNote(note);
-    };
+  const [noteShow, setNoteShow] = useState(false);
+  const handleNoteClose = () => setNoteShow(false);
+  const handleNoteShow = (note) => {
+    setNoteShow(true);
+    setSelectedNote(note);
+  };
 
-    const [ConversationShow, setConversationShow] = useState(false);
-    const handleConversationClose = () => setConversationShow(false);
-    const handleConversationShow = (converation) => {
-        setConversationShow(true);
-        setSelectedConversation(converation);
-    };
+  const [ConversationShow, setConversationShow] = useState(false);
+  const handleConversationClose = () => setConversationShow(false);
+  const handleConversationShow = (converation) => {
+    setConversationShow(true);
+    setSelectedConversation(converation);
+  };
 
-    const [addQuestionShow, setAddQuestionShow] = useState(false);
-    const handleQuestionClose = () => setAddQuestionShow(false);
-    const handleQuestionShow = () => setAddQuestionShow(true);
+  const [addQuestionShow, setAddQuestionShow] = useState(false);
+  const handleQuestionClose = () => setAddQuestionShow(false);
+  const handleQuestionShow = () => setAddQuestionShow(true);
 
-    const fetchCourseDetail = async () => {
-        useAxios.get(`student/course-detail/${UserData()?.user_id}/${param.enrollment_id}/`).then((res) => {
-            setCourse(res.data);
-            setQuestions(res.data.question_answer);
-            setStudentReview(res.data.review);
-            const totalLectures = res.data.lectures?.length || 0;
-            const completedLectures = res.data.completed_lesson?.length || 0;
-            const percentageCompleted = (completedLectures / totalLectures) * 100;
-            // const percentageCompleted = (res.data.completed_lesson?.length / res.data.lectures?.length) * 100;
-            setCompletionPercentage(percentageCompleted?.toFixed(0));
-        });
-    };
-    useEffect(() => {
-        fetchCourseDetail();
-    }, []);
+  const fetchCourseDetail = async () => {
+    try {
+      const res = await apiInstance.get(`student/course-detail/${UserData()?.user_id}/${param.enrollment_id}/`);
+      setCourse(res.data);
+      setQuestions(res.data.question_answer);
+      setStudentReview(res.data.review);
+      const totalLectures = res.data.lectures?.length || 0;
+      const completedLectures = res.data.completed_lesson?.length || 0;
+      const percentageCompleted = (completedLectures / totalLectures) * 100;
+      setCompletionPercentage(percentageCompleted?.toFixed(0));
+    } catch (error) {
+      Toast.error("Failed to load course details");
+    }
+  };
 
-    console.log(createReview?.rating);
-    // console.log(studentReview);
-    const handleMarkLessonAsCompleted = (variantItemId) => {
-        const key = `lecture_${variantItemId}`;
-        setMarkAsCompletedStatus({
-            ...markAsCompletedStatus,
-            [key]: "Updating",
-        });
+  useEffect(() => {
+    fetchCourseDetail();
+  }, []);
 
-        const formdata = new FormData();
-        formdata.append("user_id", UserData()?.user_id || 0);
-        formdata.append("course_id", course.course?.id);
-        formdata.append("variant_item_id", variantItemId);
+  const handleMarkLessonAsCompleted = async (variantItemId) => {
+    const key = `lecture_${variantItemId}`;
+    setMarkAsCompletedStatus({ ...markAsCompletedStatus, [key]: "Updating" });
 
-        useAxios.post(`student/course-completed/`, formdata).then((res) => {
-            fetchCourseDetail();
-            setMarkAsCompletedStatus({
-                ...markAsCompletedStatus,
-                [key]: "Updated",
-            });
-        });
-    };
+    const formdata = new FormData();
+    formdata.append("user_id", UserData()?.user_id || 0);
+    formdata.append("course_id", course.course?.id);
+    formdata.append("variant_item_id", variantItemId);
 
-    const handleNoteChange = (event) => {
-        setCreateNote({
-            ...createNote,
-            [event.target.name]: event.target.value,
-        });
-    };
+    try {
+      await apiInstance.post(`student/course-completed/`, formdata);
+      await fetchCourseDetail();
+      setMarkAsCompletedStatus({ ...markAsCompletedStatus, [key]: "Updated" });
+    } catch {
+      Toast.error("Could not mark lesson as completed");
+    }
+  };
 
-    const handleSubmitCreateNote = async (e) => {
-        e.preventDefault();
-        const formdata = new FormData();
+  const handleSubmitCreateNote = async (e) => {
+    e.preventDefault();
+    const formdata = new FormData();
+    formdata.append("user_id", UserData()?.user_id);
+    formdata.append("enrollment_id", param.enrollment_id);
+    formdata.append("title", createNote.title);
+    formdata.append("note", createNote.note);
 
-        formdata.append("user_id", UserData()?.user_id);
-        formdata.append("enrollment_id", param.enrollment_id);
-        formdata.append("title", createNote.title);
-        formdata.append("note", createNote.note);
+    try {
+      await apiInstance.post(`student/course-note/${UserData()?.user_id}/${param.enrollment_id}/`, formdata);
+      fetchCourseDetail();
+      handleNoteClose();
+      Toast.success("Note created");
+    } catch {
+      Toast.error("Failed to create note");
+    }
+  };
 
-        try {
-            await useAxios.post(`student/course-note/${UserData()?.user_id}/${param.enrollment_id}/`, formdata).then((res) => {
-                fetchCourseDetail();
-                handleNoteClose();
-                Toast().fire({
-                    icon: "success",
-                    title: "Note created",
-                });
-            });
-        } catch (error) {
-            console.log(error);
-        }
-    };
+  const handleSubmitEditNote = async (e, noteId) => {
+    e.preventDefault();
+    const formdata = new FormData();
+    formdata.append("user_id", UserData()?.user_id);
+    formdata.append("enrollment_id", param.enrollment_id);
+    formdata.append("title", createNote.title || selectedNote?.title);
+    formdata.append("note", createNote.note || selectedNote?.note);
 
-    const handleSubmitEditNote = (e, noteId) => {
-        e.preventDefault();
-        const formdata = new FormData();
+    try {
+      await apiInstance.patch(`student/course-note-detail/${UserData()?.user_id}/${param.enrollment_id}/${noteId}/`, formdata);
+      fetchCourseDetail();
+      Toast.success("Note updated");
+    } catch {
+      Toast.error("Failed to update note");
+    }
+  };
 
-        formdata.append("user_id", UserData()?.user_id);
-        formdata.append("enrollment_id", param.enrollment_id);
-        formdata.append("title", createNote.title || selectedNote?.title);
-        formdata.append("note", createNote.note || selectedNote?.note);
+  const handleDeleteNote = async (noteId) => {
+    try {
+      await apiInstance.delete(`student/course-note-detail/${UserData()?.user_id}/${param.enrollment_id}/${noteId}/`);
+      fetchCourseDetail();
+      Toast.success("Note deleted");
+    } catch {
+      Toast.error("Failed to delete note");
+    }
+  };
 
-        useAxios.patch(`student/course-note-detail/${UserData()?.user_id}/${param.enrollment_id}/${noteId}/`, formdata).then((res) => {
-            fetchCourseDetail();
-            Toast().fire({
-                icon: "success",
-                title: "Note updated",
-            });
-        });
-    };
+  const handleSaveQuestion = async (e) => {
+    e.preventDefault();
+    const formdata = new FormData();
+    formdata.append("course_id", course.course?.id);
+    formdata.append("user_id", UserData()?.user_id);
+    formdata.append("title", createMessage.title);
+    formdata.append("message", createMessage.message);
 
-    const handleDeleteNote = (noteId) => {
-        useAxios.delete(`student/course-note-detail/${UserData()?.user_id}/${param.enrollment_id}/${noteId}/`).then((res) => {
-            fetchCourseDetail();
-            Toast().fire({
-                icon: "success",
-                title: "Note deleted",
-            });
-        });
-    };
+    try {
+      await apiInstance.post(`student/question-answer-list-create/${course.course?.id}/`, formdata);
+      fetchCourseDetail();
+      handleQuestionClose();
+      Toast.success("Question sent");
+    } catch {
+      Toast.error("Failed to send question");
+    }
+  };
 
-    const handleMessageChange = (event) => {
-        setCreateMessage({
-            ...createMessage,
-            [event.target.name]: event.target.value,
-        });
-    };
+  const sendNewMessage = async (e) => {
+    e.preventDefault();
+    const formdata = new FormData();
+    formdata.append("course_id", course.course?.id);
+    formdata.append("user_id", UserData()?.user_id);
+    formdata.append("message", createMessage.message);
+    formdata.append("qa_id", selectedConversation?.qa_id);
 
-    const handleSaveQuestion = async (e) => {
-        e.preventDefault();
-        const formdata = new FormData();
+    try {
+      const res = await apiInstance.post(`student/question-answer-message-create/`, formdata);
+      setSelectedConversation(res.data.question);
+    } catch {
+      Toast.error("Failed to send message");
+    }
+  };
 
-        formdata.append("course_id", course.course?.id);
-        formdata.append("user_id", UserData()?.user_id);
-        formdata.append("title", createMessage.title);
-        formdata.append("message", createMessage.message);
+  const handleCreateReviewSubmit = async (e) => {
+    e.preventDefault();
+    const formdata = new FormData();
+    formdata.append("course_id", course.course?.id);
+    formdata.append("user_id", UserData()?.user_id);
+    formdata.append("rating", createReview?.rating);
+    formdata.append("review", createReview?.review);
 
-        await useAxios.post(`student/question-answer-list-create/${course.course?.id}/`, formdata).then((res) => {
-            fetchCourseDetail();
-            handleQuestionClose();
-            Toast().fire({
-                icon: "success",
-                title: "Question sent",
-            });
-        });
-    };
+    try {
+      await apiInstance.post(`student/rate-course/`, formdata);
+      fetchCourseDetail();
+      Toast.success("Review created");
+    } catch {
+      Toast.error("Failed to create review");
+    }
+  };
 
-    const sendNewMessage = async (e) => {
-        e.preventDefault();
-        const formdata = new FormData();
-        formdata.append("course_id", course.course?.id);
-        formdata.append("user_id", UserData()?.user_id);
-        formdata.append("message", createMessage.message);
-        formdata.append("qa_id", selectedConversation?.qa_id);
+  const handleUpdateReviewSubmit = async (e) => {
+    e.preventDefault();
+    const formdata = new FormData();
+    formdata.append("course", course.course?.id);
+    formdata.append("user", UserData()?.user_id);
+    formdata.append("rating", createReview?.rating || studentReview?.rating);
+    formdata.append("review", createReview?.review || studentReview?.review);
 
-        useAxios.post(`student/question-answer-message-create/`, formdata).then((res) => {
-            setSelectedConversation(res.data.question);
-        });
-    };
+    try {
+      await apiInstance.patch(`student/review-detail/${UserData()?.user_id}/${studentReview?.id}/`, formdata);
+      fetchCourseDetail();
+      Toast.success("Review updated");
+    } catch {
+      Toast.error("Failed to update review");
+    }
+  };
 
-    useEffect(() => {
-        if (lastElementRef.current) {
-            lastElementRef.current.scrollIntoView({ behavior: "smooth" });
-        }
-    }, [selectedConversation]);
+  const handleNoteChange = (event) => {
+    setCreateNote({ ...createNote, [event.target.name]: event.target.value });
+  };
 
-    const handleSearchQuestion = (event) => {
-        const query = event.target.value.toLowerCase();
-        if (query === "") {
-            fetchCourseDetail();
-        } else {
-            const filtered = questions?.filter((question) => {
-                return question.title.toLowerCase().includes(query);
-            });
-            setQuestions(filtered);
-        }
-    };
+  const handleMessageChange = (event) => {
+    setCreateMessage({ ...createMessage, [event.target.name]: event.target.value });
+  };
 
-    const handleReviewChange = (event) => {
-        setCreateReview({
-            ...createReview,
-            [event.target.name]: event.target.value,
-        });
-    };
+  const handleSearchQuestion = (event) => {
+    const query = event.target.value.toLowerCase();
+    if (query === "") {
+      fetchCourseDetail();
+    } else {
+      const filtered = questions?.filter((question) => question.title.toLowerCase().includes(query));
+      setQuestions(filtered);
+    }
+  };
 
-    const handleCreateReviewSubmit = (e) => {
-        e.preventDefault();
+  const handleReviewChange = (event) => {
+    setCreateReview({ ...createReview, [event.target.name]: event.target.value });
+  };
 
-        const formdata = new FormData();
-        formdata.append("course_id", course.course?.id);
-        formdata.append("user_id", UserData()?.user_id);
-        formdata.append("rating", createReview?.rating);
-        formdata.append("review", createReview?.review);
+  useEffect(() => {
+    if (lastElementRef.current) {
+      lastElementRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [selectedConversation]);
 
-        useAxios.post(`student/rate-course/`, formdata).then((res) => {
-            console.log(res.data);
-            fetchCourseDetail();
-            Toast().fire({
-                icon: "success",
-                title: "Review created",
-            });
-        });
-    };
-
-    const handleUpdateReviewSubmit = (e) => {
-        e.preventDefault();
-
-        const formdata = new FormData();
-        formdata.append("course", course.course?.id);
-        formdata.append("user", UserData()?.user_id);
-        formdata.append("rating", createReview?.rating || studentReview?.rating);
-        formdata.append("review", createReview?.review || studentReview?.review);
-
-        useAxios.patch(`student/review-detail/${UserData()?.user_id}/${studentReview?.id}/`, formdata).then((res) => {
-            console.log(res.data);
-            fetchCourseDetail();
-            Toast().fire({
-                icon: "success",
-                title: "Review updated",
-            });
-        });
-    };
-
-    return (
+  return (
         <>
             <BaseHeader />
 
@@ -271,11 +245,6 @@ function CourseDetail() {
                         {/* Sidebar Here */}
                         <Sidebar />
                         <div className="col-lg-9 col-md-8 col-12">
-                            {/* <section className="bg-blue py-7">
-                <div className="container">
-                  <ReactPlayer url='https://www.youtube.com/watch?v=LXb3EKWsInQ' width={"100%"} height={600} />
-                </div>
-              </section> */}
                             <section className="mt-4">
                                 <div className="container">
                                     <div className="row">
@@ -675,25 +644,6 @@ function CourseDetail() {
                                 Post <i className="fas fa-paper-plane"></i>
                             </button>
                         </form>
-
-                        {/* <form class="w-100">
-              <input
-                name="title"
-                type="text"
-                className="form-control mb-2"
-                placeholder="Question Title"
-              />
-              <textarea
-                name="message"
-                class="one form-control pe-4 mb-2 bg-light"
-                id="autoheighttextarea"
-                rows="5"
-                placeholder="What's your question?"
-              ></textarea>
-              <button class="btn btn-primary mb-0 w-25" type="button">
-                Post <i className="fas fa-paper-plane"></i>
-              </button>
-            </form> */}
                     </div>
                 </Modal.Body>
             </Modal>

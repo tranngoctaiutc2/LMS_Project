@@ -6,7 +6,7 @@ import Header from "./Partials/Header";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 
-import useAxios from "../../utils/useAxios";
+import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
 
 function Students() {
@@ -20,7 +20,7 @@ function Students() {
             setLoading(true);
             setError(null);
             try {
-                const res = await useAxios.get(`teacher/student-lists/${UserData()?.teacher_id}/`);
+                const res = await apiInstance.get(`teacher/student-lists/${UserData()?.teacher_id}/`);
                 setStudents(res.data);
             } catch (err) {
                 setError(err.message || "Failed to load students.");

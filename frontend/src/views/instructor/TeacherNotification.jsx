@@ -6,7 +6,7 @@ import Sidebar from "./Partials/Sidebar";
 import Header from "./Partials/Header";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
-import useAxios from "../../utils/useAxios";
+import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
 
@@ -20,7 +20,7 @@ function TeacherNotification() {
     const fetchNoti = async () => {
         try {
             setLoading(true);
-            const response = await useAxios.get(`teacher/noti-list/${UserData()?.teacher_id}/`);
+            const response = await apiInstance.get(`teacher/noti-list/${UserData()?.teacher_id}/`);
             setNoti(response.data);
         } catch (err) {
             setError("Failed to fetch notifications. Please try again later.");
@@ -41,7 +41,7 @@ function TeacherNotification() {
             formdata.append("pk", notiId);
             formdata.append("seen", true);
 
-            await useAxios.patch(`teacher/noti-detail/${UserData()?.teacher_id}/${notiId}`, formdata);
+            await apiInstance.patch(`teacher/noti-detail/${UserData()?.teacher_id}/${notiId}`, formdata);
             fetchNoti();
             Toast().fire({
                 icon: "success",

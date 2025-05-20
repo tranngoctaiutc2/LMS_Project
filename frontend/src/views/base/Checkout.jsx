@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 
@@ -9,316 +9,241 @@ import Toast from "../plugin/Toast";
 import { PAYPAL_CLIENT_ID } from "../../utils/constants";
 
 function Checkout() {
-    const [order, setOrder] = useState([]);
-    const [coupon, setCoupon] = useState("");
-    const [paymentLoading, setPaymentLoading] = useState(false);
+  const [order, setOrder] = useState({});
+  const [coupon, setCoupon] = useState("");
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
-    const param = useParams();
-    const fetchOrder = async () => {
-        try {
-            apiInstance.get(`order/checkout/${param.order_oid}/`).then((res) => {
-                setOrder(res.data);
-            });
-        } catch (error) {
-            console.log(error);
-        }
-    };
+  const { order_oid } = useParams();
+  const navigate = useNavigate();
 
-    const navigate = useNavigate();
+  useEffect(() => {
+    fetchOrder();
+  }, []);
 
-    const applyCoupon = async () => {
-        const formdata = new FormData();
-        formdata.append("order_oid", order?.oid);
-        formdata.append("coupon_code", coupon);
+  const fetchOrder = async () => {
+    try {
+      const res = await apiInstance.get(`order/checkout/${order_oid}/`);
+      setOrder(res.data);
+    } catch (error) {
+      Toast.error("Failed to fetch order");
+    }
+  };
 
-        try {
-            await apiInstance.post(`order/coupon/`, formdata).then((res) => {
-                console.log(res.data);
-                fetchOrder();
-                Toast().fire({
-                    icon: res.data.icon,
-                    title: res.data.message,
-                });
-            });
-        } catch (error) {
-            const message = error.response?.data?.detail;
-            if (typeof message === "string" && message.includes("Coupon matching query does not exist")) {
-                Toast().fire({
-                    icon: "error",
-                    title: "Coupon does not exist",
-                });
-            } else {
-                Toast().fire({
-                    icon: "error",
-                    title: "Coupon is not suitable",
-                });
-            }
-        }
-        
-    };
+  const applyCoupon = async () => {
+    const formdata = new FormData();
+    formdata.append("order_oid", order?.oid);
+    formdata.append("coupon_code", coupon);
 
-    useEffect(() => {
-        fetchOrder();
-    }, []);
+    try {
+      const res = await apiInstance.post(`order/coupon/`, formdata);
+      fetchOrder();
+      Toast[res.data.icon === "success" ? "success" : "error"](res.data.message);
+    } catch (error) {
+      const message = error?.response?.data?.detail;
+      if (typeof message === "string" && message.includes("Coupon matching query")) {
+        Toast.error("Coupon does not exist");
+      } else {
+        Toast.error("Coupon is not suitable");
+      }
+    }
+  };
 
-    const initialOptions = {
-        clientId: PAYPAL_CLIENT_ID,
-        currency: "USD",
-        intent: "capture",
-    };
+  const payWithVNPAY = async (event) => {
+    event.preventDefault();
+    setPaymentLoading(true);
+    try {
+      const res = await apiInstance.post(`/payment/vnpay-checkout/${order.oid}/`);
+      const paymentUrl = res.data.payment_url;
+      if (paymentUrl) {
+        window.location.href = paymentUrl;
+      } else {
+        Toast.error("Không nhận được URL thanh toán từ VNPAY.");
+      }
+    } catch (error) {
+      Toast.error("Lỗi khi gửi yêu cầu thanh toán VNPAY.");
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
 
-    const payWithVNPAY = async (event) => {
-        event.preventDefault();
-    
-        setPaymentLoading(true);
-    
-        try {
-            const response = await apiInstance.post(
-                `http://127.0.0.1:8000/api/v1/payment/vnpay-checkout/${order.oid}/`
-            );
-    
-            const paymentUrl = response.data.payment_url;
-    
-            if (paymentUrl) {
-                window.location.href = paymentUrl;
-            } else {
-                console.error("Không nhận được URL thanh toán từ VNPAY.");
-            }
-        } catch (error) {
-            console.error("Lỗi khi gửi yêu cầu thanh toán VNPAY:", error);
-        } finally {
-            setPaymentLoading(false);
-        }
-    };
-    
-    return (
-        <>
-            <BaseHeader />
+  const initialOptions = {
+    clientId: PAYPAL_CLIENT_ID,
+    currency: "USD",
+    intent: "capture",
+  };
 
-            <section className="py-0">
-                <div className="container">
-                    <div className="row">
-                        <div className="col-12">
-                            <div className="bg-light p-4 text-center rounded-3">
-                                <h1 className="m-0">Checkout</h1>
-                                {/* Breadcrumb */}
-                                <div className="d-flex justify-content-center">
-                                    <nav aria-label="breadcrumb">
-                                        <ol className="breadcrumb breadcrumb-dots mb-0">
-                                            <li className="breadcrumb-item">
-                                                <a href="#" className="text-decoration-none text-dark">
-                                                    Home
-                                                </a>
-                                            </li>
-                                            <li className="breadcrumb-item">
-                                                <a href="#" className="text-decoration-none text-dark">
-                                                    Courses
-                                                </a>
-                                            </li>
-                                            <li className="breadcrumb-item">
-                                                <a href="#" className="text-decoration-none text-dark">
-                                                    Cart
-                                                </a>
-                                            </li>
-                                            <li className="breadcrumb-item active" aria-current="page">
-                                                Checkout
-                                            </li>
-                                        </ol>
-                                    </nav>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+  return (
+    <>
+      <BaseHeader />
+
+      <section className="py-0">
+        <div className="container">
+          <div className="row">
+            <div className="col-12">
+              <div className="bg-light p-4 text-center rounded-3">
+                <h1 className="m-0">Checkout</h1>
+                <div className="d-flex justify-content-center">
+                  <nav aria-label="breadcrumb">
+                    <ol className="breadcrumb breadcrumb-dots mb-0">
+                      <li className="breadcrumb-item">
+                        <Link to="/" className="text-decoration-none text-dark">Home</Link>
+                      </li>
+                      <li className="breadcrumb-item">
+                        <Link to="/courses" className="text-decoration-none text-dark">Courses</Link>
+                      </li>
+                      <li className="breadcrumb-item">
+                        <Link to="/cart" className="text-decoration-none text-dark">Cart</Link>
+                      </li>
+                      <li className="breadcrumb-item active" aria-current="page">Checkout</li>
+                    </ol>
+                  </nav>
                 </div>
-            </section>
-            <section className="pt-5">
-                <div className="container">
-                    <div className="row g-4 g-sm-5">
-                        <div className="col-xl-8 mb-4 mb-sm-0">
-                            <div className="alert alert-warning alert-dismissible d-flex justify-content-between align-items-center fade show py-2 pe-2" role="alert">
-                                <div>
-                                    <i className="bi bi-exclamation-octagon-fill me-2" />
-                                    Review your courses before payment
-                                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-                                <button type="button" className="btn btn-warning mb-0 text-primary-hover text-end" data-bs-dismiss="alert" aria-label="Close">
-                                    <i className="bi bi-x-lg text-white" />
-                                </button>
+      <section className="pt-5">
+        <div className="container">
+          <div className="row g-4 g-sm-5">
+            <div className="col-xl-8 mb-4 mb-sm-0">
+              <div className="p-4 shadow rounded-3 mt-4">
+                <h5 className="mb-3">Courses</h5>
+                <div className="table-responsive">
+                  <table className="table align-middle mb-0">
+                    <tbody>
+                      {order?.order_items?.map((o) => (
+                        <tr key={o.id}>
+                          <td>
+                            <div className="d-flex align-items-center">
+                              <img
+                                src={o.course.image}
+                                alt={o.course.title}
+                                className="rounded"
+                                style={{ width: "100px", height: "70px", objectFit: "cover" }}
+                              />
+                              <h6 className="ms-3 mb-0">{o.course.title}</h6>
                             </div>
-
-                            <div className="p-4 shadow rounded-3 mt-4">
-                                <h5 className="mb-0 mb-3">Courses</h5>
-
-                                <div className="table-responsive border-0 rounded-3">
-                                    <table className="table align-middle p-4 mb-0">
-                                        <tbody className="border-top-2">
-                                            {order?.order_items?.map((o, index) => (
-                                                <tr>
-                                                    <td>
-                                                        <div className="d-lg-flex align-items-center">
-                                                            <div className="w-100px w-md-80px mb-2 mb-md-0">
-                                                                <img
-                                                                    src={o.course.image}
-                                                                    style={{
-                                                                        width: "100px",
-                                                                        height: "70px",
-                                                                        objectFit: "cover",
-                                                                    }}
-                                                                    className="rounded"
-                                                                    alt=""
-                                                                />
-                                                            </div>
-                                                            <h6 className="mb-0 ms-lg-3 mt-2 mt-lg-0">
-                                                                <a href="#" className="text-decoration-none text-dark">
-                                                                    {o.course.title}
-                                                                </a>
-                                                            </h6>
-                                                        </div>
-                                                    </td>
-                                                    <td className="text-center">
-                                                        <h5 className="text-success mb-0">${o.price}</h5>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <Link to={`/cart/`} className="btn btn-outline-secondary mt-3">
-                                    Edit Cart <i className="fas fa-edit"></i>
-                                </Link>
-                            </div>
-
-                            <div className="shadow p-4 rounded-3 mt-5">
-                                <h5 className="mb-0">Personal Details</h5>
-                                <form className="row g-3 mt-0">
-                                    <div className="col-md-12 bg-light-input">
-                                        <label htmlFor="yourName" className="form-label">
-                                            Your name *
-                                        </label>
-                                        <input type="text" className="form-control bg-light" id="yourName" placeholder="Name" readOnly value={order.full_name} />
-                                    </div>
-                                    <div className="col-md-12 bg-light-input">
-                                        <label htmlFor="emailInput" className="form-label">
-                                            Email address *
-                                        </label>
-                                        <input type="email" className="form-control bg-light" id="emailInput" placeholder="Email" readOnly value={order.email} />
-                                    </div>
-
-                                    {/* Country option */}
-                                    <div className="col-md-12 bg-light-input">
-                                        <label htmlFor="mobileNumber" className="form-label">
-                                            Select country *
-                                        </label>
-                                        <input type="text" className="form-control bg-light" id="mobileNumber" placeholder="Country" readOnly value={order.country} />
-                                    </div>
-                                </form>
-                                {/* Form END */}
-                            </div>
-                        </div>
-                        <div className="col-xl-4">
-                            <div className="row mb-0">
-                                <div className="col-md-6 col-xl-12">
-                                    <div className="shadow p-4 mb-4 rounded-3">
-                                        <h4 className="mb-4">Order Summary</h4>
-                                        <div className="mb-4">
-                                            <div className="d-flex justify-content-between align-items-center">
-                                                <span>Transaction ID</span>
-                                                <p className="mb-0 h6 fw-light">DES23853</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="input-group mt-1">
-                                            <input className="form-control form-control" placeholder="COUPON CODE" onChange={(e) => setCoupon(e.target.value)} />
-                                            <button onClick={applyCoupon} type="button" className="btn btn-primary">
-                                                Apply
-                                            </button>
-                                        </div>
-
-                                        <div className="p-3 shadow rounded-3 mt-3">
-                                            <h4 className="mb-3">Cart Total</h4>
-                                            <ul class="list-group mb-3">
-                                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                    Sub Total
-                                                    <span>${order.sub_total}</span>
-                                                </li>
-                                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                    Discount
-                                                    <span>${order.saved}</span>
-                                                </li>
-                                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                    Tax
-                                                    <span>${order.tax_fee}</span>
-                                                </li>
-                                                <li class="list-group-item d-flex fw-bold justify-content-between align-items-center">
-                                                    Total
-                                                    <span className="fw-bold">${order.total}</span>
-                                                </li>
-                                            </ul>
-                                            <div className="d-grid">
-                                            <form className="w-100">
-                                                {paymentLoading ? (
-                                                    <button type="submit" disabled className="btn btn-lg btn-success mt-2 w-100">
-                                                        {" "}
-                                                        Processing <i className="fas fa-spinner fa-spin"></i>
-                                                    </button>
-                                                ) : (
-                                                    <button type="button" onClick={payWithVNPAY} className="btn btn-lg btn-success mt-2 w-100">
-                                                        {" "}
-                                                        Pay With VNPAY
-                                                    </button>
-                                                )}
-                                            </form>
-
-
-                                                <PayPalScriptProvider options={initialOptions}>
-                                                    <PayPalButtons
-                                                        className="mt-3"
-                                                        createOrder={(data, actions) => {
-                                                            return actions.order.create({
-                                                                purchase_units: [
-                                                                    {
-                                                                        amount: {
-                                                                            currency_code: "USD",
-                                                                            value: order.total.toString(),
-                                                                        },
-                                                                    },
-                                                                ],
-                                                            });
-                                                        }}
-                                                        onApprove={(data, actions) => {
-                                                            return actions.order.capture().then((details) => {
-                                                                const name = details.payer.name.given_name;
-                                                                const status = details.status;
-                                                                const paypal_order_id = data.orderID;
-
-                                                                console.log(status);
-                                                                if (status === "COMPLETED") {
-                                                                    navigate(`/payment-success/${order.oid}/?paypal_order_id=${paypal_order_id}`);
-                                                                }
-                                                            });
-                                                        }}
-                                                    />
-                                                </PayPalScriptProvider>
-                                            </div>
-                                            <p className="small mb-0 mt-2 text-center">
-                                                By proceeding to payment, you agree to these{" "}
-                                                <a href="#">
-                                                    {" "}
-                                                    <strong>Terms of Service</strong>
-                                                </a>
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                          </td>
+                          <td className="text-end text-success fw-bold">
+                            ${o.price}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-            </section>
+                <Link to="/cart" className="btn btn-outline-secondary mt-3">
+                  Edit Cart <i className="fas fa-edit"></i>
+                </Link>
+              </div>
 
-            <BaseFooter />
-        </>
-    );
+              <div className="shadow p-4 rounded-3 mt-5">
+                <h5 className="mb-3">Personal Details</h5>
+                <form className="row g-3">
+                  <div className="col-md-12">
+                    <label className="form-label">Full Name *</label>
+                    <input type="text" className="form-control bg-light" value={order.full_name} readOnly />
+                  </div>
+                  <div className="col-md-12">
+                    <label className="form-label">Email *</label>
+                    <input type="email" className="form-control bg-light" value={order.email} readOnly />
+                  </div>
+                  <div className="col-md-12">
+                    <label className="form-label">Country *</label>
+                    <input type="text" className="form-control bg-light" value={order.country} readOnly />
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <div className="col-xl-4">
+              <div className="shadow p-4 rounded-3">
+                <h4 className="mb-4">Order Summary</h4>
+
+                <div className="input-group mb-3">
+                  <input
+                    className="form-control"
+                    placeholder="COUPON CODE"
+                    value={coupon}
+                    onChange={(e) => setCoupon(e.target.value)}
+                  />
+                  <button onClick={applyCoupon} type="button" className="btn btn-primary">
+                    Apply
+                  </button>
+                </div>
+
+                <ul className="list-group mb-3">
+                  <li className="list-group-item d-flex justify-content-between">
+                    Sub Total <span>${order.sub_total}</span>
+                  </li>
+                  <li className="list-group-item d-flex justify-content-between">
+                    Discount <span>${order.saved}</span>
+                  </li>
+                  <li className="list-group-item d-flex justify-content-between">
+                    Tax <span>${order.tax_fee}</span>
+                  </li>
+                  <li className="list-group-item d-flex justify-content-between fw-bold">
+                    Total <span>${order.total}</span>
+                  </li>
+                </ul>
+
+                <div className="d-grid gap-3">
+                  {paymentLoading ? (
+                    <button className="btn btn-success" disabled>
+                      Processing... <i className="fas fa-spinner fa-spin ms-2" />
+                    </button>
+                  ) : (
+                    <button className="btn btn-success" onClick={payWithVNPAY}>
+                      Pay With VNPAY
+                    </button>
+                  )}
+
+                  <PayPalScriptProvider options={initialOptions}>
+                    <PayPalButtons
+                      createOrder={(data, actions) => {
+                        return actions.order.create({
+                          purchase_units: [
+                            {
+                              amount: {
+                                currency_code: "USD",
+                                value: order.total?.toString(),
+                              },
+                            },
+                          ],
+                        });
+                      }}
+                      onApprove={(data, actions) => {
+                        return actions.order.capture().then((details) => {
+                          const status = details.status;
+                          const paypal_order_id = data.orderID;
+
+                          if (status === "COMPLETED") {
+                            navigate(`/payment-success/${order.oid}/?paypal_order_id=${paypal_order_id}`);
+                          } else {
+                            Toast.error("PayPal payment not completed.");
+                          }
+                        });
+                      }}
+                      className="mt-3"
+                    />
+                  </PayPalScriptProvider>
+                </div>
+
+                <p className="small text-center mt-3">
+                  By proceeding to payment, you agree to the{" "}
+                  <Link to="/terms"><strong>Terms of Service</strong></Link>.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <BaseFooter />
+    </>
+  );
 }
 
 export default Checkout;

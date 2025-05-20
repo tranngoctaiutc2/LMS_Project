@@ -1,11 +1,11 @@
 import { useEffect, useState, useContext } from "react";
-import BaseHeader from "../partials/BaseHeader";
-import BaseFooter from "../partials/BaseFooter";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Rater from "react-rater";
 import "react-rater/lib/react-rater.css";
 
-import useAxios from "../../utils/useAxios";
+import BaseHeader from "../partials/BaseHeader";
+import BaseFooter from "../partials/BaseFooter";
+
 import CartId from "../plugin/CartId";
 import GetCurrentAddress from "../plugin/UserCountry";
 import UserData from "../plugin/UserData";
@@ -21,181 +21,128 @@ import Botleft from '../../assets/images/svg/botleft.svg';
 import Botright from '../../assets/images/svg/botright.svg';
 
 function Index() {
-    const [courses, setCourses] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [cartCount, setCartCount] = useContext(CartContext);
+  const navigate = useNavigate();
+  const [courses, setCourses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [cartCount, setCartCount] = useContext(CartContext);
+  const [wishlist, setWishlist] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
 
-    const country = GetCurrentAddress().country;
-    const userId = UserData()?.user_id;
-    const cartId = CartId();
+  const country = GetCurrentAddress().country;
+  const userId = UserData()?.user_id;
+  const cartId = CartId();
 
-    const fetchCourse = async () => {
-        setIsLoading(true);
-        try {
-            await apiInstance.get(`/course/course-list/`).then((res) => {
-                setCourses(res.data);
-                setIsLoading(false);
-            });
-        } catch (error) {
-            console.log(error);
-        }
-    };
-
-    useEffect(() => {
-        fetchCourse();
-    }, []);
-
-    const isCourseEnrolled = async (courseId) => {
-        try {
-            const res = await useAxios.get(`student/course-list/${userId}/`);
-            const enrolledCourses = res.data;
-    
-            const isEnrolled = enrolledCourses.some(item => item.course?.id === courseId);
-    
-            if (isEnrolled) {
-                Toast().fire({
-                    title: "Bạn đã ghi danh khoá học này rồi",
-                    icon: "warning",
-                });
-            }
-    
-            return isEnrolled;
-        } catch (error) {
-            console.error("Lỗi khi kiểm tra khoá học đã ghi danh:", error);
-            return false;
-        }
-    };
-    
-
-    const addToCart = async (courseId, userId, price, country, cartId) => {
-        const alreadyEnrolled = await isCourseEnrolled(courseId);
-
-        if (alreadyEnrolled) {
-            Toast().fire({
-                icon: "info",
-                title: "You are already enrolled in this course",
-            });
-            return;
-    }
-        const formdata = new FormData();
-
-        formdata.append("course_id", courseId);
-        formdata.append("user_id", userId);
-        formdata.append("price", price);
-        formdata.append("country_name", country);
-        formdata.append("cart_id", cartId);
-
-        try {
-            const cartRes = await apiInstance.get(`course/cart-list/${cartId}/`);
-            const cartItems = cartRes.data;
-    
-            const alreadyInCart = cartItems.some(item => item.course.id === courseId);
-    
-            if (alreadyInCart) { 
-                Toast().fire({
-                    title: "Course already in cart",
-                    icon: "info",
-                });
-                return;
-            }
-    
-            const formdata = new FormData();
-            formdata.append("course_id", courseId);
-            formdata.append("user_id", userId);
-            formdata.append("price", price);
-            formdata.append("country_name", country);
-            formdata.append("cart_id", cartId);
-    
-            const res = await useAxios.post(`course/cart/`, formdata);
-            console.log(res.data);
-    
-            Toast().fire({
-                title: "Added To Cart",
-                icon: "success",
-            });
-
-            const updatedCart = await apiInstance.get(`course/cart-list/${cartId}/`);
-            setCartCount(updatedCart.data?.length);
-    
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    // Pagination
-    const itemsPerPage = 4;
-    const [currentPage, setCurrentPage] = useState(1);
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentItems = courses.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(courses.length / itemsPerPage);
-    const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
-
-    const [wishlist, setWishlist] = useState([]);
-
-    useEffect(() => {
-    const fetchWishlist = async () => {
-        try {
-        const userId = UserData()?.user_id;
-        if (userId) {
-            const res = await apiInstance.get(`student/wishlist/${userId}/`);
-            const wishlistCourseIds = res.data.map(item => item.course?.id || item.course_id);
-            setWishlist(wishlistCourseIds);
-        }
-        } catch (error) {
-        console.error("Error fetching wishlist:", error);
-        }
-    };
-
-    fetchWishlist();
-    }, []);
-
-    const addToWishlist = async (courseId) => {
+  const fetchCourses = async () => {
     try {
-        const userId = UserData()?.user_id;
-        if (!userId) {
-        Toast().fire({
-            icon: "warning",
-            title: "Please login to add to wishlist!",
-        });
-        return;
-        }
-
-        const formdata = new FormData();
-        formdata.append("user_id", userId);
-        formdata.append("course_id", courseId);
-
-        const isInWishlist = wishlist.includes(courseId);
-
-        const res = await apiInstance.post(
-        `student/wishlist/${userId}/`,
-        formdata
-        );
-
-        if (isInWishlist) {
-        setWishlist((prev) => prev.filter((id) => id !== courseId));
-        Toast().fire({
-            icon: "success",
-            title: "Removed from wishlist",
-        });
-        } else {
-        setWishlist((prev) => [...prev, courseId]);
-        Toast().fire({
-            icon: "success",
-            title: "Added to wishlist",
-        });
-        }
+      const res = await apiInstance.get(`/course/course-list/`);
+      setCourses(res.data);
     } catch (error) {
-        Toast().fire({
-        icon: "error",
-        title: "Failed to update wishlist!",
-        });
-        console.error(error);
+      Toast.error("Failed to load courses");
+    } finally {
+      setIsLoading(false);
     }
-    };
+  };
 
+  const fetchWishlist = async () => {
+    try {
+      if (!userId) return;
+      const res = await apiInstance.get(`student/wishlist/${userId}/`);
+      const wishlistIds = res.data.map(item => item.course?.id || item.course_id);
+      setWishlist(wishlistIds);
+    } catch (error) {
+      Toast.error("Failed to fetch wishlist");
+    }
+  };
 
-    return (
+  const fetchCart = async () => {
+    if (!cartId) return;
+    try {
+      const res = await apiInstance.get(`course/cart-list/${cartId}/`);
+      setCartCount(res.data?.length || 0);
+    } catch (error) {
+      Toast.error("Failed to fetch cart!");
+    }
+  };
+
+  useEffect(() => {
+    fetchCourses();
+    fetchWishlist();
+    fetchCart();
+  }, []);
+
+  const isCourseEnrolled = async (courseId) => {
+    try {
+      const res = await apiInstance.get(`student/course-list/${userId}/`);
+      const enrolled = res.data.some(item => item.course?.id === courseId);
+      if (enrolled) Toast.warning("You are already enrolled in this course");
+      return enrolled;
+    } catch (err) {
+      Toast.error("Error checking enrollment status");
+      return false;
+    }
+  };
+
+  const addToCart = async (courseId, userId, price, country, cartId) => {
+    if (!userId) {
+        Toast.warning("Please login to add to cart");
+        setTimeout(() => navigate('/login'), 2000);
+        return;
+    }
+    const enrolled = await isCourseEnrolled(courseId);
+    if (enrolled) return;
+
+    try {
+        const cartRes = await apiInstance.get(`course/cart-list/${cartId}/`);
+        const inCart = cartRes.data.some(item => item.course.id === courseId);
+        if (inCart) return Toast.info("Course already in cart");
+
+        const formData = new FormData();
+        formData.append("course_id", courseId);
+        formData.append("user_id", userId);
+        formData.append("price", price);
+        formData.append("country_name", country);
+        formData.append("cart_id", cartId);
+
+        await apiInstance.post(`course/cart/`, formData);
+        Toast.success("Course added to cart");
+        await fetchCart();
+        const updatedCart = await apiInstance.get(`course/cart-list/${cartId}/`);
+        setCartCount(updatedCart.data?.length);
+    } catch (err) {
+        Toast.error("Failed to add course to cart");
+    }
+  };
+
+  const addToWishlist = async (courseId) => {
+    if (!userId) return Toast.warning("Please login to add to wishlist");
+
+    const formData = new FormData();
+    formData.append("user_id", userId);
+    formData.append("course_id", courseId);
+
+    try {
+      await apiInstance.post(`student/wishlist/${userId}/`, formData);
+      if (wishlist.includes(courseId)) {
+        setWishlist(prev => prev.filter(id => id !== courseId));
+        Toast.success("Removed from wishlist");
+      } else {
+        setWishlist(prev => [...prev, courseId]);
+        Toast.success("Added to wishlist");
+      }
+    } catch (error) {
+      Toast.error("Failed to update wishlist");
+    }
+  };
+
+  // Pagination logic
+  const itemsPerPage = 4;
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = courses.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(courses.length / itemsPerPage);
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
+
+  return (
         <>
             <BaseHeader />
 

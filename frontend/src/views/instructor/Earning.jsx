@@ -8,7 +8,7 @@ import Header from "./Partials/Header";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 
-import useAxios from "../../utils/useAxios";
+import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
 
 ChartJS.register(
@@ -34,9 +34,9 @@ function Earning() {
         const fetchData = async () => {
             try {
                 const [summaryRes, monthsRes, coursesRes] = await Promise.all([
-                    useAxios.get(`teacher/summary/${UserData()?.teacher_id}/`),
-                    useAxios.get(`teacher/all-months-earning/${UserData()?.teacher_id}/`),
-                    useAxios.get(`teacher/best-course-earning/${UserData()?.teacher_id}/`)
+                    apiInstance.get(`teacher/summary/${UserData()?.teacher_id}/`),
+                    apiInstance.get(`teacher/all-months-earning/${UserData()?.teacher_id}/`),
+                    apiInstance.get(`teacher/best-course-earning/${UserData()?.teacher_id}/`)
                 ]);
                 
                 setStats(summaryRes.data[0] || {});
