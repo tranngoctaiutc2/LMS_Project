@@ -41,7 +41,7 @@ urlpatterns = [
     path("student/rate-course/", api_views.StudentRateCourseCreateAPIView.as_view()),
     path("student/review-detail/<user_id>/<review_id>/", api_views.StudentRateCourseUpdateAPIView.as_view()),
     path("student/wishlist/<user_id>/", api_views.StudentWishListListCreateAPIView.as_view()),
-    path("student/question-answer-list-create/<course_id>/", api_views.QuestionAnswerListCreateAPIView.as_view()),
+    path("student/question-answer-list-create/<user_id>/", api_views.QuestionAnswerListCreateAPIView.as_view()),
     path("student/question-answer-message-create/", api_views.QuestionAnswerMessageSendAPIView.as_view()),
 
 
@@ -59,8 +59,9 @@ urlpatterns = [
     path("teacher/coupon-detail/<teacher_id>/<coupon_id>/", api_views.TeacherCouponDetailAPIView.as_view()),
     path("teacher/noti-list/<teacher_id>/", api_views.TeacherNotificationListAPIView.as_view()),
     path("teacher/noti-detail/<teacher_id>/<noti_id>", api_views.TeacherNotificationDetailAPIView.as_view()),
-    path("teacher/course-create/", api_views.CourseCreateAPIView.as_view()),
-    path("teacher/course-update/<teacher_id>/<course_id>/", api_views.CourseUpdateAPIView.as_view()),
+    path("teacher/course-create/", api_views.TeacherCourseCreateAPIView.as_view()),
+    path("teacher/course-update/<teacher_id>/<course_id>/", api_views.TeacherCourseUpdateAPIView.as_view()),
+    path("teacher/course-delete/<teacher_id>/<course_id>/", api_views.TeacherCourseDeleteAPIView.as_view()),
     path("teacher/course-detail/<course_id>/", api_views.TeacherCourseDetailAPIView.as_view()),
     path("teacher/course/variant-delete/<variant_id>/<teacher_id>/<course_id>/", api_views.CourseVariantDeleteAPIView.as_view()),
     path("teacher/course/variant-item-delete/<variant_id>/<variant_item_id>/<teacher_id>/<course_id>/", api_views.CourseVariantItemDeleteAPIVIew.as_view()),
@@ -69,6 +70,7 @@ urlpatterns = [
 
     path('chat/', api_views.ChatBotAPIView.as_view()),
     path('chat/history/', api_views.GetChatHistoryAPIView.as_view()),
+    path('chat/delete/', api_views.DeleteChatHistoryAPIView.as_view()),
 ]
 
 

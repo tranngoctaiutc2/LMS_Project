@@ -1,7 +1,8 @@
 from django.db import models
 from django.utils.text import slugify
 from django.utils import timezone
-
+from datetime import date
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 from userauths.models import User, Profile
 from shortuuid.django_fields import ShortUUIDField
@@ -17,7 +18,7 @@ LANGUAGE = (
 
 LEVEL = (
     ("Beginner", "Beginner"),
-    ("Intemediate", "Intemediate"),
+    ("Intermediate", "Intermediate"),
     ("Advanced", "Advanced"),
 )
 
@@ -372,13 +373,21 @@ class Notification(models.Model):
 class Coupon(models.Model):
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, blank=True)
     used_by = models.ManyToManyField(User, blank=True)
-    code = models.CharField(max_length=50)
-    discount = models.IntegerField(default=1)
-    active = models.BooleanField(default=False)
-    date = models.DateTimeField(default=timezone.now)   
+    code = models.CharField(max_length=50, unique=True)
+    discount = models.IntegerField(
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(100)]
+    )
+    date = models.DateField(default=date.today)
+    end_date = models.DateField(null=True, blank=True)
+    max_uses = models.PositiveIntegerField(null=True, blank=True)
+    active = models.BooleanField(default=True)
 
     def __str__(self):
-        return self.code
+        return f"{self.code} ({self.discount}% off)"
+
+    class Meta:
+        ordering = ['-date']
     
 class Wishlist(models.Model):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
