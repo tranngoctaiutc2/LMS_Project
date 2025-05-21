@@ -21,128 +21,140 @@ import Botleft from '../../assets/images/svg/botleft.svg';
 import Botright from '../../assets/images/svg/botright.svg';
 
 function Index() {
-  const navigate = useNavigate();
-  const [courses, setCourses] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [cartCount, setCartCount] = useContext(CartContext);
-  const [wishlist, setWishlist] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
+    const navigate = useNavigate();
+    const [courses, setCourses] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [cartCount, setCartCount] = useContext(CartContext);
+    const [wishlist, setWishlist] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
 
-  const country = GetCurrentAddress().country;
-  const userId = UserData()?.user_id;
-  const cartId = CartId();
+    const country = GetCurrentAddress().country;
+    const userId = UserData()?.user_id;
+    const cartId = CartId();
 
-  const fetchCourses = async () => {
-    try {
-      const res = await apiInstance.get(`/course/course-list/`);
-      setCourses(res.data);
-    } catch (error) {
-      Toast.error("Failed to load courses");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    const fetchCourses = async () => {
+    const cached = localStorage.getItem("courses");
+        if (cached) {
+            setCourses(JSON.parse(cached));
+            setIsLoading(false);
+            return;
+        }
 
-  const fetchWishlist = async () => {
-    try {
-      if (!userId) return;
-      const res = await apiInstance.get(`student/wishlist/${userId}/`);
-      const wishlistIds = res.data.map(item => item.course?.id || item.course_id);
-      setWishlist(wishlistIds);
-    } catch (error) {
-      Toast.error("Failed to fetch wishlist");
-    }
-  };
+        try {
+            const res = await apiInstance.get(`/course/course-list/`);
+            setCourses(res.data);
+            localStorage.setItem("courses", JSON.stringify(res.data));
+        } catch (error) {
+            Toast.error("Failed to load courses");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-  const fetchCart = async () => {
-    if (!cartId) return;
-    try {
-      const res = await apiInstance.get(`course/cart-list/${cartId}/`);
-      setCartCount(res.data?.length || 0);
-    } catch (error) {
-      Toast.error("Failed to fetch cart!");
-    }
-  };
 
-  useEffect(() => {
-    fetchCourses();
-    fetchWishlist();
-    fetchCart();
-  }, []);
+    const fetchWishlist = async () => {
+        try {
+        if (!userId) return;
+        const res = await apiInstance.get(`student/wishlist/${userId}/`);
+        const wishlistIds = res.data.map(item => item.course?.id || item.course_id);
+        setWishlist(wishlistIds);
+        } catch (error) {
+        Toast.error("Failed to fetch wishlist");
+        }
+    };
 
-  const isCourseEnrolled = async (courseId) => {
-    try {
-      const res = await apiInstance.get(`student/course-list/${userId}/`);
-      const enrolled = res.data.some(item => item.course?.id === courseId);
-      if (enrolled) Toast.warning("You are already enrolled in this course");
-      return enrolled;
-    } catch (err) {
-      Toast.error("Error checking enrollment status");
-      return false;
-    }
-  };
+    const fetchCart = async () => {
+        if (!cartId) {
+            return;
+        }
 
-  const addToCart = async (courseId, userId, price, country, cartId) => {
-    if (!userId) {
-        Toast.warning("Please login to add to cart");
-        setTimeout(() => navigate('/login'), 2000);
-        return;
-    }
-    const enrolled = await isCourseEnrolled(courseId);
-    if (enrolled) return;
+        try {
+            const res = await apiInstance.get(`course/cart-list/${cartId}/`);
+            setCartCount(res.data?.length || 0);
+        } catch (error) {
+            return;
+        }
+    };
 
-    try {
-        const cartRes = await apiInstance.get(`course/cart-list/${cartId}/`);
-        const inCart = cartRes.data.some(item => item.course.id === courseId);
-        if (inCart) return Toast.info("Course already in cart");
+    useEffect(() => {
+        fetchCourses();
+        fetchWishlist();
+        fetchCart();
+    }, []);
+
+    const isCourseEnrolled = async (courseId) => {
+        try {
+        const res = await apiInstance.get(`student/course-list/${userId}/`);
+        const enrolled = res.data.some(item => item.course?.id === courseId);
+        if (enrolled) Toast.warning("You are already enrolled in this course");
+        return enrolled;
+        } catch (err) {
+        Toast.error("Error checking enrollment status");
+        return false;
+        }
+    };
+
+    const addToCart = async (courseId, userId, price, country, cartId) => {
+        if (!userId) {
+            Toast.warning("Please login to add to cart");
+            setTimeout(() => navigate('/login'), 2000);
+            return;
+        }
+        const enrolled = await isCourseEnrolled(courseId);
+        if (enrolled) return;
+
+        try {
+            const cartRes = await apiInstance.get(`course/cart-list/${cartId}/`);
+            const inCart = cartRes.data.some(item => item.course.id === courseId);
+            if (inCart) return Toast.info("Course already in cart");
+
+            const formData = new FormData();
+            formData.append("course_id", courseId);
+            formData.append("user_id", userId);
+            formData.append("price", price);
+            formData.append("country_name", country);
+            formData.append("cart_id", cartId);
+
+            await apiInstance.post(`course/cart/`, formData);
+            Toast.success("Course added to cart");
+            await fetchCart();
+            const updatedCart = await apiInstance.get(`course/cart-list/${cartId}/`);
+            setCartCount(updatedCart.data?.length);
+        } catch (err) {
+            Toast.error("Failed to add course to cart");
+        }
+    };
+
+    const addToWishlist = async (courseId) => {
+        if (!userId) return Toast.warning("Please login to add to wishlist");
 
         const formData = new FormData();
-        formData.append("course_id", courseId);
         formData.append("user_id", userId);
-        formData.append("price", price);
-        formData.append("country_name", country);
-        formData.append("cart_id", cartId);
+        formData.append("course_id", courseId);
 
-        await apiInstance.post(`course/cart/`, formData);
-        Toast.success("Course added to cart");
-        await fetchCart();
-        const updatedCart = await apiInstance.get(`course/cart-list/${cartId}/`);
-        setCartCount(updatedCart.data?.length);
-    } catch (err) {
-        Toast.error("Failed to add course to cart");
-    }
-  };
+        try {
+        await apiInstance.post(`student/wishlist/${userId}/`, formData);
+        if (wishlist.includes(courseId)) {
+            setWishlist(prev => prev.filter(id => id !== courseId));
+            Toast.success("Removed from wishlist");
+        } else {
+            setWishlist(prev => [...prev, courseId]);
+            Toast.success("Added to wishlist");
+        }
+        } catch (error) {
+        Toast.error("Failed to update wishlist");
+        }
+    };
 
-  const addToWishlist = async (courseId) => {
-    if (!userId) return Toast.warning("Please login to add to wishlist");
+    // Pagination logic
+    const itemsPerPage = 4;
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = courses.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(courses.length / itemsPerPage);
+    const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
 
-    const formData = new FormData();
-    formData.append("user_id", userId);
-    formData.append("course_id", courseId);
-
-    try {
-      await apiInstance.post(`student/wishlist/${userId}/`, formData);
-      if (wishlist.includes(courseId)) {
-        setWishlist(prev => prev.filter(id => id !== courseId));
-        Toast.success("Removed from wishlist");
-      } else {
-        setWishlist(prev => [...prev, courseId]);
-        Toast.success("Added to wishlist");
-      }
-    } catch (error) {
-      Toast.error("Failed to update wishlist");
-    }
-  };
-
-  // Pagination logic
-  const itemsPerPage = 4;
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = courses.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(courses.length / itemsPerPage);
-  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
-
-  return (
+    return (
         <>
             <BaseHeader />
 
@@ -258,7 +270,15 @@ function Index() {
 
                     {/* Courses Grid */}
                     <div className="row g-4">
-                    {currentItems?.map((c, index) => (
+                    {isLoading ? (
+                    <div className="d-flex justify-content-center align-items-center py-5">
+                        <div className="spinner-border text-primary me-3" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <span className="h5 mb-0 text-muted">Loading course data...</span>
+                    </div>
+                    ) : (
+                    currentItems?.map((c, index) => (
                         <div className="col-12 col-md-6 col-lg-4 col-xl-3" key={c.id || index}>
                         {/* Course Card */}
                         <div className="card h-100 border-0 shadow-sm rounded-3 overflow-hidden hover-shadow transition-all">
@@ -368,7 +388,7 @@ function Index() {
                             </div>
                         </div>
                         </div>
-                    ))}
+                    )))}
                     </div>
 
                     {/* Pagination */}

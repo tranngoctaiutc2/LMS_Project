@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import moment from "moment";
-import _ from 'lodash';
+import _ from "lodash";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 import Toast from "../plugin/Toast";
@@ -9,7 +9,6 @@ import Sidebar from "./Partials/Sidebar";
 import Header from "./Partials/Header";
 import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
-import Swal from 'sweetalert2';
 
 function Courses() {
     const [courses, setCourses] = useState([]);
@@ -23,7 +22,7 @@ function Courses() {
             setCourses(res.data);
             setOriginalCourses(res.data);
         } catch (error) {
-            console.error('Fetch error:', error);
+            Toast.error("Failed to fetch course list.");
         } finally {
             setFetching(false);
         }
@@ -35,52 +34,35 @@ function Courses() {
 
     const debouncedSearch = useCallback(
         _.debounce((query) => {
-            if (!query.trim()) {
-                setCourses(originalCourses);
-                return;
-            }
-            const filtered = originalCourses.filter((c) =>
-                c?.title?.toLowerCase().includes(query)
-            );
-            setCourses(filtered);
+        if (!query.trim()) {
+            setCourses(originalCourses);
+            return;
+        }
+        const filtered = originalCourses.filter((c) =>
+            c?.title?.toLowerCase().includes(query)
+        );
+        setCourses(filtered);
         }, 300),
         [originalCourses]
     );
 
     const handleSearch = (event) => {
-        const query = event?.target?.value?.toLowerCase() || '';
+        const query = event?.target?.value?.toLowerCase() || "";
         debouncedSearch(query);
     };
 
     const handleDeleteCourse = async (courseId, title) => {
-        const result = await Swal.fire({
-            title: `Delete course "${title}"?`,
-            text: "You will not be able to restore this action!",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonColor: "#d33",
-            cancelButtonColor: "#3085d6",
-            confirmButtonText: "Delete",
-            cancelButtonText: "Cancel",
-        });
+        const confirmed = window.confirm(`Delete course "${title}"?\nThis action cannot be undone.`);
+        if (!confirmed) return;
 
-        if (result.isConfirmed) {
-            try {
-                await apiInstance.delete(`teacher/course-delete/${UserData()?.teacher_id}/${courseId}/`);
-                fetchData();
-                Toast().fire({
-                    icon: "success",
-                    title: `Delete "${title}" successfully`,
-                });
-            } catch (err) {
-                Toast().fire({
-                    icon: "error",
-                    title: `Fail to delete "${title}"`,
-                });
-            }
+        try {
+            await apiInstance.delete(`teacher/course-delete/${UserData()?.teacher_id}/${courseId}/`);
+            fetchData();
+            Toast.success(`Deleted "${title}" successfully`);
+        } catch (err) {
+            Toast.error(`Failed to delete "${title}"`);
         }
     };
-
 
     return (
         <>

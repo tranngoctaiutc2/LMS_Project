@@ -9,7 +9,7 @@ import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 
 import apiInstance from "../../utils/axios";
-import { teacherId } from "../../utils/constants";
+import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
 
 function Review() {
@@ -23,12 +23,12 @@ function Review() {
         setLoading(true);
         setError(null);
         try {
-            const res = await apiInstance.get(`teacher/review-lists/${teacherId}/`);
-            console.log(res.data);
+        const res = await apiInstance.get(`teacher/review-lists/${UserData()?.teacher_id}/`);
             setReviews(res.data);
             setFilteredReview(res.data);
         } catch (err) {
             setError(err.message || "Failed to load reviews.");
+            Toast.error("Failed to load reviews.");
         } finally {
             setLoading(false);
         }
@@ -40,26 +40,14 @@ function Review() {
 
     const handleSubmitReply = async (reviewId) => {
         try {
-            await apiInstance
-                .patch(`teacher/review-detail/${teacherId}/${reviewId}/`, {
-                    reply: reply,
-                })
-                .then((res) => {
-                    console.log(res.data);
-                    fetchReviewsData();
-                    Toast().fire({
-                        icon: "success",
-                        title: "Reply sent.",
-                    });
-                    setReply("");
-                });
+        await apiInstance.patch(`teacher/review-detail/${UserData()?.teacher_id}/${reviewId}/`, {
+            reply: reply,
+        });
+        fetchReviewsData();
+        Toast.success("Reply sent.");
+        setReply("");
         } catch (error) {
-            console.log(error);
-            Toast().fire({
-                icon: "error",
-                title: "Failed to send reply.",
-                text: error.message || "Something went wrong.",
-            });
+            Toast.error(error.message || "Failed to send reply.");
         }
     };
 
@@ -76,7 +64,6 @@ function Review() {
 
     const handleSortByRatingChange = (e) => {
         const rating = parseInt(e.target.value);
-        console.log(rating);
         if (rating === 0) {
             setFilteredReview(reviews);
         } else {
@@ -88,68 +75,67 @@ function Review() {
     const handleFilterByCourse = (e) => {
         const query = e.target.value.toLowerCase();
         if (query === "") {
-            setFilteredReview(reviews);
+        setFilteredReview(reviews);
         } else {
-            const filtered = reviews.filter((review) =>
-                review.course.title.toLowerCase().includes(query)
-            );
-            setFilteredReview(filtered);
+        const filtered = reviews.filter((review) =>
+            review.course.title.toLowerCase().includes(query)
+        );
+        setFilteredReview(filtered);
         }
     };
 
     if (loading) {
         return (
-            <>
-                <BaseHeader />
-                <section className="pt-5 pb-5 bg-light">
-                    <div className="container">
-                        <Header />
-                        <div className="row mt-0 mt-md-4">
-                            <Sidebar />
-                            <div className="col-lg-9 col-md-8 col-12">
-                                <div className="card border-0 shadow-sm rounded-4">
-                                    <div className="card-body p-5 text-center">
-                                        <div className="spinner-border text-primary" role="status">
-                                            <span className="visually-hidden">Loading...</span>
-                                        </div>
-                                        <p className="mt-3 text-muted">Loading reviews...</p>
-                                    </div>
-                                </div>
-                            </div>
+        <>
+            <BaseHeader />
+            <section className="pt-5 pb-5 bg-light">
+            <div className="container">
+                <Header />
+                <div className="row mt-0 mt-md-4">
+                <Sidebar />
+                <div className="col-lg-9 col-md-8 col-12">
+                    <div className="card border-0 shadow-sm rounded-4">
+                    <div className="card-body p-5 text-center">
+                        <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Loading...</span>
                         </div>
+                        <p className="mt-3 text-muted">Loading reviews...</p>
                     </div>
-                </section>
-                <BaseFooter />
-            </>
+                    </div>
+                </div>
+                </div>
+            </div>
+            </section>
+            <BaseFooter />
+        </>
         );
     }
 
     if (error) {
         return (
-            <>
-                <BaseHeader />
-                <section className="pt-5 pb-5 bg-light">
-                    <div className="container">
-                        <Header />
-                        <div className="row mt-0 mt-md-4">
-                            <Sidebar />
-                            <div className="col-lg-9 col-md-8 col-12">
-                                <div className="card border-0 shadow-sm rounded-4">
-                                    <div className="card-body p-5 text-center text-danger">
-                                        <i className="fas fa-exclamation-triangle fa-2x mb-3"></i>
-                                        <p className="h5">Error loading reviews</p>
-                                        <p className="text-muted">{error}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+        <>
+            <BaseHeader />
+            <section className="pt-5 pb-5 bg-light">
+            <div className="container">
+                <Header />
+                <div className="row mt-0 mt-md-4">
+                <Sidebar />
+                <div className="col-lg-9 col-md-8 col-12">
+                    <div className="card border-0 shadow-sm rounded-4">
+                    <div className="card-body p-5 text-center text-danger">
+                        <i className="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                        <p className="h5">Error loading reviews</p>
+                        <p className="text-muted">{error}</p>
                     </div>
-                </section>
-                <BaseFooter />
-            </>
+                    </div>
+                </div>
+                </div>
+            </div>
+            </section>
+            <BaseFooter />
+        </>
         );
     }
-
     return (
         <>
             <BaseHeader />

@@ -151,7 +151,6 @@ function QA() {
                               <small className="text-muted">{moment(q.date).format("DD MMM, YYYY")}</small>
                             </div>
                           </div>
-
                           {q.messages?.length > 0 && (
                             <span className="badge bg-info text-dark px-3 py-2 fs-6 rounded-pill fw-semibold">
                               📘 {q.messages[0].course_name}
@@ -176,7 +175,10 @@ function QA() {
                     ))}
 
                     {questions?.length === 0 && (
-                      <p className="text-center text-muted fs-5">No questions found.</p>
+                      <div className="text-center py-5 text-muted">
+                        <i className="fas fa-question-circle fa-2x mb-3"></i>
+                        <p className="fs-5">No questions found.</p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -186,7 +188,7 @@ function QA() {
         </div>
       </section>
 
-      <Modal show={ConversationShow} size="lg" onHide={handleConversationClose}>
+      <Modal show={ConversationShow} size="lg" onHide={handleConversationClose} centered>
         <Modal.Header closeButton>
           <Modal.Title>Discussion: {selectedConversation?.title}</Modal.Title>
         </Modal.Header>
@@ -196,30 +198,24 @@ function QA() {
               {selectedConversation?.messages?.map((m, index) => (
                 <li key={index} className="comment-item mb-3">
                   <div className="d-flex">
-                    <div className="avatar avatar-sm flex-shrink-0">
-                      <img
-                        className="avatar-img rounded-circle"
-                        src={m.profile?.image || '/default-avatar.png'}
-                        style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }}
-                        alt="profile"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = '/default-avatar.png';
-                        }}
-                      />
-                    </div>
+                    <img
+                      className="rounded-circle"
+                      src={m.profile?.image || '/default-avatar.png'}
+                      style={{ width: "40px", height: "40px", objectFit: "cover" }}
+                      alt="profile"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = '/default-avatar.png';
+                      }}
+                    />
                     <div className="ms-2">
-                      <div className="bg-light p-3 rounded w-100">
-                        <div className="d-flex w-100 justify-content-center">
-                          <div className="me-2">
-                            <h6 className="mb-1 lead fw-bold">
-                              <span className="text-decoration-none text-dark">{m.profile?.full_name || 'Anonymous'}</span>
-                              <br />
-                              <span style={{ fontSize: "12px", color: "gray" }}>{moment(m.date).format("DD MMM, YYYY")}</span>
-                            </h6>
-                            <p className="mb-0 mt-3">{m.message}</p>
-                          </div>
-                        </div>
+                      <div className="bg-light p-3 rounded">
+                        <h6 className="mb-1 fw-bold text-dark">
+                          {m.profile?.full_name || 'Anonymous'}
+                          <br />
+                          <small className="text-muted">{moment(m.date).format("DD MMM, YYYY")}</small>
+                        </h6>
+                        <p className="mb-0 mt-2">{m.message}</p>
                       </div>
                     </div>
                   </div>

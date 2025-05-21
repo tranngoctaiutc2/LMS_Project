@@ -10,6 +10,7 @@ import BaseFooter from "../partials/BaseFooter";
 
 import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
+import Toast from "../plugin/Toast";
 
 ChartJS.register(
   CategoryScale,
@@ -43,7 +44,7 @@ function Earning() {
                 setEarning(monthsRes.data || []);
                 setBestSellingCourse(coursesRes.data || []);
             } catch (error) {
-                console.error("Error fetching data:", error);
+                Toast.error("Failed to fetch data.");
             } finally {
                 setIsLoading(false);
             }

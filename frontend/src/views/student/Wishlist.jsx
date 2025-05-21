@@ -203,10 +203,10 @@ function Wishlist() {
                                 </div>
                                 <h5 className="text-muted">Your wishlist is empty</h5>
                                 <p className="text-muted small">
-                                When you save courses, they will appear here
+                                  When you save courses, they will appear here
                                 </p>
                                 <Link to="/courses/" className="btn btn-primary mt-3">
-                                Browse Courses
+                                  Browse Courses
                                 </Link>
                             </div>
                         </div>

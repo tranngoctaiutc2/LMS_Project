@@ -7,8 +7,8 @@ import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import apiInstance from "../../utils/axios";
-import Swal from "sweetalert2";
 import { teacherId } from "../../utils/constants";
+import Toast from "../plugin/Toast";
 
 function CourseEdit() {
   const [courseData, setCourseData] = useState({
@@ -74,7 +74,7 @@ function CourseEdit() {
         setCourseData(fetchedData);
         setImagePreview(courseRes.data.image || "https://www.eclosio.ong/wp-content/uploads/2018/08/default.png");
       } catch (error) {
-        Swal.fire({ icon: "error", title: "Error", text: "Failed to load data!" });
+        Toast.error("Failed to load data!");
       }
     };
     fetchData();
@@ -127,7 +127,7 @@ function CourseEdit() {
         return updated;
       });
     } catch {
-      Swal.fire({ icon: "error", title: "Upload Failed", text: "Could not upload video." });
+      Toast.error("Could not upload video.");
     } finally {
       setLoading((prev) => ({ ...prev, file: false }));
     }
@@ -197,7 +197,7 @@ function CourseEdit() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
-      Swal.fire({ icon: "error", title: "Error", text: "Please fill required fields." });
+      Toast.error("Please fill required fields.");
       return;
     }
 
@@ -223,14 +223,10 @@ function CourseEdit() {
         },
       });
 
-      Swal.fire({ icon: "success", title: "Course Updated" });
+      Toast.success("Course Updated");
       navigate("/instructor/courses/");
     } catch (error) {
-      Swal.fire({
-        icon: "error",
-        title: "Update Failed",
-        text: error.response?.data?.message || "Please try again.",
-      });
+      Toast.error(error.response?.data?.message || "Please try again.");
     } finally {
       setIsSubmitting(false);
     }

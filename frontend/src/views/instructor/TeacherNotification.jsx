@@ -19,14 +19,14 @@ function TeacherNotification() {
 
     const fetchNoti = async () => {
         try {
-            setLoading(true);
-            const response = await apiInstance.get(`teacher/noti-list/${UserData()?.teacher_id}/`);
-            setNoti(response.data);
+        setLoading(true);
+        const response = await apiInstance.get(`teacher/noti-list/${UserData()?.teacher_id}/`);
+        setNoti(response.data);
         } catch (err) {
-            setError("Failed to fetch notifications. Please try again later.");
-            console.error(err);
+        setError("Failed to fetch notifications. Please try again later.");
+        Toast.error("Failed to fetch notifications.");
         } finally {
-            setLoading(false);
+        setLoading(false);
         }
     };
 
@@ -36,23 +36,19 @@ function TeacherNotification() {
 
     const handleMarkAsSeen = async (notiId) => {
         try {
-            const formdata = new FormData();
-            formdata.append("teacher", UserData()?.teacher_id);
-            formdata.append("pk", notiId);
-            formdata.append("seen", true);
+        const formdata = new FormData();
+        formdata.append("teacher", UserData()?.teacher_id);
+        formdata.append("pk", notiId);
+        formdata.append("seen", true);
 
-            await apiInstance.patch(`teacher/noti-detail/${UserData()?.teacher_id}/${notiId}`, formdata);
-            fetchNoti();
-            Toast().fire({
-                icon: "success",
-                title: "Notification marked as seen",
-            });
+        await apiInstance.patch(
+            `teacher/noti-detail/${UserData()?.teacher_id}/${notiId}`,
+            formdata
+        );
+        fetchNoti();
+        Toast.success("Notification marked as seen");
         } catch (err) {
-            Toast().fire({
-                icon: "error",
-                title: "Failed to update notification",
-            });
-            console.error(err);
+        Toast.error("Failed to update notification");
         }
     };
 
@@ -62,7 +58,6 @@ function TeacherNotification() {
     const totalPages = Math.ceil(noti.length / itemsPerPage);
 
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
     return (
         <>
             <BaseHeader />

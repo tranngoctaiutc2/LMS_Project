@@ -10,6 +10,7 @@ import { Link } from "react-router-dom";
 
 import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
+import Toast from "../plugin/Toast";
 
 function QA() {
     const [questions, setQuestions] = useState([]);
@@ -21,10 +22,14 @@ function QA() {
     });
 
     const fetchQuestions = async () => {
-        apiInstance.get(`teacher/question-answer-list/${UserData()?.teacher_id}/`).then((res) => {
-            console.log(res.data);
-            setQuestions(res.data);
-        });
+        try {
+        const res = await apiInstance.get(
+            `teacher/question-answer-list/${UserData()?.teacher_id}/`
+        );
+        setQuestions(res.data);
+        } catch (err) {
+        Toast.error("Failed to fetch Q&A data.");
+        }
     };
 
     useEffect(() => {
@@ -40,27 +45,34 @@ function QA() {
 
     const handleMessageChange = (event) => {
         setCreateMessage({
-            ...createMessage,
-            [event.target.name]: event.target.value,
+        ...createMessage,
+        [event.target.name]: event.target.value,
         });
     };
-    console.log(selectedConversation?.course);
-    const sendNewMessage = async (e) => {
-        e.preventDefault();
-        const formdata = new FormData();
-        formdata.append("course_id", selectedConversation.course);
-        formdata.append("user_id", UserData()?.user_id);
-        formdata.append("message", createMessage.message);
-        formdata.append("qa_id", selectedConversation?.qa_id);
 
-        apiInstance.post(`student/question-answer-message-create/`, formdata).then((res) => {
-            setSelectedConversation(res.data.question);
-        });
+    const sendNewMessage = async (e) => {
+    e.preventDefault();
+    const formdata = new FormData();
+    formdata.append("course_id", selectedConversation.course);
+    formdata.append("user_id", UserData()?.user_id);
+    formdata.append("message", createMessage.message);
+    formdata.append("qa_id", selectedConversation?.qa_id);
+
+    try {
+        const res = await apiInstance.post(
+            `student/question-answer-message-create/`,
+            formdata
+        );
+        setSelectedConversation(res.data.question);
+        Toast.success("Message sent");
+    } catch (err) {
+        Toast.error("Failed to send message.");
+        }
     };
 
     useEffect(() => {
         if (lastElementRef.current) {
-            lastElementRef.current.scrollIntoView({ behavior: "smooth" });
+        lastElementRef.current.scrollIntoView({ behavior: "smooth" });
         }
     }, [selectedConversation]);
 
@@ -75,6 +87,7 @@ function QA() {
             setQuestions(filtered);
         }
     };
+
     return (
         <>
             <BaseHeader />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import moment from "moment";
 import { Modal, Button, Badge, Alert } from "react-bootstrap";
 
@@ -13,8 +13,8 @@ import Toast from "../plugin/Toast";
 
 function Coupon() {
     const [coupons, setCoupons] = useState([]);
-    const [createCoupon, setCreateCoupon] = useState({ 
-        code: "", 
+    const [createCoupon, setCreateCoupon] = useState({
+        code: "",
         discount: 0,
         valid_from: "",
         valid_to: "",
@@ -30,14 +30,16 @@ function Coupon() {
 
     const fetchCoupons = async () => {
         try {
-            setIsLoading(true);
-            const res = await apiInstance.get(`teacher/coupon-list/${UserData()?.teacher_id}/`);
-            setCoupons(res.data);
+        setIsLoading(true);
+        const res = await apiInstance.get(
+            `teacher/coupon-list/${UserData()?.teacher_id}/`
+        );
+        setCoupons(res.data);
         } catch (err) {
-            setError("Failed to fetch coupons. Please try again later.");
-            console.error(err);
+        setError("Failed to fetch coupons. Please try again later.");
+        console.error(err);
         } finally {
-            setIsLoading(false);
+        setIsLoading(false);
         }
     };
 
@@ -46,89 +48,86 @@ function Coupon() {
     }, []);
 
     const handleInputChange = (event) => {
-        const { name, value } = event.target;
+    const { name, value } = event.target;
         setCreateCoupon({
-            ...createCoupon,
-            [name]: value,
+        ...createCoupon,
+        [name]: value,
         });
     };
 
     const handleCreateCoupon = async (e) => {
         e.preventDefault();
-        try {
-            const formdata = new FormData();
-            formdata.append("teacher", UserData()?.teacher_id);
-            formdata.append("code", createCoupon.code);
-            formdata.append("discount", createCoupon.discount);
-            formdata.append("valid_from", createCoupon.valid_from);
-            formdata.append("valid_to", createCoupon.valid_to);
-            formdata.append("max_uses", createCoupon.max_uses);
-            formdata.append("active", createCoupon.active ? "true" : "false"); 
+    try {
+        const formdata = new FormData();
+        formdata.append("teacher", UserData()?.teacher_id);
+        formdata.append("code", createCoupon.code);
+        formdata.append("discount", createCoupon.discount);
+        formdata.append("valid_from", createCoupon.valid_from);
+        formdata.append("valid_to", createCoupon.valid_to);
+        formdata.append("max_uses", createCoupon.max_uses);
+        formdata.append("active", createCoupon.active ? "true" : "false");
 
-            await apiInstance.post(`teacher/coupon-list/${UserData()?.teacher_id}/`, formdata);
-            fetchCoupons();
-            setShowAddModal(false);
-            setCreateCoupon({ code: "", discount: "", date: "", end_date: "", max_uses: "", active: true,});
-            Toast().fire({
-                icon: "success",
-                title: "Coupon created successfully",
-            });
-        } catch (err) {
-            console.error("Create coupon error:", err);
-            Toast().fire({
-                icon: "error",
-                title: "Failed to create coupon",
-            });
-        }
+    await apiInstance.post(
+        `teacher/coupon-list/${UserData()?.teacher_id}/`,
+        formdata
+    );
+    fetchCoupons();
+    setShowAddModal(false);
+    setCreateCoupon({
+        code: "",
+        discount: 0,
+        valid_from: "",
+        valid_to: "",
+        max_uses: "",
+        active: true,
+    });
+        Toast.success("Coupon created successfully");
+    } catch (err) {
+        Toast.error("Failed to create coupon");
+    }
     };
 
     const handleDeleteCoupon = async (couponId) => {
-        if (window.confirm("Are you sure you want to delete this coupon?")) {
-            try {
-                await apiInstance.delete(`teacher/coupon-detail/${UserData()?.teacher_id}/${couponId}/`);
-                fetchCoupons();
-                Toast().fire({
-                    icon: "success",
-                    title: "Coupon deleted successfully",
-                });
-            } catch (err) {
-                Toast().fire({
-                    icon: "error",
-                    title: "Failed to delete coupon",
-                });
+    if (window.confirm("Are you sure you want to delete this coupon?")) {
+        try {
+            await apiInstance.delete(
+            `teacher/coupon-detail/${UserData()?.teacher_id}/${couponId}/`
+            );
+            fetchCoupons();
+            Toast.success("Coupon deleted successfully");
+        } catch (err) {
+            Toast.error("Failed to delete coupon");
             }
         }
     };
+
     const handleUpdateCoupon = async (e) => {
         e.preventDefault();
-        try {
-            const formdata = new FormData();
-            formdata.append("teacher", UserData()?.teacher_id);
-            formdata.append("code", createCoupon.code);
-            formdata.append("discount", createCoupon.discount);
-            formdata.append("date", createCoupon.valid_from);
-            formdata.append("end_date", createCoupon.valid_to);
-            formdata.append("max_uses", createCoupon.max_uses);
-            formdata.append("active", createCoupon.active ? "true" : "false");
+    try {
+    const formdata = new FormData();
+    formdata.append("teacher", UserData()?.teacher_id);
+    formdata.append("code", createCoupon.code);
+    formdata.append("discount", createCoupon.discount);
+    formdata.append("valid_from", createCoupon.valid_from);
+    formdata.append("valid_to", createCoupon.valid_to);
+    formdata.append("max_uses", createCoupon.max_uses);
+    formdata.append("active", createCoupon.active ? "true" : "false");
 
-            await apiInstance.patch(`teacher/coupon-detail/${UserData()?.teacher_id}/${selectedCoupon.id}/`, formdata);
-            fetchCoupons();
-            setShowModal(false);
-            Toast().fire({
-                icon: "success",
-                title: "Coupon updated successfully",
-            });
-        } catch (err) {
-            Toast().fire({
-                icon: "error",
-                title: "Failed to update coupon",
-            });
+    await apiInstance.patch(
+        `teacher/coupon-detail/${UserData()?.teacher_id}/${selectedCoupon.id}/`,
+        formdata
+    );
+    fetchCoupons();
+        setShowModal(false);
+        Toast.success("Coupon updated successfully");
+    } catch (err) {
+        Toast.error("Failed to update coupon");
         }
     };
 
+    return(
+        <>
 
-    return (
-    <>
         <BaseHeader />
 
         <section className="pt-5 pb-5 bg-light">

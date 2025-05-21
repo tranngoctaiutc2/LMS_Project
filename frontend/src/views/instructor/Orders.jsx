@@ -8,39 +8,42 @@ import BaseFooter from "../partials/BaseFooter";
 
 import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
+import Toast from "../plugin/Toast";
 
 function Orders() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage] = useState(10); // Adjust as needed
+    const [itemsPerPage] = useState(10);
 
     useEffect(() => {
         const fetchOrders = async () => {
             try {
-                const response = await apiInstance.get(`teacher/course-order-list/${UserData()?.teacher_id}/`);
+                const response = await apiInstance.get(
+                `teacher/course-order-list/${UserData()?.teacher_id}/`
+                );
                 setOrders(response.data);
             } catch (err) {
                 setError("Failed to fetch orders. Please try again later.");
-                console.error(err);
+                Toast.error("Failed to fetch orders.");
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchOrders();
+    fetchOrders();
     }, []);
 
-    // Pagination logic
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentItems = orders.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(orders.length / itemsPerPage);
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = orders.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(orders.length / itemsPerPage);
 
-    const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-    return (
+  return (
         <>
             <BaseHeader />
 
