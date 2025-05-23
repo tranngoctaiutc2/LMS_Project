@@ -6,13 +6,16 @@ import { logout } from "../../utils/auth";
 import { CartContext } from "../plugin/Context";
 import Toast from "../plugin/Toast";
 
+
 function Logout() {
   const [_, setCartCount] = useContext(CartContext);
 
+
   useEffect(() => {
-    logout();
-    setCartCount(0);
-    Toast.success("Logout successful");
+        logout();
+        setCartCount(0);
+        Toast.success("Logout successful");
+
   }, [setCartCount]);
 
   return (

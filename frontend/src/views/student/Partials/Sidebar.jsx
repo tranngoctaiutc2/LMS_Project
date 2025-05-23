@@ -21,6 +21,7 @@ function Sidebar() {
           </button>
           <div className="collapse navbar-collapse p-3" id="sidenav">
             <div className="navbar-nav flex-column w-100">
+              <span className="navbar-header mb-2 text-gray-800 text-base fw-semibold ps-3">🧭 Main Navigation</span>
               <ul className="list-unstyled ms-n2 mb-4">
                 <li className="nav-item">
                   <Link className="nav-link py-2 px-3 rounded d-flex align-items-center gap-2 hover-bg-light" to={`/student/dashboard/`}>
@@ -42,15 +43,28 @@ function Sidebar() {
                     <i className="fas fa-envelope text-info"></i> Q/A
                   </Link>
                 </li>
-                <li className="nav-item">
-                  <Link className="nav-link py-2 px-3 rounded d-flex align-items-center gap-2 hover-bg-light" to={`/student/ai-teaching-agent/`}>
-                    <i className="fas fa-robot text-warning"></i> AI Teaching Agent
-                  </Link>
-                </li>
               </ul>
-  
+
+              <span className="navbar-header mb-2 text-gray-800 text-base fw-semibold ps-3">🤖 AI Tools</span>
+              <div className="navbar-nav flex-column w-100">
+                <ul className="list-unstyled ms-n2 mb-4">
+                  <li className="nav-item">
+                    <Link className="nav-link py-2 px-3 rounded d-flex align-items-center gap-2 hover-bg-light" to={`/student/ai-teaching-agent/`}>
+                      <i className="fas fa-robot text-warning"></i> AI Teaching Agent
+                    </Link>
+                  </li>
+                  <li className="nav-item">
+                    <Link
+                      className="nav-link py-2 px-3 rounded d-flex align-items-center gap-2 hover-bg-light"
+                      to={`/student/ai-document-list/`}
+                    >
+                      <i className="fas fa-file-alt text-info"></i> AI Documents
+                    </Link>
+                  </li>
+                </ul>
+              </div>
               {/* Navbar header */}
-              <span className="navbar-header mb-2 text-muted fw-semibold ps-3">Account Settings</span>
+              <span className="navbar-header mb-2 text-gray-800 text-base fw-semibold ps-3">⚙️ Account Settings</span>
               <ul className="list-unstyled ms-n2 mb-0">
                 <li className="nav-item">
                   <Link className="nav-link py-2 px-3 rounded d-flex align-items-center gap-2 hover-bg-light" to={`/student/profile/`}>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Route, Routes, BrowserRouter } from "react-router-dom";
+import { ClerkProvider } from "@clerk/clerk-react";
 
 import './locales/i18n';
 
@@ -12,6 +13,7 @@ import PrivateRoute from "./layouts/PrivateRoute";
 
 import Register from "../src/views/auth/Register";
 import Login from "../src/views/auth/Login";
+import ClerkCallback from "../src/views/auth/ClerkCallback";
 import Logout from "./views/auth/Logout";
 import ForgotPassword from "./views/auth/ForgotPassword";
 import CreateNewPassword from "./views/auth/CreateNewPassword";
@@ -45,6 +47,7 @@ import CourseCreate from "./views/instructor/CourseCreate";
 import CourseEdit from "./views/instructor/CourseEdit";
 import StudentQA from "./views/student/QA";
 import AITeaching from "./views/student/AITeachingTeam";
+import Documentation from "./views/student/Documentation";
 
 import Chatbot from "./views/chat/Chatbot";
 
@@ -54,6 +57,7 @@ function App() {
     const [wishlist, setWishlist] = useState([]);
 
     useEffect(() => {
+        
         apiInstance.get(`course/cart-list/${CartId()}/`).then((res) => {
             setCartCount(res.data?.length);
         });
@@ -70,11 +74,13 @@ function App() {
     return (
         <CartContext.Provider value={[cartCount, setCartCount]}>
             <ProfileContext.Provider value={[profile, setProfile]}>
+                <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}>
                 <BrowserRouter>
                     <MainWrapper>
                         <Routes>
                             <Route path="/register/" element={<Register />} />
-                            <Route path="/login/" element={<Login />} />
+                            <Route path="/login/" element={<Login />} />                           
+                            <Route path="/clerk-callback" element={<ClerkCallback />} />
                             <Route path="/logout/" element={<Logout />} />
                             <Route path="/forgot-password/" element={<ForgotPassword />} />
                             <Route path="/create-new-password/" element={<CreateNewPassword />} />
@@ -149,6 +155,14 @@ function App() {
                                 element={
                                     <PrivateRoute>
                                         <AITeaching />
+                                    </PrivateRoute>
+                                }
+                            />
+                            <Route
+                                path="/student/ai-document-list/"
+                                element={
+                                    <PrivateRoute>
+                                        <Documentation/>
                                     </PrivateRoute>
                                 }
                             />
@@ -263,6 +277,7 @@ function App() {
                         <Chatbot/>
                     </MainWrapper>
                 </BrowserRouter>
+                </ClerkProvider>
             </ProfileContext.Provider>
         </CartContext.Provider>
     );

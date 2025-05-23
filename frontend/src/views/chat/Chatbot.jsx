@@ -3,6 +3,8 @@ import apiInstance from "../../utils/axios";
 import moment from "moment";
 import { userId } from "../../utils/constants";
 import Toast from "../plugin/Toast";
+import Swal from "sweetalert2";
+import { Link } from "react-router-dom";
 
 function Chatbot() {
   const [messages, setMessages] = useState([]);
@@ -12,6 +14,7 @@ function Chatbot() {
   const [isLoading, setIsLoading] = useState(false);
   const [detectedLang, setDetectedLang] = useState(null);
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   const toggleChat = () => setIsOpen(!isOpen);
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -23,6 +26,12 @@ function Chatbot() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, sessionMessages]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 300);
+    }
+  }, [isOpen]);
 
   const fetchChatHistory = async () => {
     try {
@@ -39,7 +48,6 @@ function Chatbot() {
     const uid = userId();
 
     if (!uid) {
-      // Guest user
       setSessionMessages((prev) => [...prev, { role: "user", content: inputMessage, timestamp: now }]);
       setInputMessage("");
       setIsLoading(true);
@@ -49,18 +57,17 @@ function Chatbot() {
           ...prev,
           {
             role: "assistant",
-            content: res.data.message || "Xin lỗi, tôi không thể trả lời ngay lúc này.",
+            content: res.data.message || "Sorry, I can't respond right now.",
             timestamp: now,
           },
         ]);
         setDetectedLang(res.data.language || null);
       } catch (err) {
-        Toast.error("Lỗi khi gửi tin nhắn");
+        Toast.error("Failed to send message");
       } finally {
         setIsLoading(false);
       }
     } else {
-      // Logged-in user
       setMessages((prev) => [...prev, { metadata: { role: "user" }, text: inputMessage, timestamp: now }]);
       setInputMessage("");
       setIsLoading(true);
@@ -69,7 +76,7 @@ function Chatbot() {
         setDetectedLang(res.data.language || null);
         await fetchChatHistory();
       } catch {
-        Toast.error("Lỗi khi gửi tin nhắn");
+        Toast.error("Failed to send message");
       } finally {
         setIsLoading(false);
       }
@@ -79,26 +86,27 @@ function Chatbot() {
   const handleClearChat = async () => {
     const uid = userId();
     if (!uid) {
-      Toast.warning("Bạn cần đăng nhập để sử dụng chức năng này.");
+      Toast.warning("You need to log in to use this feature.");
       return;
     }
 
-    const result = await Toast.custom({
-      title: "Bạn có chắc?",
-      text: "Hành động này sẽ xoá toàn bộ cuộc trò chuyện.",
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "This will delete your entire conversation.",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Xoá",
-      cancelButtonText: "Huỷ",
+      showConfirmButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
     });
 
     if (result.isConfirmed) {
       try {
         await apiInstance.post(`chat/delete/`, { user_id: uid });
         setMessages([]);
-        Toast.success("Đã xoá cuộc trò chuyện.");
+        Toast.success("Conversation deleted.");
       } catch {
-        Toast.error("Không thể xoá cuộc trò chuyện.");
+        Toast.error("Failed to delete conversation.");
       }
     }
   };
@@ -114,12 +122,15 @@ function Chatbot() {
     const uid = userId();
     const currentMessages = uid ? messages.slice().reverse() : sessionMessages;
     if (!currentMessages.length && !isLoading) {
-      return <div className="text-center text-muted">Bắt đầu cuộc trò chuyện mới</div>;
+      return <div className="text-center text-muted mt-5">🤖 Start a new conversation</div>;
     }
 
     return currentMessages.map((msg, i) => {
       const sender = uid ? msg.metadata.role : msg.role;
       const content = uid ? msg.text : msg.content;
+
+      const match = content.match(/\/course-detail\/([a-zA-Z0-9\-_]+)/);
+
       return (
         <div key={i} className={`mb-3 ${sender === "user" ? "text-end" : "text-start"}`}>
           <div
@@ -128,7 +139,17 @@ function Chatbot() {
             }`}
             style={{ maxWidth: "80%" }}
           >
-            {content}
+            <div className="fw-bold small mb-1">{sender === "user" ? "You" : "Bot"}</div>
+            {match ? (
+              <div className="border rounded p-2 bg-white">
+                <p>{content.split(match[0])[0].trim()}</p>
+                <Link to={match[0]} className="btn btn-sm btn-outline-primary mt-2">
+                  View Course
+                </Link>
+              </div>
+            ) : (
+              content
+            )}
             <div className="text-muted small mt-1">{moment(msg.timestamp).format("HH:mm")}</div>
           </div>
         </div>
@@ -144,10 +165,10 @@ function Chatbot() {
           style={{ width: "350px", height: "500px", position: "absolute", right: "0", bottom: "70px" }}
         >
           <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h6 className="mb-0">Trợ lý ảo</h6>
+            <h6 className="mb-0">Virtual Assistant</h6>
             <div className="d-flex gap-2">
               <button className="btn btn-sm btn-danger" onClick={handleClearChat}>
-                Xoá
+                Delete
               </button>
               <button className="btn btn-sm btn-light" onClick={toggleChat}>
                 ×
@@ -164,7 +185,7 @@ function Chatbot() {
             )}
             {detectedLang && (
               <div className="text-center text-muted small mt-2">
-                Ngôn ngữ phát hiện: {detectedLang.toUpperCase()}
+                Detected language: {detectedLang.toUpperCase()}
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -173,9 +194,10 @@ function Chatbot() {
           <div className="card-footer">
             <div className="input-group">
               <input
+                ref={inputRef}
                 type="text"
                 className="form-control"
-                placeholder="Nhập tin nhắn..."
+                placeholder="Type your message..."
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
@@ -186,7 +208,7 @@ function Chatbot() {
                 onClick={handleSendMessage}
                 disabled={isLoading || !inputMessage.trim()}
               >
-                Gửi
+                Send
               </button>
             </div>
           </div>

@@ -5,6 +5,7 @@ import BaseFooter from "../partials/BaseFooter";
 import { login } from "../../utils/auth";
 import apiInstance from "../../utils/axios";
 import Toast from "../plugin/Toast";
+import { useClerk } from "@clerk/clerk-react";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -40,22 +41,21 @@ function Login() {
     setIsLoading(false);
   };
 
+  const { redirectToSignIn } = useClerk();
   const handleOAuthLogin = async () => {
-    setOauthLoading(true);
-    try {
-      const res = await apiInstance.get("/auth/google/login-url");
-      const { url } = res.data;
-      if (url) {
-        window.location.href = url;
-      } else {
-        Toast.error("Failed to get Google login URL");
-      }
-    } catch (err) {
-      Toast.error("Something went wrong with Google login");
-    } finally {
-      setOauthLoading(false);
-    }
-  };
+  setOauthLoading(true);
+  try {
+    await redirectToSignIn({
+      strategy: "oauth_google",
+      redirectUrl: window.location.origin + "/clerk-callback",
+    });
+  } catch (err) {
+    console.error(err);
+    Toast.error("Google login failed via Clerk");
+    setOauthLoading(false);
+  }
+};
+
 
   return (
     <>
