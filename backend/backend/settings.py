@@ -168,8 +168,13 @@ PAYPAL_CLIENT_ID = env("PAYPAL_CLIENT_ID")
 PAYPAL_SECRET_ID = env("PAYPAL_SECRET_ID")
 
 GEMINI_API_KEY = env("GEMINI_API_KEY")
+SERPAPI_KEY = env("SERPAPI_KEY")
+CREDENTIALS_FILE = os.path.join(BASE_DIR, 'credentials.json')
 QDRANT_API_KEY = env("QDRANT_API_KEY")
 QDRANT_URL = env("QDRANT_URL")
+
+CLERK_FRONTEND_API = env("CLERK_FRONTEND_API")
+CLERK_SECRET_KEY = env("CLERK_SECRET_KEY")  
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
