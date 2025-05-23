@@ -2,6 +2,10 @@ from api import views as api_views
 from django.urls import path
 
 from rest_framework_simplejwt.views import TokenRefreshView
+from api.AITeachingTeam.views_professor import ProfessorAgentAPIView
+from api.AITeachingTeam.views_academic_advisor import AcademicAdvisorAgentAPIView
+from api.AITeachingTeam.views_research_librarian import ResearchLibrarianAgentAPIView
+from api.AITeachingTeam.views_teaching_assistant import TeachingAssistantAgentAPIView
 
 urlpatterns = [
 
@@ -13,6 +17,7 @@ urlpatterns = [
     path("user/password-change/", api_views.PasswordChangeAPIView.as_view()),
     path("user/profile/<user_id>/", api_views.ProfileAPIView.as_view()),
     path("user/change-password/", api_views.ChangePasswordAPIView.as_view()),
+    path("clerk/login/", api_views.clerk_login),
 
     # Core Endpoints
     path("course/category/", api_views.CategoryListAPIView.as_view()),
@@ -71,6 +76,13 @@ urlpatterns = [
     path('chat/', api_views.ChatBotAPIView.as_view()),
     path('chat/history/', api_views.GetChatHistoryAPIView.as_view()),
     path('chat/delete/', api_views.DeleteChatHistoryAPIView.as_view()),
+
+    path('ai-document-list/', api_views.UserDocumentListView.as_view()),
+    path("professor-agent/", ProfessorAgentAPIView.as_view()),
+    path("academic-advisor-agent/", AcademicAdvisorAgentAPIView.as_view()),
+    path("research-librarian-agent/", ResearchLibrarianAgentAPIView.as_view()),
+    path("teaching-assistant-agent/", TeachingAssistantAgentAPIView.as_view()),
+
 ]
 
 

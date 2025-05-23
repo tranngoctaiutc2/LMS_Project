@@ -27,7 +27,7 @@ from rest_framework import generics, status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, APIView
+from rest_framework.decorators import api_view, APIView, permission_classes, authentication_classes
 from rest_framework.parsers import MultiPartParser, FormParser
 
 from moviepy.editor import VideoFileClip
@@ -54,6 +54,21 @@ PAYPAL_SECRET_ID = settings.PAYPAL_SECRET_ID
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = api_serializer.MyTokenObtainPairSerializer
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@authentication_classes([])
+def clerk_login(request):
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return Response({"detail": "Authorization header missing or invalid"}, status=401)
+
+    token = auth_header.split(" ")[1]
+    serializer = api_serializer.ClerkLoginSerializer(data={"token": token})
+
+    if serializer.is_valid():
+        return Response(serializer.validated_data)
+    return Response(serializer.errors, status=400)
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -764,9 +779,9 @@ class QuestionAnswerListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        course_id = self.kwargs['course_id']
-        course = api_models.Course.objects.get(id=course_id)
-        return api_models.Question_Answer.objects.filter(course=course)
+        user_id = self.kwargs.get('user_id')
+
+        return api_models.Question_Answer.objects.filter(user_id=user_id)
     
     def create(self, request, *args, **kwargs):
         course_id = request.data['course_id']
@@ -1150,113 +1165,6 @@ class TeacherCourseDetailAPIView(generics.RetrieveAPIView):
         course_id = self.kwargs['course_id']
         course = api_models.Course.objects.get(course_id=course_id, platform_status="Published", teacher_course_status="Published")
         return course
-
-# class CourseUpdateAPIView(generics.RetrieveUpdateAPIView):
-#     queryset = api_models.Course.objects.filter(
-#         platform_status="Published",
-#         teacher_course_status="Published"
-#     )
-#     serializer_class = api_serializer.CourseSerializer
-#     permission_classes = [AllowAny]
-#     lookup_field = 'course_id'
-
-#     def get_object(self):
-#         course_id = self.kwargs['course_id']
-#         teacher_id = self.kwargs['teacher_id']
-#         get_object_or_404(api_models.Teacher, id=teacher_id)
-#         return get_object_or_404(
-#             api_models.Course,
-#             course_id=course_id,
-#             platform_status="Published",
-#             teacher_course_status="Published"
-#         )
-
-#     def update(self, request, *args, **kwargs):
-#         course = self.get_object()
-#         serializer = self.get_serializer(course, data=request.data, partial=True)
-#         serializer.is_valid(raise_exception=True)
-
-#         self._update_course_fields(course, request)
-#         serializer.save()
-#         self._update_variants(course, request.data)
-
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-
-#     def _update_course_fields(self, course, request):
-#         if 'image' in request.FILES:
-#             course.image = request.FILES['image']
-#         elif request.data.get('image') == "No File":
-#             course.image = None
-
-#         if request.data.get('file'):
-#             course.file = request.data.get('file')
-
-#         category_id = request.data.get('category')
-#         if category_id and category_id not in ["NaN", "undefined", None]:
-#             course.category = get_object_or_404(api_models.Category, id=category_id)
-
-#     def _update_variants(self, course, data):
-#         if not any(f"variants[{i}][variant_title]" in data for i in range(100)):
-#             course.variants.all().delete()
-#             return
-
-#         for i in range(100):
-#             title_key = f"variants[{i}][variant_title]"
-#             if title_key not in data:
-#                 break
-
-#             variant = self._get_or_create_variant(course, data, i)
-#             self._update_variant_items(variant, data, i)
-
-#     def _get_or_create_variant(self, course, data, index):
-#         title = data.get(f"variants[{index}][variant_title]")
-#         variant_id = data.get(f"variants[{index}][variant_id]")
-
-#         variant = course.variants.filter(variant_id=variant_id).first() if variant_id else None
-#         if variant:
-#             variant.title = title
-#             variant.save()
-#         else:
-#             variant = api_models.Variant.objects.create(course=course, title=title)
-#         return variant
-
-#     def _update_variant_items(self, variant, data, variant_index):
-#         if not any(f"variants[{variant_index}][items][{j}][title]" in data for j in range(100)):
-#             variant.items.all().delete()
-#             return
-
-#         for j in range(100):
-#             base = f"variants[{variant_index}][items][{j}]"
-#             title = data.get(f"{base}[title]")
-#             if not title:
-#                 break
-
-#             self._get_or_create_variant_item(variant, data, base, j)
-
-#     def _get_or_create_variant_item(self, variant, data, base, index):
-#         description = data.get(f"{base}[description]")
-#         file = data.get(f"{base}[file]")
-#         preview_val = data.get(f"{base}[preview]")
-#         variant_item_id = data.get(f"{base}[variant_item_id]")
-#         preview = bool(strtobool(str(preview_val))) if preview_val is not None else False
-#         file_to_save = file if file and not str(file).startswith("http") and file != "null" else None
-
-#         item = variant.items.filter(variant_item_id=variant_item_id).first() if variant_item_id else None
-#         if item:
-#             item.title = title
-#             item.description = description
-#             item.file = file_to_save
-#             item.preview = preview
-#             item.save()
-#         else:
-#             api_models.VariantItem.objects.create(
-#                 variant=variant,
-#                 title=title,
-#                 description=description,
-#                 file=file_to_save,
-#                 preview=preview
-#             )
- 
 class TeacherCourseUpdateAPIView(generics.UpdateAPIView):
     queryset = api_models.Course.objects.all()
     serializer_class = api_serializer.CourseSerializer
@@ -1476,4 +1384,16 @@ class DeleteChatHistoryAPIView(APIView):
                 "error": str(e),
                 "icon": "error"
             }, status=500)
+
+class UserDocumentListView(generics.ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = api_serializer.UserDocumentSerializer
+
+    def get_queryset(self):
+        user_id = self.request.query_params.get("user_id")
+        if not user_id:
+            return api_models.UserDocument.objects.none()
+
+        return api_models.UserDocument.objects.filter(user__id=user_id).order_by("-created_at")
+
 

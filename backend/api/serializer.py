@@ -1,8 +1,16 @@
 from django.contrib.auth.password_validation import validate_password
+import requests
+import jwt
+from jwt.algorithms import RSAAlgorithm
+from django.conf import settings
 from api import models as api_models
 
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.hashers import make_password
+
+
 
 from userauths.models import Profile, User
 from moviepy.editor import VideoFileClip
@@ -23,6 +31,94 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 
         return token
+
+
+CLERK_JWKS_URL = f"https://{settings.CLERK_FRONTEND_API}/.well-known/jwks.json"
+CLERK_ISSUER = f"https://{settings.CLERK_FRONTEND_API}"
+
+class ClerkLoginSerializer(serializers.Serializer):
+    token = serializers.CharField()
+
+    def get_clerk_public_keys(self):
+        response = requests.get(CLERK_JWKS_URL)
+        response.raise_for_status()
+        return response.json()["keys"]
+
+    def verify_clerk_token(self, token):
+        unverified_header = jwt.get_unverified_header(token)
+        keys = self.get_clerk_public_keys()
+        for key in keys:
+            if key["kid"] == unverified_header["kid"]:
+                public_key = RSAAlgorithm.from_jwk(key)
+                return jwt.decode(
+                    token,
+                    public_key,
+                    algorithms=["RS256"],
+                    audience=None,
+                    issuer=CLERK_ISSUER,
+                )
+        raise jwt.InvalidTokenError("Public key not found.")
+
+    def validate(self, data):
+        print("Request data received:", data)
+        token = data.get("token")
+        try:
+            decoded = self.verify_clerk_token(token)
+        except jwt.ExpiredSignatureError:
+            raise serializers.ValidationError("Token expired")
+        except jwt.InvalidTokenError as e:
+            raise serializers.ValidationError(f"Invalid token: {str(e)}")
+
+        email = decoded.get("email")
+        full_name = decoded.get("full_name", "").strip()
+        first_name = decoded.get("first_name", "").strip()
+        last_name = decoded.get("last_name", "").strip()
+        clerk_id = decoded.get("sub")
+
+        if not full_name or "@" in full_name or full_name == email.split("@")[0]:
+            full_name = f"{first_name} {last_name}".strip()
+
+        if not full_name:
+            full_name = email.split("@")[0]
+
+        if not email or not clerk_id:
+            raise serializers.ValidationError("Invalid Clerk token payload")
+
+        try:
+            user, created = User.objects.get_or_create(email=email, defaults={
+                "username": email,
+                "full_name": full_name,
+                "first_name": first_name,
+                "last_name": last_name,
+                "password": make_password(None),
+            })
+
+            if not created:
+                updated = False
+                if user.first_name != first_name:
+                    user.first_name = first_name
+                    updated = True
+                if user.last_name != last_name:
+                    user.last_name = last_name
+                    updated = True
+                if updated:
+                    user.save()
+
+        except Exception as e:
+            raise serializers.ValidationError("Failed to create or update user.")
+
+        refresh = RefreshToken.for_user(user)
+
+        return {
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "full_name": f"{user.first_name} {user.last_name}".strip(),
+            }
+        }
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
@@ -50,7 +146,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.save()
 
         return user
-    
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -469,4 +564,7 @@ class TeacherSummarySerializer(serializers.Serializer):
 class FileUploadSerializer(serializers.Serializer):
     file = serializers.FileField(required=True)
 
-
+class UserDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = api_models.UserDocument
+        fields = '__all__'

@@ -403,3 +403,20 @@ class Country(models.Model):
 
     def __str__(self):
         return self.name
+
+class UserDocument(models.Model):
+    AI_CHOICES = [
+        ("professor", "Professor Agent"),
+        ("advisor", "Academic Advisor"),
+        ("librarian", "Research Librarian"),
+        ("assistant", "Teaching Assistant"),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="documents")
+    topic = models.CharField(max_length=255)
+    doc_url = models.URLField()
+    ai_type = models.CharField(max_length=20, choices=AI_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.topic} - {self.ai_type} - {self.user.email}"

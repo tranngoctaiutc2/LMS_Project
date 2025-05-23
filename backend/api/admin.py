@@ -20,4 +20,5 @@ admin.site.register(models.Notification)
 admin.site.register(models.Coupon)
 admin.site.register(models.Wishlist)
 admin.site.register(models.Country)
+admin.site.register(models.UserDocument)
 

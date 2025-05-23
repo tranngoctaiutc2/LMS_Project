@@ -1,5 +1,6 @@
 import os
 import uuid
+import random
 from datetime import datetime
 import google.generativeai as genai
 from qdrant_client import QdrantClient
@@ -142,70 +143,73 @@ class CustomerSupportAIAgent:
     def is_course_recommendation_query(self, query: str):
         keywords = [
             "gợi ý khóa học", "khóa học nào", "nên học gì",
-            "học gì", "khóa học phù hợp", "course recommendation"
+            "học gì", "khóa học phù hợp", "course recommendation",
+            "khoá học", "khóa học", "course"
         ]
-        simple_course_words = ["khoá học", "khóa học", "course"]  # Thêm từ khóa đơn giản
         query_lower = query.lower()
+        return any(k in query_lower for k in keywords)
 
-        if any(k in query_lower for k in keywords):
-            return True
-        # Nếu chỉ hỏi đơn giản về "khoá học" thì cũng trả True
-        if any(word == query_lower.strip() for word in simple_course_words):
-            return True
-        return False
-
-
-    def recommend_courses(self, user_id: str, limit: int = 5, single: bool = False):
+    def recommend_course_random(self):
         try:
-            courses_qs = api_models.Course.objects.all()[:limit]
-            if not courses_qs.exists():
-                logger.warning("No published courses found in DB for recommendation.")
-                return []
+            courses = list(api_models.Course.objects.all())
+            if not courses:
+                return None
+            course = random.choice(courses)
+            return {
+                "title": course.title,
+                "description": course.description,
+                "level": course.level,
+                "slug": course.slug,
+                "url": f"/courses/{course.slug}"
+            }
+        except Exception as e:
+            logger.error(f"Failed to recommend random course: {e}")
+            return None
 
-            if single:
-                c = courses_qs.first()
-                if c:
-                    return [{
-                        "title": c.title,
-                        "description": c.description,
-                        "level": c.level,
-                        "slug": c.slug,
-                    }]
-                else:
-                    return []
-            else:
-                courses_list = []
-                for c in courses_qs[:limit]:
-                    courses_list.append({
-                        "title": c.title,
-                        "description": c.description,
-                        "level": c.level,
-                        "slug": c.slug,
-                    })
-                logger.info(f"Recommend {len(courses_list)} courses for user {user_id}")
-                return courses_list
+    def handle_query(self, query: str, user_id: str):
+        lang = self._detect_language(query)
+        try:
+            if self.is_course_recommendation_query(query):
+                course = self.recommend_course_random()
+                if not course:
+                    return {
+                        "vi": "Hiện tại chưa có khóa học nào để giới thiệu.",
+                        "en": "There are no courses available at the moment."
+                    }.get(lang, "There are no courses available.")
+
+                response = {
+                    "vi": f"""Mình gợi ý bạn khoá học **{course['title']}** ({course['level']}):\n{course['description']}\n\n Bạn có thể xem chi tiết tại: /course-detail/{course['slug']}""",
+                    "en": f"""I recommend you the course **{course['title']}** ({course['level']}):\n{course['description']}\n\n Check it out here: /course-detail/{course['slug']}"""
+                }.get(lang, f"Recommended course: {course['title']} ({course['level']}) - {course['description']}")
+
+                self.add_memory(query, user_id=user_id, metadata={"role": "user", "lang": lang})
+                self.add_memory(response, user_id=user_id, metadata={"role": "assistant", "lang": lang})
+                return response
+
+            memories = self.search_memories(query, user_id)
+            prompt = self._build_prompt(query, memories, lang)
+            response = self.model.generate_content([{"role": "user", "parts": [prompt]}])
+            answer = response.text
+            self.add_memory(query, user_id=user_id, metadata={"role": "user", "lang": lang})
+            self.add_memory(answer, user_id=user_id, metadata={"role": "assistant", "lang": lang})
+            return answer
 
         except Exception as e:
-            logger.error(f"Failed to fetch course recommendations: {e}")
-            return []
-
-
+            logger.error(f"Failed to handle query: {e}")
+            return {
+                "vi": "Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.",
+                "en": "Sorry, something went wrong. Please try again later."
+            }.get(lang, "Sorry, something went wrong.")
 
     def _build_prompt(self, query, memories=None, lang="en", course_suggestions=None):
         lang_instruction = {
             "vi": "Bạn là một trợ lý hỗ trợ khách hàng chuyên nghiệp và thân thiện cho hệ thống học tập Vdemy. Luôn trả lời bằng tiếng Việt.",
             "en": "You are a professional, friendly customer support assistant for the Vdemy learning system. Always reply in English.",
-        }.get(lang, "You are a professional, friendly customer support assistant for the Vdemy learning system. Always reply in the user's language.")
+        }.get(lang, "You are a professional, friendly customer support assistant. Always reply in the user's language.")
 
         context = ""
         if memories:
             context += "Relevant past messages:\n" + "\n".join([f"- {m['text']}" for m in memories])
-
-        if course_suggestions:
-            course_list = "\n".join(
-                [f"- {c['title']} ({c['level']}): {c['description']}" for c in course_suggestions]
-            )
-            context += f"\n\nSuggested courses for the user:\n{course_list}"
 
         return f"""{lang_instruction}
 
@@ -213,66 +217,6 @@ class CustomerSupportAIAgent:
 
         Customer: {query}
         Support:"""
-
-    def handle_query(self, query: str, user_id: str):
-        lang = self._detect_language(query)
-        try:
-            if self.is_course_recommendation_query(query):
-                memories = self.get_all_memories(user_id)
-                keywords = ["lập trình", "python", "thiết kế", "beginner", "nâng cao", "marketing", "data", "ai", "machine learning"]
-                has_detail = any(
-                    any(k in m["text"].lower() for k in keywords)
-                    for m in memories
-                )
-
-                simple_course_words = ["khoá học", "khóa học", "course"]
-                if query.strip().lower() in simple_course_words:
-                    course_suggestions = self.recommend_courses(user_id, single=True)
-                else:
-                    course_suggestions = self.recommend_courses(user_id)
-
-                # Nếu chưa có detail, vẫn trả về khóa học + hỏi thêm
-                if not has_detail:
-                    followup = {
-                        "vi": "Dưới đây là một số khóa học nổi bật dành cho bạn. Bạn có muốn tìm theo chủ đề hoặc trình độ cụ thể không?",
-                        "en": "Here are some popular courses for you. Would you like to search by a specific topic or level?"
-                    }.get(lang, "Here are some popular courses. Would you like to search by a specific topic or level?")
-
-                    self.add_memory(query, user_id=user_id, metadata={"role": "user", "lang": lang})
-                    self.add_memory(followup, user_id=user_id, metadata={"role": "assistant", "lang": lang})
-
-                    # Tạo prompt với khóa học gợi ý
-                    prompt = self._build_prompt(query, memories, lang, course_suggestions)
-                    response = self.model.generate_content([
-                        {"role": "user", "parts": [prompt]}
-                    ])
-
-                    # Trả về câu trả lời có chứa khóa học + thêm câu hỏi follow-up
-                    return f"{response.text}\n\n{followup}"
-
-                # Nếu đã có detail rồi thì trả lời bình thường, kèm khóa học
-                prompt = self._build_prompt(query, memories, lang, course_suggestions)
-
-            else:
-                memories = self.search_memories(query, user_id)
-                prompt = self._build_prompt(query, memories, lang)
-
-            response = self.model.generate_content([
-                {"role": "user", "parts": [prompt]}
-            ])
-            answer = response.text
-            self.add_memory(query, user_id=user_id, metadata={"role": "user", "lang": lang})
-            self.add_memory(answer, user_id=user_id, metadata={"role": "assistant", "lang": lang})
-            return answer
-        except Exception as e:
-            logger.error(f"Failed to handle query: {e}")
-            return {
-                "vi": "Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.",
-                "en": "Sorry, something went wrong. Please try again later."
-            }.get(lang, "Sorry, something went wrong. Please try again later.")
-
-
-
 
     def generate_response_only(self, query: str, history=None):
         lang = self._detect_language(query)
@@ -282,7 +226,7 @@ class CustomerSupportAIAgent:
             response = self.model.generate_content([
                 {"role": "user", "parts": [prompt]}
             ])
-            return response.text
+            return response.text.strip()
         except Exception as e:
             logger.error(f"Failed to generate response only: {e}")
             return {
