@@ -412,11 +412,23 @@ class UserDocument(models.Model):
         ("assistant", "Teaching Assistant"),
     ]
 
+    LANGUAGE_CHOICES = [
+        ("en", "English"),
+        ("vi", "Vietnamese"),
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="documents")
     topic = models.CharField(max_length=255)
     doc_url = models.URLField()
     ai_type = models.CharField(max_length=20, choices=AI_CHOICES)
+    language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, default="en")
+    study_duration = models.CharField(max_length=50, null=True, blank=True)  # ✅ mới thêm
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def save(self, *args, **kwargs):
+        if self.ai_type == "advisor" and not self.study_duration:
+            raise ValueError("Field 'study_duration' is required for advisor documents.")
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.topic} - {self.ai_type} - {self.user.email}"
+        return f"{self.topic} - {self.ai_type} - {self.user.email} - {self.language}"
