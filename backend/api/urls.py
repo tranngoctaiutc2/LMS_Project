@@ -6,6 +6,8 @@ from api.AITeachingTeam.views_professor import ProfessorAgentAPIView
 from api.AITeachingTeam.views_academic_advisor import AcademicAdvisorAgentAPIView
 from api.AITeachingTeam.views_research_librarian import ResearchLibrarianAgentAPIView
 from api.AITeachingTeam.views_teaching_assistant import TeachingAssistantAgentAPIView
+from api.AITeachingTeam.all_agents import RunAllAgentsAPIView
+from api.AITeachingTeam.views_check_global_topic import CheckGlobalTopicAPIView
 
 urlpatterns = [
 
@@ -82,7 +84,8 @@ urlpatterns = [
     path("academic-advisor-agent/", AcademicAdvisorAgentAPIView.as_view()),
     path("research-librarian-agent/", ResearchLibrarianAgentAPIView.as_view()),
     path("teaching-assistant-agent/", TeachingAssistantAgentAPIView.as_view()),
-
+    path("all-agent/", RunAllAgentsAPIView.as_view()),
+    path("check-global-topic/", CheckGlobalTopicAPIView.as_view()),
 ]
 
 

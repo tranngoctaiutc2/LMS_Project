@@ -15,7 +15,7 @@ GEMINI_API_KEY = settings.GEMINI_API_KEY
 genai.configure(api_key=GEMINI_API_KEY)
 
 
-def generate_advisor_prompt(topic, study_duration, language="en"):
+def generate_advisor_content(topic, study_duration, language="en"):
     model = genai.GenerativeModel("gemini-1.5-flash")
     lang_note = "Please write the entire content in Vietnamese, using clear, formal academic language suitable for university-level learners." if language == "vi" else "Please write the entire content in English, using clear, formal academic language suitable for university-level learners."
 
@@ -280,7 +280,7 @@ class AcademicAdvisorAgentAPIView(APIView):
                 content = generate_advisor_from_professor(topic, professor_content, study_duration, language)
 
             else:
-                content = generate_advisor_prompt(topic, study_duration, language)
+                content = generate_advisor_content(topic, study_duration, language)
 
             doc_url = create_google_doc(f"🗺️ Learning Roadmap - {topic}", content, creds, user.email)
 

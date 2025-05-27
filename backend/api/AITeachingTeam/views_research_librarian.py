@@ -16,14 +16,14 @@ GEMINI_API_KEY = settings.GEMINI_API_KEY
 SERPAPI_KEY = settings.SERPAPI_KEY
 genai.configure(api_key=settings.GEMINI_API_KEY)
 
-def generate_librarian_content(topic, references=None, language="en", skip_online_courses_section=False):
+def generate_librarian_content(topic, language="en", skip_online_courses_section=False):
     model = genai.GenerativeModel("gemini-1.5-flash")
     lang_note = (
         "Please write the entire content in Vietnamese, using clear, formal academic language suitable for university-level learners."
         if language == "vi"
         else "Please write the entire content in English, using clear, formal academic language suitable for university-level learners."
     )
-
+    references = search_serpapi_links(topic, is_update=False, max_results=10)
     references_text = "\n".join([f"- [{title}]({url})" for title, url in (references or []) if title and url]) or "No external references provided."
 
     online_courses_section = """

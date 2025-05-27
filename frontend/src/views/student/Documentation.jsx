@@ -14,6 +14,11 @@ const AI_TYPE_LABELS = {
   assistant: "✍️ Teaching Assistant",
 };
 
+const LANGUAGE_LABELS = {
+  en: "English",
+  vi: "Vietnamese",
+};
+
 const getEmbedUrl = (url) => {
   if (url.endsWith(".pdf")) {
     return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
@@ -140,6 +145,8 @@ function UserDocuments() {
                             <thead>
                               <tr>
                                 <th>Topic</th>
+                                <th>Language</th>
+                                {type === "advisor" && <th>Study Duration</th>}
                                 <th>Created At</th>
                                 <th>Actions</th>
                               </tr>
@@ -148,6 +155,10 @@ function UserDocuments() {
                               {docs.map((doc) => (
                                 <tr key={doc.id}>
                                   <td>{doc.topic}</td>
+                                  <td>{LANGUAGE_LABELS[doc.language] || doc.language || "N/A"}</td>
+                                  {type === "advisor" && (
+                                    <td>{doc.study_duration || "N/A"}</td>
+                                  )}
                                   <td>{new Date(doc.created_at).toLocaleString("en-US")}</td>
                                   <td>
                                     <a
@@ -179,58 +190,66 @@ function UserDocuments() {
               {/* Preview Modal */}
               {previewUrl && (
                 <div
-                    className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 d-flex justify-content-center align-items-center"
-                    style={{ zIndex: 1050 }}
+                  className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 d-flex justify-content-center align-items-center"
+                  style={{ zIndex: 1050 }}
                 >
-                    <div
+                  <div
                     className="bg-white rounded-4 shadow-lg p-4 d-flex flex-column"
                     style={{
-                        width: "90%",
-                        maxWidth: "1000px",
-                        maxHeight: "90vh",
-                        overflow: "hidden",
+                      width: "90%",
+                      maxWidth: "1000px",
+                      maxHeight: "90vh",
+                      overflow: "hidden",
                     }}
-                    >
+                  >
                     <div className="d-flex justify-content-between align-items-center mb-3">
-                        <h5 className="mb-0 text-primary">Document Preview</h5>
-                        <button className="btn btn-sm btn-outline-danger" onClick={() => setPreviewUrl(null)}>
+                      <h5 className="mb-0 text-primary">Document Preview</h5>
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => setPreviewUrl(null)}
+                      >
                         Close
-                        </button>
+                      </button>
                     </div>
 
                     {getEmbedUrl(previewUrl) ? (
-                        <div className="flex-grow-1 overflow-auto">
+                      <div className="flex-grow-1 overflow-auto">
                         <iframe
-                            src={getEmbedUrl(previewUrl)}
-                            style={{
+                          src={getEmbedUrl(previewUrl)}
+                          style={{
                             width: "100%",
                             height: "100%",
                             border: "1px solid #ccc",
                             minHeight: "500px",
-                            }}
-                            allowFullScreen
+                          }}
+                          allowFullScreen
                         ></iframe>
-                        </div>
+                      </div>
                     ) : (
-                        <div className="alert alert-warning">Cannot preview this document type.</div>
+                      <div className="alert alert-warning">
+                        Cannot preview this document type.
+                      </div>
                     )}
 
                     <div className="d-flex justify-content-end mt-3">
-                        <a
+                      <a
                         href={previewUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="btn btn-primary me-2"
-                        >
+                      >
                         Open in New Tab
-                        </a>
-                        <button className="btn btn-secondary" onClick={() => setPreviewUrl(null)}>
+                      </a>
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => setPreviewUrl(null)}
+                      >
                         Close
-                        </button>
+                      </button>
                     </div>
-                    </div>
+                  </div>
                 </div>
-                )}
+              )}
             </div>
           </div>
         </div>

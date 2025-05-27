@@ -12,7 +12,7 @@ const agents = [
     title: "Professor Agent",
     type: "professor",
     endpoint: "/professor-agent/",
-    description: "Creates a comprehensive knowledge base with explanations from first principles, structured in a Google Doc.",
+    description: "Creates or updates a knowledge base with structured explanations in a Google Doc.",
   },
   {
     icon: "💼",
@@ -25,141 +25,147 @@ const agents = [
     icon: "📚",
     title: "Research Librarian Agent",
     type: "librarian",
-    endpoint: "/librarian-agent/",
+    endpoint: "/research-librarian-agent/",
     description: "Collects high-quality reference materials, categorized by difficulty level and reliability, in a detailed document.",
   },
   {
     icon: "✍️",
     title: "Teaching Assistant Agent",
     type: "assistant",
-    endpoint: "/assistant-agent/",
+    endpoint: "/teaching-assistant-agent/",
     description: "Creates exercises with guided solutions to reinforce key concepts covered in the topic.",
   },
 ];
 
 const AITeachingAgents = () => {
-  const [topic, setTopic] = useState("");
-  const [language, setLanguage] = useState("en");
-  const [duration, setDuration] = useState("4 weeks");
+  const [globalTopic, setGlobalTopic] = useState("");
+  const [globalLanguage, setGlobalLanguage] = useState("en");
   const [professorDocs, setProfessorDocs] = useState([]);
-  const [selectedProfessorDoc, setSelectedProfessorDoc] = useState(null);
-  const [manualProfessorLinks, setManualProfessorLinks] = useState([""]);
-  const [loading, setLoading] = useState({});
-  const [docUrls, setDocUrls] = useState({});
+  const [advisorDocs, setAdvisorDocs] = useState([]);
+  const [isRunningGlobal, setIsRunningGlobal] = useState(false);
+  const [agentStates, setAgentStates] = useState(
+    agents.reduce((acc, agent) => ({
+      ...acc,
+      [agent.type]: {
+        selectedProfessorDoc: null,
+        selectedAdvisorDoc: null,
+        loading: false,
+        docUrl: null,
+        ...(agent.type === "advisor" ? { duration: "4 weeks" } : {}),
+      },
+    }), {})
+  );
   const [checking, setChecking] = useState(false);
   const [step, setStep] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchProfessorDocs = async () => {
+    const fetchDocs = async () => {
       try {
         const res = await apiInstance.get("/ai-document-list/", {
-          params: { user_id: UserData()?.user_id }
+          params: { user_id: UserData()?.user_id },
         });
         const professorOnly = res.data?.filter((doc) => doc.ai_type === "professor") || [];
+        const advisorOnly = res.data?.filter((doc) => doc.ai_type === "advisor") || [];
         setProfessorDocs(professorOnly);
-        console.log("Fetched professor docs:", professorOnly);
+        setAdvisorDocs(advisorOnly);
       } catch (err) {
-        console.error("Failed to fetch professor docs", err);
+        console.error("Failed to fetch documents", err);
       }
     };
-    fetchProfessorDocs();
+    fetchDocs();
   }, []);
 
-  const isValidUrl = (url) => {
-    try {
-      new URL(url);
-      return true;
-    } catch (_) {
-      return false;
+  const updateAgentState = (agentType, updates) => {
+    setAgentStates((prev) => ({
+      ...prev,
+      [agentType]: { ...prev[agentType], ...updates },
+    }));
+  };
+
+  const getAgentExtraData = (agentType) => {
+    const agentState = agentStates[agentType];
+    const extraData = {};
+    if (agentState.selectedProfessorDoc) {
+      extraData.professor_content = { doc_url: agentState.selectedProfessorDoc.doc_url };
     }
-  };
-
-  const handleLinkChange = (index, value) => {
-    const updated = [...manualProfessorLinks];
-    updated[index] = value;
-    setManualProfessorLinks(updated);
-  };
-
-  const addManualLink = () => {
-    if (manualProfessorLinks.length >= 5) return;
-    setManualProfessorLinks([...manualProfessorLinks, ""]);
-  };
-
-  const getAdvisorExtraData = () => {
-    const validLinks = manualProfessorLinks.filter((url) => isValidUrl(url));
-    let professor_content = "";
-    if (selectedProfessorDoc) professor_content = selectedProfessorDoc;
-    else if (validLinks.length > 0) professor_content = validLinks.join("\n");
-    return { professor_content, study_duration: duration };
-  };
-
-  const handleCallAgent = async (agentType, endpoint, extraData = {}) => {
-    let finalTopic = topic;
-
-    if (!finalTopic && selectedProfessorDoc?.topic) {
-      finalTopic = selectedProfessorDoc.topic;
-      Toast.info(`Auto-filled topic from selected document: "${finalTopic}"`);
+    if (agentType === "advisor") {
+      extraData.study_duration = agentState.duration;
+      if (agentState.selectedAdvisorDoc) {
+        extraData.advisor_content = { doc_url: agentState.selectedAdvisorDoc.doc_url };
+      }
     }
+    return extraData;
+  };
+
+  const handleCallAgent = async (agentType, endpoint) => {
+    const agentState = agentStates[agentType];
+    let finalTopic = globalTopic;
+    let finalLanguage = globalLanguage;
+
+    if (agentState.selectedProfessorDoc) {
+      finalTopic = agentState.selectedProfessorDoc.topic;
+      finalLanguage = agentState.selectedProfessorDoc.language;
+    } else if (agentType === "advisor" && agentState.selectedAdvisorDoc) {
+      finalTopic = agentState.selectedAdvisorDoc.topic;
+      finalLanguage = agentState.selectedAdvisorDoc.language;
+}
 
     if (!finalTopic) return Toast.warning("Please enter a topic or select a professor document");
 
-    setLoading((prev) => ({ ...prev, [agentType]: true }));
+    const payload = {
+      user_id: UserData()?.user_id,
+      topic: finalTopic,
+      language: finalLanguage,
+      ...getAgentExtraData(agentType),
+    };
+
+    if (agentState.selectedProfessorDoc) {
+      payload.doc_url = agentState.selectedProfessorDoc.doc_url;
+      Toast.info(`Auto-filled topic: "${finalTopic}", language: "${finalLanguage}" for ${agentType} from selected professor document.`);
+    }
+    if (agentType === "advisor" && agentState.selectedAdvisorDoc) {
+      Toast.info(`Using advisor document: "${agentState.selectedAdvisorDoc.topic}" for ${agentType}.`);
+    }
+
+    setIsRunningGlobal(true);
+    updateAgentState(agentType, { loading: true });
 
     try {
-      const res = await apiInstance.post(
-        endpoint,
-        {
-          topic: finalTopic,
-          user_id: UserData()?.user_id,
-          language,
-          ...extraData,
-        },
-        { timeout: 180000 }
-      );
-
+      const res = await apiInstance.post(endpoint, payload, { timeout: 300000 });
       Toast.success(`${agentType} completed!`);
-      setDocUrls((prev) => ({ ...prev, [agentType]: res.data.doc_url }));
+      updateAgentState(agentType, { docUrl: res.data.doc_url });
       return res.data;
     } catch (error) {
       console.error(error);
       Toast.error(error.response?.data?.error || "Agent failed");
       return null;
     } finally {
-      setLoading((prev) => ({ ...prev, [agentType]: false }));
+      updateAgentState(agentType, { loading: false });
+      setIsRunningGlobal(false);
     }
   };
 
-
   const handleRunAll = async () => {
-    if (!topic) return Toast.warning("Please enter a topic");
+    if (!globalTopic && !agents.some(agent => agentStates[agent.type].selectedProfessorDoc)) {
+      return Toast.warning("Please enter a global topic or select a professor document for at least one agent");
+    }
+    setIsRunningGlobal(true);
     setStep(1);
 
-    const professorRes = await handleCallAgent("professor", "/professor-agent/");
-    if (!professorRes || !professorRes.content) return;
-
-    const professorContent = professorRes.content;
-    setStep(2);
-
-    await handleCallAgent("advisor", "/advisor-agent/", {
-      professor_content: professorContent,
-      study_duration: duration,
-    });
-
-    setStep(3);
-    await handleCallAgent("librarian", "/librarian-agent/");
-
-    setStep(4);
-    await handleCallAgent("assistant", "/assistant-agent/");
-
+    for (const agent of agents) {
+      await handleCallAgent(agent.type, agent.endpoint);
+      setStep((prev) => prev + 1);
+    }
     setStep(0);
+    setIsRunningGlobal(false);
   };
 
   const handleCheckFeasibility = async () => {
-    if (!topic) return Toast.warning("Please enter a topic");
+    if (!globalTopic) return Toast.warning("Please enter a topic");
     setChecking(true);
     try {
-      const res = await apiInstance.post("/check-topic/", { topic });
+      const res = await apiInstance.post("/check-topic/", { topic: globalTopic });
       Toast.success(`✅ ${res.data?.message || "Topic is feasible"}`);
     } catch (err) {
       Toast.error(err.response?.data?.error || "❌ Topic may be too vague or unsupported");
@@ -168,45 +174,78 @@ const AITeachingAgents = () => {
     }
   };
 
+  const handleAdvisorDocChange = (agentType, selectedDocId) => {
+    if (globalTopic.trim()) {
+      Toast.warning("You cannot select an advisor document when a global topic is entered.");
+      return;
+    }
+
+    const selected = advisorDocs.find((doc) => doc.id === Number(selectedDocId));
+    const agentState = agentStates[agentType];
+
+    if (selected) {
+      if (selected.study_duration && selected.study_duration === agentState.duration) {
+        Toast.warning(`Selected advisor document has the same duration (${selected.study_duration}) as the current setting. Please choose a different duration or document.`);
+        return;
+      }
+
+      updateAgentState(agentType, {
+        selectedAdvisorDoc: selected,
+        selectedProfessorDoc: null,
+      });
+    } else {
+      updateAgentState(agentType, { selectedAdvisorDoc: null });
+    }
+  };
+
+
+  const handleProfessorDocChange = (agentType, selectedDocId) => {
+    if (globalTopic.trim()) {
+      Toast.warning("You cannot select a professor document when a global topic is entered.");
+      return;
+    }
+
+    const selected = professorDocs.find((doc) => doc.id === Number(selectedDocId));
+    if (selected && agentType === "advisor") {
+      updateAgentState(agentType, {
+        selectedProfessorDoc: selected,
+        selectedAdvisorDoc: null,
+      });
+    } else {
+      updateAgentState(agentType, { selectedProfessorDoc: selected || null });
+    }
+  };
+
+
   return (
     <>
       <BaseHeader />
-
       <div className="container py-4">
         <h2 className="mb-4 text-center">AI Teaching Team</h2>
 
         <div className="mb-4 text-center">
+          <h5>Global Settings</h5>
           <input
             type="text"
             className="form-control w-50 mx-auto mb-2"
-            placeholder="Enter a topic (e.g., Machine Learning)"
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
+            placeholder="Enter a global topic (e.g., Machine Learning)"
+            value={globalTopic}
+            onChange={(e) => setGlobalTopic(e.target.value)}
+            disabled={isRunningGlobal}
           />
-
           <select
             className="form-select w-25 mx-auto mb-2"
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
+            value={globalLanguage}
+            onChange={(e) => setGlobalLanguage(e.target.value)}
+            disabled={isRunningGlobal}
           >
             <option value="en">English</option>
             <option value="vi">Vietnamese</option>
           </select>
-
-          <select
-            className="form-select w-25 mx-auto mb-2"
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-          >
-            {["2 weeks", "4 weeks", "6 weeks", "8 weeks", "10 weeks", "12 weeks"].map((opt) => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
-          </select>
-
           <button
             className="btn btn-outline-info mt-2"
             onClick={handleCheckFeasibility}
-            disabled={checking}
+            disabled={checking || isRunningGlobal}
           >
             {checking ? "Checking..." : "🔍 Check Topic Feasibility"}
           </button>
@@ -221,61 +260,60 @@ const AITeachingAgents = () => {
                 </h4>
                 <p className="text-muted small mb-3">{agent.description}</p>
 
+                <select
+                  className="form-select mb-2"
+                  value={agentStates[agent.type].selectedProfessorDoc?.id || ""}
+                  onChange={(e) => handleProfessorDocChange(agent.type, e.target.value)}
+                  disabled={!!globalTopic || (agent.type === "advisor" && agentStates[agent.type].selectedAdvisorDoc) || isRunningGlobal}
+                >
+                  <option value="">-- Select Professor Document (Optional) --</option>
+                  {professorDocs.map((doc) => (
+                    <option key={doc.id} value={doc.id}>
+                      {doc.topic} - {new Date(doc.created_at).toLocaleDateString()}
+                    </option>
+                  ))}
+                </select>
+
                 {agent.type === "advisor" && (
                   <>
                     <select
                       className="form-select mb-2"
-                      value={selectedProfessorDoc?.id || ""}
-                      onChange={(e) => {
-                        const selected = professorDocs.find((doc) => doc.id === Number(e.target.value));
-                        setSelectedProfessorDoc(selected || null);
-                      }}
+                      value={agentStates[agent.type].selectedAdvisorDoc?.id || ""}
+                      onChange={(e) => handleAdvisorDocChange(agent.type, e.target.value)}
+                      disabled={!!globalTopic || agentStates[agent.type].selectedProfessorDoc || isRunningGlobal}
                     >
-                      <option value="">-- Select Professor Document --</option>
-                      {professorDocs.map((doc) => (
+                      <option value="">-- Select Advisor Document (Optional) --</option>
+                      {advisorDocs.map((doc) => (
                         <option key={doc.id} value={doc.id}>
-                          {doc.topic} - {new Date(doc.created_at).toLocaleDateString()}
+                          {doc.topic} - {new Date(doc.created_at).toLocaleDateString()} (Duration: {doc.study_duration || "N/A"})
                         </option>
                       ))}
                     </select>
-                    {manualProfessorLinks.map((link, idx) => (
-                      <input
-                        key={idx}
-                        type="text"
-                        className={`form-control mb-2 ${link && !isValidUrl(link) ? "is-invalid" : ""}`}
-                        placeholder={`Additional link #${idx + 1}`}
-                        value={link}
-                        onChange={(e) => handleLinkChange(idx, e.target.value)}
-                      />
-                    ))}
-
-                    {manualProfessorLinks.length < 5 && (
-                      <button
-                        type="button"
-                        className="btn btn-outline-secondary btn-sm mb-2"
-                        onClick={addManualLink}
-                      >
-                        ➕ Add another link
-                      </button>
-                    )}
+                    <select
+                      className="form-select mb-2"
+                      value={agentStates[agent.type].duration}
+                      onChange={(e) => updateAgentState(agent.type, { duration: e.target.value })}
+                      disabled = {isRunningGlobal} 
+                    >
+                      {["2 weeks", "4 weeks", "6 weeks", "8 weeks", "10 weeks", "12 weeks"].map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
                   </>
                 )}
 
                 <button
                   className="btn btn-primary"
-                  onClick={() => {
-                    const extraData = agent.type === "advisor" ? getAdvisorExtraData() : {};
-                    handleCallAgent(agent.type, agent.endpoint, extraData);
-                  }}
-                  disabled={loading[agent.type]}
+                  onClick={() => handleCallAgent(agent.type, agent.endpoint)}
+                  disabled={agentStates[agent.type].loading || isRunningGlobal}
                 >
-                  {loading[agent.type] ? "Generating..." : `Run ${agent.title}`}
+                  {agentStates[agent.type].loading ? "Generating..." : `Run ${agent.title}`}
                 </button>
 
-                {docUrls[agent.type] && (
+                {agentStates[agent.type].docUrl && (
                   <div className="mt-3">
                     <a
-                      href={docUrls[agent.type]}
+                      href={agentStates[agent.type].docUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary"
@@ -290,20 +328,19 @@ const AITeachingAgents = () => {
         </div>
 
         <div className="text-center mt-4">
-          <button className="btn btn-success me-3" onClick={handleRunAll}>
+          <button className="btn btn-success me-3" onClick={handleRunAll} disabled={isRunningGlobal}>
             🚀 Run All Agents
-            {step > 0 && <span className="ms-2">(Step {step}/4)</span>}
+            {step > 0 && <span className="ms-2">(Step {step}/{agents.length})</span>}
           </button>
-
           <button
             className="btn btn-outline-secondary"
             onClick={() => navigate("/student/ai-document-list/")}
+            disabled={isRunningGlobal}
           >
             📚 View All My Documents
           </button>
         </div>
       </div>
-
       <BaseFooter />
     </>
   );
