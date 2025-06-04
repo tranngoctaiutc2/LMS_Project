@@ -8,6 +8,8 @@ from api import models as api_models
 from django.conf import settings
 from api.AITeachingTeam.utils import search_serpapi_links, create_google_doc, extract_text_from_google_doc
 from google.oauth2 import service_account
+import time
+
 
 SERVICE_ACCOUNT_FILE = settings.CREDENTIALS_FILE
 SCOPES = ["https://www.googleapis.com/auth/documents", "https://www.googleapis.com/auth/drive"]
@@ -15,184 +17,739 @@ GEMINI_API_KEY = settings.GEMINI_API_KEY
 SERPAPI_KEY = settings.SERPAPI_KEY
 genai.configure(api_key=GEMINI_API_KEY)
 
-def generate_assistant_content(topic, language="en"):
-    model = genai.GenerativeModel("gemini-1.5-flash")
+
+def generate_content_in_chunks(topic, language="en"):
+    model = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
     references = search_serpapi_links(topic, is_update=False, max_results=10)
     references_text = "\n".join([f"- [{title}]({url})" for title, url in (references or []) if title and url]) or "No external references provided."
+    
     lang_note = (
         "Please write the entire content in Vietnamese, using clear, formal academic language suitable for university-level learners."
         if language == "vi"
         else "Please write the entire content in English, using clear, formal academic language suitable for university-level learners."
     )
 
-    prompt = f"""
-You are a Teaching Assistant Agent tasked with creating a comprehensive, high-quality, and structured set of practice materials for the topic: **"{topic}"**. Your goal is to support university students, researchers, and self-learners in mastering the topic through engaging exercises that increase in difficulty. The output will be embedded in a digital research notebook or Google Document, designed to facilitate interactive learning and future reference.
+    exercises_prompt = f"""
+You are a Teaching Assistant Agent creating comprehensive practice materials for: **"{topic}"**
 
----
+{lang_note}
+
+Create ONLY the following sections:
 
 #### 🎯 Overview  
-- Provide a concise introduction (3-5 sentences) explaining the value of these practice materials for mastering the topic.  
-- Specify the types of learners these materials are suited for (e.g., beginners, students, developers).  
-- Highlight the importance of structured, progressive exercises in achieving proficiency.
-
-#### 📚 Structured Practice Materials  
-Organize exercises into the following sections, ensuring clarity and progression in difficulty:
-
-##### 📘 Progressive Exercises  
-- Break exercises into **Beginner**, **Intermediate**, and **Advanced** levels, with **3-5 exercises per level**.  
-- For each exercise, include:  
-  - **Title**: A short, descriptive title.  
-  - **Task**: The exercise question or task (2-3 sentences).  
-  - **Real-world Context**: A practical scenario (e.g., "In a hospital...", "In a financial app...") (1-2 sentences).  
-  - **Difficulty**: Clearly state Beginner, Intermediate, or Advanced.  
-- Use `### Beginner`, `### Intermediate`, `### Advanced` for subsections.  
-- Format as a markdown list with clear sub-bullets.
-
-##### ❓ Quiz Questions  
-- Provide **5-10 multiple-choice or short-answer questions**.  
-- For each question, include:  
-  - **Question**: Clearly stated question.  
-  - **Options**: 4 options for multiple-choice, or a prompt for short-answer.  
-  - **Correct Answer**: Mark the correct answer clearly.  
-  - **Explanation**: Provide a detailed explanation (2-3 sentences).  
-- Format as a markdown list with numbered questions and sub-bullets.
-
-##### 🛠 Hands-on Projects  
-- Provide **1-2 larger tasks or mini-projects** integrating multiple concepts.  
-- For each project, include:  
-  - **Objective**: The goal of the project (1-2 sentences).  
-  - **Description**: Detailed task description (3-4 sentences).  
-  - **Expected Output/Result**: Describe the desired outcome (1-2 sentences).  
-  - **Required Tools/Libraries**: List any tools or libraries needed (e.g., Python, pandas).  
-- Format as a markdown list with clear sub-bullets.
-
-##### 🌍 Real-world Scenarios  
-- Describe **2-3 practical applications** of the topic.  
-- For each application, include:  
-  - **Description**: Explain the application (2-3 sentences).  
-  - **Challenge Question**: Provide 1-2 challenge questions to apply the concept (1-2 sentences each).  
-- Format as a markdown list with sub-bullets.
-
-##### ✅ Solutions & Explanations  
-- Provide **detailed solutions** for all exercises, quiz questions, and challenge questions.  
-- Include reasoning for each solution (2-4 sentences per item).  
-- Format as a markdown list, aligning with the corresponding question or task.
+- Provide a concise introduction (3-5 sentences) explaining the value of these practice materials.
+- Specify target learners and highlight the importance of structured exercises.
 
 #### 🔗 External References  
 {references_text}
 
----
+#### 📚 Progressive Exercises  
 
-#### 🛠 Additional Instructions  
-- Use **enhanced markdown** for readability:  
-  - `####` for main sections, `###` for subsections.  
-  - Use `-` for bullet points, `**bold** for emphasis, and tables where appropriate.  
-  - Add emojis (e.g., 📚, 🎯, ❓) to make sections visually distinct.  
-  - Ensure short paragraphs (2-4 sentences) and clear spacing.  
-- Write in a **formal yet accessible academic tone** suitable for university-level learners.  
-- **Maximize detail in every section** to provide robust practice materials, including specific examples or use cases.  
-- Use provided references from SerpApi to inspire exercises, prioritizing high-quality, reputable sources.  
-- If no references are provided, rely on reliable general knowledge to create exercises.  
-- Avoid copying content verbatim from sources; write original exercises and solutions in your own words.  
-- Ensure each exercise and question includes a **difficulty level** to guide learners.  
-- Focus on beginner-to-intermediate exercises unless specified otherwise.  
+**🟢 BEGINNER LEVEL**
+
+Exercise 1:
+**Title:** [Short descriptive title]
+**Task:** [2-3 sentences describing the exercise]
+**Real-world Context:** [1-2 sentences with practical scenario]
+**Difficulty:** Beginner
+
+Exercise 2:
+**Title:** [Short descriptive title]  
+**Task:** [2-3 sentences describing the exercise]
+**Real-world Context:** [1-2 sentences with practical scenario]
+**Difficulty:** Beginner
+
+Exercise 3:
+**Title:** [Short descriptive title]
+**Task:** [2-3 sentences describing the exercise] 
+**Real-world Context:** [1-2 sentences with practical scenario]
+**Difficulty:** Beginner
+
+Exercise 4:
+**Title:** [Short descriptive title]
+**Task:** [2-3 sentences describing the exercise]
+**Real-world Context:** [1-2 sentences with practical scenario]
+**Difficulty:** Beginner
+
+**🟡 INTERMEDIATE LEVEL**
+
+Exercise 1:
+**Title:** [Short descriptive title]
+**Task:** [2-3 sentences describing the exercise]
+**Real-world Context:** [1-2 sentences with practical scenario]
+**Difficulty:** Intermediate
+
+Exercise 2:
+**Title:** [Short descriptive title]
+**Task:** [2-3 sentences describing the exercise]
+**Real-world Context:** [1-2 sentences with practical scenario]
+**Difficulty:** Intermediate
+
+Exercise 3:
+**Title:** [Short descriptive title]
+**Task:** [2-3 sentences describing the exercise]
+**Real-world Context:** [1-2 sentences with practical scenario]
+**Difficulty:** Intermediate
+
+Exercise 4:
+**Title:** [Short descriptive title]
+**Task:** [2-3 sentences describing the exercise]
+**Real-world Context:** [1-2 sentences with practical scenario]
+**Difficulty:** Intermediate
+
+**🔴 ADVANCED LEVEL**
+
+Exercise 1:
+**Title:** [Short descriptive title]
+**Task:** [2-3 sentences describing the exercise]
+**Real-world Context:** [1-2 sentences with practical scenario]
+**Difficulty:** Advanced
+
+Exercise 2:
+**Title:** [Short descriptive title]
+**Task:** [2-3 sentences describing the exercise]
+**Real-world Context:** [1-2 sentences with practical scenario]
+**Difficulty:** Advanced
+
+Exercise 3:
+**Title:** [Short descriptive title]
+**Task:** [2-3 sentences describing the exercise]
+**Real-world Context:** [1-2 sentences with practical scenario]
+**Difficulty:** Advanced
+
+Exercise 4:
+**Title:** [Short descriptive title]
+**Task:** [2-3 sentences describing the exercise]
+**Real-world Context:** [1-2 sentences with practical scenario]
+**Difficulty:** Advanced
+
+Use **enhanced markdown** with emojis, clear spacing, and avoid tables completely.
+    """
+
+    quiz_prompt = f"""
+Create ONLY quiz questions for the topic: **"{topic}"**
 
 {lang_note}
-    """
-    response = model.generate_content(prompt)
-    return response.text.strip()
 
-def generate_assistant_from_professor(topic, professor_content, language="en"):
-    model = genai.GenerativeModel("gemini-1.5-flash")
+#### ❓ Quiz Questions  
+
+**Question 1:**
+[Clear question statement]
+- A) [Option A]
+- B) [Option B] 
+- C) [Option C]
+- D) [Option D]
+**Correct Answer:** [Letter]
+**Explanation:** [Detailed 2-3 sentence explanation]
+
+**Question 2:**
+[Clear question statement]
+- A) [Option A]
+- B) [Option B]
+- C) [Option C] 
+- D) [Option D]
+**Correct Answer:** [Letter]
+**Explanation:** [Detailed 2-3 sentence explanation]
+
+**Question 3:**
+[Clear question statement]
+- A) [Option A]
+- B) [Option B]
+- C) [Option C]
+- D) [Option D]
+**Correct Answer:** [Letter]
+**Explanation:** [Detailed 2-3 sentence explanation]
+
+**Question 4:**
+[Clear question statement]
+- A) [Option A]
+- B) [Option B]
+- C) [Option C]
+- D) [Option D]
+**Correct Answer:** [Letter]
+**Explanation:** [Detailed 2-3 sentence explanation]
+
+**Question 5:**
+[Clear question statement]
+- A) [Option A]
+- B) [Option B]
+- C) [Option C]
+- D) [Option D]
+**Correct Answer:** [Letter]
+**Explanation:** [Detailed 2-3 sentence explanation]
+
+**Question 6:**
+[Clear question statement]
+- A) [Option A]
+- B) [Option B]
+- C) [Option C]
+- D) [Option D]
+**Correct Answer:** [Letter]
+**Explanation:** [Detailed 2-3 sentence explanation]
+
+**Question 7:**
+[Clear question statement]
+- A) [Option A]
+- B) [Option B]
+- C) [Option C]
+- D) [Option D]
+**Correct Answer:** [Letter]
+**Explanation:** [Detailed 2-3 sentence explanation]
+
+**Question 8:**
+[Clear question statement]
+- A) [Option A]
+- B) [Option B]
+- C) [Option C]
+- D) [Option D]
+**Correct Answer:** [Letter]
+**Explanation:** [Detailed 2-3 sentence explanation]
+    """
+
+    projects_prompt = f"""
+Create ONLY projects and scenarios for the topic: **"{topic}"**
+
+{lang_note}
+
+#### 🛠 Hands-on Projects  
+
+**Project 1:**
+**Objective:** [1-2 sentences describing the goal]
+**Description:** [3-4 sentences with detailed task description]
+**Expected Output/Result:** [1-2 sentences describing desired outcome]
+**Required Tools/Libraries:** [List tools/libraries needed]
+
+**Project 2:**
+**Objective:** [1-2 sentences describing the goal]
+**Description:** [3-4 sentences with detailed task description]
+**Expected Output/Result:** [1-2 sentences describing desired outcome]
+**Required Tools/Libraries:** [List tools/libraries needed]
+
+#### 🌍 Real-world Scenarios  
+
+**Scenario 1:**
+**Description:** [2-3 sentences explaining the application]
+**Challenge Question 1:** [1-2 sentences with challenge question]
+**Challenge Question 2:** [1-2 sentences with challenge question]
+
+**Scenario 2:**
+**Description:** [2-3 sentences explaining the application]
+**Challenge Question 1:** [1-2 sentences with challenge question]
+**Challenge Question 2:** [1-2 sentences with challenge question]
+
+**Scenario 3:**
+**Description:** [2-3 sentences explaining the application]
+**Challenge Question 1:** [1-2 sentences with challenge question]
+**Challenge Question 2:** [1-2 sentences with challenge question]
+    """
+
+    solutions_prompt = f"""
+Create COMPREHENSIVE solutions for ALL exercises, quizzes, projects, and scenarios for the topic: **"{topic}"**
+
+{lang_note}
+
+#### ✅ Complete Solutions & Explanations  
+
+**🟢 BEGINNER LEVEL SOLUTIONS**
+
+**Beginner Exercise 1 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+
+**Beginner Exercise 2 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+
+**Beginner Exercise 3 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+
+**Beginner Exercise 4 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+
+**🟡 INTERMEDIATE LEVEL SOLUTIONS**
+
+**Intermediate Exercise 1 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+
+**Intermediate Exercise 2 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+
+**Intermediate Exercise 3 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+
+**Intermediate Exercise 4 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+
+**🔴 ADVANCED LEVEL SOLUTIONS**
+
+**Advanced Exercise 1 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+
+**Advanced Exercise 2 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+
+**Advanced Exercise 3 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+
+**Advanced Exercise 4 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+
+**❓ QUIZ COMPLETE SOLUTIONS**
+
+**Quiz Question 1 - Detailed Solution:**
+[Provide comprehensive explanation beyond the basic answer, including why other options are incorrect (3-4 sentences)]
+
+**Quiz Question 2 - Detailed Solution:**
+[Provide comprehensive explanation beyond the basic answer, including why other options are incorrect (3-4 sentences)]
+
+**Quiz Question 3 - Detailed Solution:**
+[Provide comprehensive explanation beyond the basic answer, including why other options are incorrect (3-4 sentences)]
+
+**Quiz Question 4 - Detailed Solution:**
+[Provide comprehensive explanation beyond the basic answer, including why other options are incorrect (3-4 sentences)]
+
+**Quiz Question 5 - Detailed Solution:**
+[Provide comprehensive explanation beyond the basic answer, including why other options are incorrect (3-4 sentences)]
+
+**Quiz Question 6 - Detailed Solution:**
+[Provide comprehensive explanation beyond the basic answer, including why other options are incorrect (3-4 sentences)]
+
+**Quiz Question 7 - Detailed Solution:**
+[Provide comprehensive explanation beyond the basic answer, including why other options are incorrect (3-4 sentences)]
+
+**Quiz Question 8 - Detailed Solution:**
+[Provide comprehensive explanation beyond the basic answer, including why other options are incorrect (3-4 sentences)]
+
+**🛠 PROJECT COMPLETE SOLUTIONS**
+
+**Project 1 - Complete Implementation:**
+**Step-by-step Solution:**
+[Provide detailed implementation steps (5-8 sentences)]
+**Code Examples/Pseudo-code:**
+[Include relevant code snippets or pseudo-code]
+**Testing & Validation:**
+[Explain how to test and validate the solution (2-3 sentences)]
+
+**Project 2 - Complete Implementation:**
+**Step-by-step Solution:**
+[Provide detailed implementation steps (5-8 sentences)]
+**Code Examples/Pseudo-code:**
+[Include relevant code snippets or pseudo-code]
+**Testing & Validation:**
+[Explain how to test and validate the solution (2-3 sentences)]
+
+**🌍 SCENARIO COMPLETE SOLUTIONS**
+
+**Scenario 1 Solutions:**
+**Challenge Question 1 Answer:**
+[Provide comprehensive answer with practical application (3-4 sentences)]
+**Challenge Question 2 Answer:**
+[Provide comprehensive answer with practical application (3-4 sentences)]
+
+**Scenario 2 Solutions:**
+**Challenge Question 1 Answer:**
+[Provide comprehensive answer with practical application (3-4 sentences)]
+**Challenge Question 2 Answer:**
+[Provide comprehensive answer with practical application (3-4 sentences)]
+
+**Scenario 3 Solutions:**
+**Challenge Question 1 Answer:**
+[Provide comprehensive answer with practical application (3-4 sentences)]
+**Challenge Question 2 Answer:**
+[Provide comprehensive answer with practical application (3-4 sentences)]
+
+**📋 SOLUTION SUMMARY**
+[Provide a brief summary of key learning points from all solutions (4-5 sentences)]
+    """
+    
+    chunks = []
+    prompts = [exercises_prompt, quiz_prompt, projects_prompt, solutions_prompt]
+    
+    for prompt in prompts:
+        try:
+            response = model.generate_content(prompt)
+            if response and response.text:
+                chunks.append(response.text.strip())
+            else:
+                chunks.append("## Error\nEmpty response generated")
+            time.sleep(3)
+        except Exception as e:
+            chunks.append(f"## Error\nError generating content: {str(e)}")
+
+    return "\n".join(chunks)
+
+
+def generate_content_in_chunks_from_professor(topic, professor_content, language="en"):
+    model = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
     references = search_serpapi_links(topic, is_update=False, max_results=10)
     references_text = "\n".join([f"- [{title}]({url})" for title, url in (references or []) if title and url]) or "No external references provided."
+    
     lang_note = (
         "Please write the entire content in Vietnamese, using clear, formal academic language suitable for university-level learners."
         if language == "vi"
         else "Please write the entire content in English, using clear, formal academic language suitable for university-level learners."
     )
 
-    prompt = f"""
-You are a Teaching Assistant Agent tasked with creating a comprehensive, high-quality, and structured set of practice materials for the topic: **"{topic}"**, based on the provided Professor knowledge base. Your goal is to support university students, researchers, and professionals in deepening their understanding through engaging exercises that build upon the knowledge base and increase in difficulty. The output will be embedded in a digital research notebook or Google Document, designed to facilitate interactive learning and future reference.
-
----
+    base_context = f"""
+You are a Teaching Assistant Agent creating practice materials for: **"{topic}"**
 
 #### 📜 Professor Knowledge Base  
 {professor_content}
 
----
-
-#### 🎯 Overview  
-- Provide a concise introduction (3-5 sentences) explaining how these practice materials extend the Professor knowledge base for mastering the topic.  
-- Specify the types of learners these materials are suited for (e.g., intermediate learners, developers, researchers).  
-- Highlight how the exercises align with the knowledge base to achieve proficiency.
-
-#### 📚 Structured Practice Materials  
-Organize exercises into the following sections, ensuring clarity and progression in difficulty, and linking to the knowledge base where relevant:
-
-##### 📘 Progressive Exercises  
-- Break exercises into **Beginner**, **Intermediate**, and **Advanced** levels, with **3-5 exercises per level**.  
-- For each exercise, include:  
-  - **Title**: A short, descriptive title.  
-  - **Task**: The exercise question or task, referencing knowledge base concepts (2-3 sentences).  
-  - **Real-world Context**: A practical scenario (e.g., "In a hospital...", "In a financial app...") (1-2 sentences).  
-  - **Difficulty**: Clearly state Beginner, Intermediate, or Advanced.  
-- Use `### Beginner`, `### Intermediate`, `### Advanced` for subsections.  
-- Format as a markdown list with clear sub-bullets.
-
-##### ❓ Quiz Questions  
-- Provide **5-10 multiple-choice or short-answer questions**, aligned with the knowledge base.  
-- For each question, include:  
-  - **Question**: Clearly stated question.  
-  - **Options**: 4 options for multiple-choice, or a prompt for short-answer.  
-  - **Correct Answer**: Mark the correct answer clearly.  
-  - **Explanation**: Provide a detailed explanation, referencing the knowledge base (2-3 sentences).  
-- Format as a markdown list with numbered questions and sub-bullets.
-
-##### 🛠 Hands-on Projects  
-- Provide **1-2 larger tasks or mini-projects** integrating multiple concepts from the knowledge base.  
-- For each project, include:  
-  - **Objective**: The goal of the project, tied to the knowledge base (1-2 sentences).  
-  - **Description**: Detailed task description (3-4 sentences).  
-  - **Expected Output/Result**: Describe the desired outcome (1-2 sentences).  
-  - **Required Tools/Libraries**: List any tools or libraries needed (e.g., Python, pandas).  
-- Format as a markdown list with clear sub-bullets.
-
-##### 🌍 Real-world Scenarios  
-- Describe **2-3 practical applications** of the topic, extending the knowledge base.  
-- For each application, include:  
-  - **Description**: Explain the application, linking to the knowledge base (2-3 sentences).  
-  - **Challenge Question**: Provide 1-2 challenge questions to apply the concept (1-2 sentences each).  
-- Format as a markdown list with sub-bullets.
-
-##### ✅ Solutions & Explanations  
-- Provide **detailed solutions** for all exercises, quiz questions, and challenge questions, referencing the knowledge base.  
-- Include reasoning for each solution (2-4 sentences per item).  
-- Format as a markdown list, aligning with the corresponding question or task.
-
 #### 🔗 External References  
 {references_text}
 
----
-
-#### 🛠 Additional Instructions  
-- Use **enhanced markdown** for readability:  
-  - `####` for main sections, `###` for subsections.  
-  - Use `-` for bullet points, `**bold** for emphasis, and tables where appropriate.  
-  - Add emojis (e.g., 📚, 🎯, ❓) to make sections visually distinct.  
-  - Ensure short paragraphs (2-4 sentences) and clear spacing.  
-- Write in a **formal yet accessible academic tone** suitable for university-level learners.  
-- **Maximize detail in every section** to provide robust practice materials, linking exercises to specific concepts or applications from the knowledge base.  
-- Use provided references from SerpApi to inspire exercises, prioritizing high-quality, reputable sources.  
-- If no references are provided, rely on reliable general knowledge to create exercises.  
-- Avoid copying content verbatim from sources; write original exercises and solutions in your own words.  
-- Ensure each exercise and question includes a **difficulty level** to guide learners.  
-- Focus on intermediate-to-advanced exercises unless specified otherwise.  
-
 {lang_note}
+
+IMPORTANT: Base all exercises, questions, and solutions on the Professor Knowledge Base provided above.
     """
-    response = model.generate_content(prompt)
-    return response.text.strip()
+
+    exercises_prompt = base_context + """
+Create ONLY the following sections, directly referencing concepts from the Professor Knowledge Base:
+
+#### 🎯 Overview  
+- Explain how these materials extend and practice the Professor Knowledge Base concepts (3-5 sentences)
+- Specify target learners and alignment with provided knowledge base
+- Highlight key concepts from the knowledge base that will be practiced
+
+#### 📚 Progressive Exercises  
+
+**🟢 BEGINNER LEVEL** (Based on fundamental concepts from Knowledge Base)
+
+Exercise 1:
+**Title:** [Short descriptive title referencing knowledge base concept]
+**Task:** [2-3 sentences describing exercise that applies knowledge base fundamentals]
+**Real-world Context:** [1-2 sentences with practical scenario from knowledge base]
+**Difficulty:** Beginner
+
+Exercise 2:
+**Title:** [Short descriptive title referencing knowledge base concept]
+**Task:** [2-3 sentences describing exercise that applies knowledge base fundamentals]
+**Real-world Context:** [1-2 sentences with practical scenario from knowledge base]
+**Difficulty:** Beginner
+
+Exercise 3:
+**Title:** [Short descriptive title referencing knowledge base concept]
+**Task:** [2-3 sentences describing exercise that applies knowledge base fundamentals]
+**Real-world Context:** [1-2 sentences with practical scenario from knowledge base]
+**Difficulty:** Beginner
+
+Exercise 4:
+**Title:** [Short descriptive title referencing knowledge base concept]
+**Task:** [2-3 sentences describing exercise that applies knowledge base fundamentals]
+**Real-world Context:** [1-2 sentences with practical scenario from knowledge base]
+**Difficulty:** Beginner
+
+**🟡 INTERMEDIATE LEVEL** (Based on intermediate concepts from Knowledge Base)
+
+Exercise 1:
+**Title:** [Short descriptive title referencing knowledge base concept]
+**Task:** [2-3 sentences describing exercise that applies knowledge base concepts]
+**Real-world Context:** [1-2 sentences with practical scenario from knowledge base]
+**Difficulty:** Intermediate
+
+Exercise 2:
+**Title:** [Short descriptive title referencing knowledge base concept]
+**Task:** [2-3 sentences describing exercise that applies knowledge base concepts]
+**Real-world Context:** [1-2 sentences with practical scenario from knowledge base]
+**Difficulty:** Intermediate
+
+Exercise 3:
+**Title:** [Short descriptive title referencing knowledge base concept]
+**Task:** [2-3 sentences describing exercise that applies knowledge base concepts]
+**Real-world Context:** [1-2 sentences with practical scenario from knowledge base]
+**Difficulty:** Intermediate
+
+Exercise 4:
+**Title:** [Short descriptive title referencing knowledge base concept]
+**Task:** [2-3 sentences describing exercise that applies knowledge base concepts]
+**Real-world Context:** [1-2 sentences with practical scenario from knowledge base]
+**Difficulty:** Intermediate
+
+**🔴 ADVANCED LEVEL** (Based on advanced concepts from Knowledge Base)
+
+Exercise 1:
+**Title:** [Short descriptive title referencing knowledge base concept]
+**Task:** [2-3 sentences describing exercise that applies advanced knowledge base concepts]
+**Real-world Context:** [1-2 sentences with practical scenario from knowledge base]
+**Difficulty:** Advanced
+
+Exercise 2:
+**Title:** [Short descriptive title referencing knowledge base concept]
+**Task:** [2-3 sentences describing exercise that applies advanced knowledge base concepts]
+**Real-world Context:** [1-2 sentences with practical scenario from knowledge base]
+**Difficulty:** Advanced
+
+Exercise 3:
+**Title:** [Short descriptive title referencing knowledge base concept]
+**Task:** [2-3 sentences describing exercise that applies advanced knowledge base concepts]
+**Real-world Context:** [1-2 sentences with practical scenario from knowledge base]
+**Difficulty:** Advanced
+
+Exercise 4:
+**Title:** [Short descriptive title referencing knowledge base concept]
+**Task:** [2-3 sentences describing exercise that applies advanced knowledge base concepts]
+**Real-world Context:** [1-2 sentences with practical scenario from knowledge base]
+**Difficulty:** Advanced
+    """
+
+    quiz_prompt = base_context + """
+Create ONLY quiz questions directly based on the Professor Knowledge Base:
+
+#### ❓ Quiz Questions (Based on Professor Knowledge Base)
+
+**Question 1:** [Question directly testing knowledge base concept]
+- A) [Option A]
+- B) [Option B] 
+- C) [Option C]
+- D) [Option D]
+**Correct Answer:** [Letter]
+**Explanation:** [Detailed explanation referencing knowledge base content]
+
+**Question 2:** [Question directly testing knowledge base concept]
+- A) [Option A]
+- B) [Option B]
+- C) [Option C] 
+- D) [Option D]
+**Correct Answer:** [Letter]
+**Explanation:** [Detailed explanation referencing knowledge base content]
+
+**Question 3:** [Question directly testing knowledge base concept]
+- A) [Option A]
+- B) [Option B]
+- C) [Option C]
+- D) [Option D]
+**Correct Answer:** [Letter]
+**Explanation:** [Detailed explanation referencing knowledge base content]
+
+**Question 4:** [Question directly testing knowledge base concept]
+- A) [Option A]
+- B) [Option B]
+- C) [Option C]
+- D) [Option D]
+**Correct Answer:** [Letter]
+**Explanation:** [Detailed explanation referencing knowledge base content]
+
+**Question 5:** [Question directly testing knowledge base concept]
+- A) [Option A]
+- B) [Option B]
+- C) [Option C]
+- D) [Option D]
+**Correct Answer:** [Letter]
+**Explanation:** [Detailed explanation referencing knowledge base content]
+
+**Question 6:** [Question directly testing knowledge base concept]
+- A) [Option A]
+- B) [Option B]
+- C) [Option C]
+- D) [Option D]
+**Correct Answer:** [Letter]
+**Explanation:** [Detailed explanation referencing knowledge base content]
+
+**Question 7:** [Question directly testing knowledge base concept]
+- A) [Option A]
+- B) [Option B]
+- C) [Option C]
+- D) [Option D]
+**Correct Answer:** [Letter]
+**Explanation:** [Detailed explanation referencing knowledge base content]
+
+**Question 8:** [Question directly testing knowledge base concept]
+- A) [Option A]
+- B) [Option B]
+- C) [Option C]
+- D) [Option D]
+**Correct Answer:** [Letter]
+**Explanation:** [Detailed explanation referencing knowledge base content]
+    """
+
+    projects_prompt = base_context + """
+Create ONLY projects and scenarios that extend the Professor Knowledge Base:
+
+#### 🛠 Hands-on Projects (Extending Knowledge Base Applications)
+
+**Project 1:**
+**Objective:** [Goal that applies knowledge base concepts practically]
+**Description:** [Detailed task extending knowledge base applications]
+**Expected Output/Result:** [Outcome demonstrating knowledge base mastery]
+**Required Tools/Libraries:** [Tools needed, referencing knowledge base if applicable]
+**Knowledge Base Connection:** [How this project relates to professor content]
+
+**Project 2:**
+**Objective:** [Goal that applies knowledge base concepts practically]
+**Description:** [Detailed task extending knowledge base applications]
+**Expected Output/Result:** [Outcome demonstrating knowledge base mastery]
+**Required Tools/Libraries:** [Tools needed, referencing knowledge base if applicable]
+**Knowledge Base Connection:** [How this project relates to professor content]
+
+#### 🌍 Real-world Scenarios (Knowledge Base Applications)
+
+**Scenario 1:**
+**Description:** [Real-world application of knowledge base concepts]
+**Challenge Question 1:** [Challenge based on knowledge base]
+**Challenge Question 2:** [Challenge based on knowledge base]
+**Knowledge Base Link:** [Connection to professor content]
+
+**Scenario 2:**
+**Description:** [Real-world application of knowledge base concepts]
+**Challenge Question 1:** [Challenge based on knowledge base]
+**Challenge Question 2:** [Challenge based on knowledge base]
+**Knowledge Base Link:** [Connection to professor content]
+
+**Scenario 3:**
+**Description:** [Real-world application of knowledge base concepts]
+**Challenge Question 1:** [Challenge based on knowledge base]
+**Challenge Question 2:** [Challenge based on knowledge base]
+**Knowledge Base Link:** [Connection to professor content]
+    """
+
+    solutions_prompt = base_context + """
+Create COMPREHENSIVE solutions for ALL exercises, quizzes, projects, and scenarios with direct references to the Professor Knowledge Base:
+
+#### ✅ Complete Solutions & Explanations (Referencing Professor Knowledge Base)
+
+**🟢 BEGINNER LEVEL SOLUTIONS**
+
+**Beginner Exercise 1 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+**Knowledge Base Reference:** [Cite specific concepts from professor content]
+
+**Beginner Exercise 2 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+**Knowledge Base Reference:** [Cite specific concepts from professor content]
+
+**Beginner Exercise 3 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+**Knowledge Base Reference:** [Cite specific concepts from professor content]
+
+**Beginner Exercise 4 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+**Knowledge Base Reference:** [Cite specific concepts from professor content]
+
+**🟡 INTERMEDIATE LEVEL SOLUTIONS**
+
+**Intermediate Exercise 1 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+**Knowledge Base Reference:** [Cite specific concepts from professor content]
+
+**Intermediate Exercise 2 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+**Knowledge Base Reference:** [Cite specific concepts from professor content]
+
+**Intermediate Exercise 3 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+**Knowledge Base Reference:** [Cite specific concepts from professor content]
+
+**Intermediate Exercise 4 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+**Knowledge Base Reference:** [Cite specific concepts from professor content]
+
+**🔴 ADVANCED LEVEL SOLUTIONS**
+
+**Advanced Exercise 1 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+**Knowledge Base Reference:** [Cite specific concepts from professor content]
+
+**Advanced Exercise 2 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+**Knowledge Base Reference:** [Cite specific concepts from professor content]
+
+**Advanced Exercise 3 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+**Knowledge Base Reference:** [Cite specific concepts from professor content]
+
+**Advanced Exercise 4 Solution:**
+[Provide complete step-by-step solution with detailed reasoning (4-6 sentences)]
+**Knowledge Base Reference:** [Cite specific concepts from professor content]
+
+**❓ QUIZ COMPLETE SOLUTIONS**
+
+**Quiz Question 1 - Detailed Solution:**
+[Comprehensive explanation with knowledge base references (3-4 sentences)]
+**Why Other Options Are Wrong:** [Explain incorrect options]
+
+**Quiz Question 2 - Detailed Solution:**
+[Comprehensive explanation with knowledge base references (3-4 sentences)]
+**Why Other Options Are Wrong:** [Explain incorrect options]
+
+**Quiz Question 3 - Detailed Solution:**
+[Comprehensive explanation with knowledge base references (3-4 sentences)]
+**Why Other Options Are Wrong:** [Explain incorrect options]
+
+**Quiz Question 4 - Detailed Solution:**
+[Comprehensive explanation with knowledge base references (3-4 sentences)]
+**Why Other Options Are Wrong:** [Explain incorrect options]
+
+**Quiz Question 5 - Detailed Solution:**
+[Comprehensive explanation with knowledge base references (3-4 sentences)]
+**Why Other Options Are Wrong:** [Explain incorrect options]
+
+**Quiz Question 6 - Detailed Solution:**
+[Comprehensive explanation with knowledge base references (3-4 sentences)]
+**Why Other Options Are Wrong:** [Explain incorrect options]
+
+**Quiz Question 7 - Detailed Solution:**
+[Comprehensive explanation with knowledge base references (3-4 sentences)]
+**Why Other Options Are Wrong:** [Explain incorrect options]
+
+**Quiz Question 8 - Detailed Solution:**
+[Comprehensive explanation with knowledge base references (3-4 sentences)]
+**Why Other Options Are Wrong:** [Explain incorrect options]
+
+**🛠 PROJECT COMPLETE SOLUTIONS**
+
+**Project 1 - Complete Implementation:**
+**Step-by-step Solution:** [Detailed implementation with knowledge base applications]
+**Code Examples/Methodology:** [Include relevant examples]
+**Knowledge Base Integration:** [How solution applies professor concepts]
+**Testing & Validation:** [Validation methods referencing knowledge base]
+
+**Project 2 - Complete Implementation:**
+**Step-by-step Solution:** [Detailed implementation with knowledge base applications]
+**Code Examples/Methodology:** [Include relevant examples]
+**Knowledge Base Integration:** [How solution applies professor concepts]
+**Testing & Validation:** [Validation methods referencing knowledge base]
+
+**🌍 SCENARIO COMPLETE SOLUTIONS**
+
+**Scenario 1 Solutions:**
+**Challenge Question 1 Answer:** [Comprehensive answer with knowledge base application]
+**Challenge Question 2 Answer:** [Comprehensive answer with knowledge base application]
+
+**Scenario 2 Solutions:**
+**Challenge Question 1 Answer:** [Comprehensive answer with knowledge base application]
+**Challenge Question 2 Answer:** [Comprehensive answer with knowledge base application]
+
+**Scenario 3 Solutions:**
+**Challenge Question 1 Answer:** [Comprehensive answer with knowledge base application]
+**Challenge Question 2 Answer:** [Comprehensive answer with knowledge base application]
+
+**📋 COMPREHENSIVE SOLUTION SUMMARY**
+[Provide detailed summary linking all solutions back to professor knowledge base (5-7 sentences)]
+    """
+
+    chunks = []
+    prompts = [exercises_prompt, quiz_prompt, projects_prompt, solutions_prompt]
+    
+    for prompt in prompts:
+        try:
+            response = model.generate_content(prompt)
+            if response and response.text:
+                chunks.append(response.text.strip())
+            else:
+                chunks.append("## Error\nEmpty response generated")
+            time.sleep(3)
+        except Exception as e:
+            chunks.append(f"## Error\nError generating content: {str(e)}")
+    
+    return "\n".join(chunks)
+
+
+def generate_assistant_content(topic, language="en"):
+    return generate_content_in_chunks(topic, language)
+
+
+def generate_assistant_from_professor(topic, professor_content, language="en"):
+    return generate_content_in_chunks_from_professor(topic, professor_content, language)
+
 
 class TeachingAssistantAgentAPIView(APIView):
     permission_classes = [AllowAny]
@@ -215,34 +772,60 @@ class TeachingAssistantAgentAPIView(APIView):
 
             user = User.objects.get(id=user_id)
             creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-
-            if isinstance(professor_input, dict) and "doc_url" in professor_input:
-                doc_url = professor_input["doc_url"]
-                topic = topic or professor_input.get("topic", "")
-                professor_content = extract_text_from_google_doc(doc_url, creds)
+            
+            content = None
+            doc_title_prefix = ""
+            
+            if professor_input:
+                if isinstance(professor_input, dict) and "doc_url" in professor_input:
+                    doc_url = professor_input["doc_url"]
+                    topic = topic or professor_input.get("topic", "")
+                    professor_content = extract_text_from_google_doc(doc_url, creds)
+                elif isinstance(professor_input, str) and professor_input.startswith("https://docs.google.com/document/"):
+                    professor_content = extract_text_from_google_doc(professor_input, creds)
+                else:
+                    professor_content = professor_input
+                
                 content = generate_assistant_from_professor(topic, professor_content, language)
-            elif isinstance(professor_input, str) and professor_input.startswith("https://docs.google.com/document/"):
-                professor_content = extract_text_from_google_doc(professor_input, creds)
-                content = generate_assistant_from_professor(topic, professor_content, language)
-            elif isinstance(professor_input, str):
-                content = generate_assistant_from_professor(topic, professor_input, language)
+                doc_title_prefix = "🎓 Based Practice Materials"
             else:
                 content = generate_assistant_content(topic, language)
+                doc_title_prefix = "✍️ AI Practice Materials"
 
-            doc_url = create_google_doc(f"✍️ Practice Materials - {topic}", content, creds, user.email)
-            api_models.UserDocument.objects.create(
+            if not content or len(content.strip()) < 100:
+                return Response(
+                    {"error": "Failed to generate sufficient content. Please try again."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+            doc_title = f"{doc_title_prefix} - {topic}"
+            doc_url = create_google_doc(doc_title, content, creds, user.email)
+            
+            document = api_models.UserDocument.objects.create(
                 user=user,
                 topic=topic,
                 doc_url=doc_url,
-                ai_type="assistant"
+                ai_type="assistant",
+                language=language,
             )
 
             return Response({
-                "message": "Document created successfully.",
-                "doc_url": doc_url
-            })
+                "message": "Teaching Assistant content generated successfully with complete solutions.",
+                "doc_url": doc_url,
+                "document_id": document.id,
+                "content_stats": {
+                    "length": len(content),
+                    "has_solutions": "✅ Complete Solutions" in content,
+                    "language": language,
+                    "type": "professor-based" if professor_input else "standard"
+                }
+            }, status=status.HTTP_201_CREATED)
 
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({
+                "error": "An error occurred while generating content",
+                "details": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

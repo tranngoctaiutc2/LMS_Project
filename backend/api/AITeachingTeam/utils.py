@@ -1,8 +1,6 @@
 from googleapiclient.discovery import build
 import re
 import requests
-import mistune
-from typing import List, Tuple
 import datetime
 from serpapi import GoogleSearch
 from django.conf import settings
@@ -30,7 +28,7 @@ def search_serpapi_links(topic, is_update=False, max_results=10):
 
     cache_key = f"serpapi_{topic}_{is_update}_{max_results}"
     cached_results = cache.get(cache_key)
-    if cached_results and len(cached_results) >= 3:
+    if cached_results and len(cached_results) >= 2:
         return cached_results
 
     try:
@@ -58,8 +56,8 @@ def search_serpapi_links(topic, is_update=False, max_results=10):
             if r.get("title") and r.get("link", "").startswith("http") and is_valid_link(r["link"])
         ]
 
-        if len(valid_links) < 3:
-            raise ValueError(f"Only {len(valid_links)} valid references found for topic '{topic}'. Minimum 3 required.")
+        if len(valid_links) < 2:
+            raise ValueError(f"Only {len(valid_links)} valid references found for topic '{topic}'. Minimum 2 required.")
 
         final_links = valid_links[:max_results]
         cache.set(cache_key, final_links, timeout=3600)

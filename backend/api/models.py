@@ -422,7 +422,7 @@ class UserDocument(models.Model):
     doc_url = models.URLField()
     ai_type = models.CharField(max_length=20, choices=AI_CHOICES)
     language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, default="en")
-    study_duration = models.CharField(max_length=50, null=True, blank=True)  # ✅ mới thêm
+    study_duration = models.CharField(max_length=50, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
@@ -432,3 +432,20 @@ class UserDocument(models.Model):
 
     def __str__(self):
         return f"{self.topic} - {self.ai_type} - {self.user.email} - {self.language}"
+
+class ApprovedTopic(models.Model):
+    topic = models.CharField(max_length=255, unique=True)
+    normalized_topic = models.CharField(max_length=255, db_index=True)
+    
+    field_en = models.CharField(max_length=100)
+    field_vi = models.CharField(max_length=100)
+    
+    explanation_en = models.TextField(blank=True)
+    explanation_vi = models.TextField(blank=True)
+    complexity_en = models.CharField(max_length=50, blank=True, default="undergraduate")
+    complexity_vi = models.CharField(max_length=50, blank=True, default="đại học")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.topic
+

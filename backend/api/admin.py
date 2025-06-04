@@ -21,4 +21,5 @@ admin.site.register(models.Coupon)
 admin.site.register(models.Wishlist)
 admin.site.register(models.Country)
 admin.site.register(models.UserDocument)
+admin.site.register(models.ApprovedTopic)
 

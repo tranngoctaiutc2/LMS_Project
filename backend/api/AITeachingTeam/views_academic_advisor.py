@@ -8,6 +8,7 @@ import google.generativeai as genai
 from api import models as api_models
 from django.conf import settings
 from api.AITeachingTeam.utils import create_google_doc, update_google_doc, extract_text_from_google_doc
+import re
 
 SERVICE_ACCOUNT_FILE = settings.CREDENTIALS_FILE
 SCOPES = ["https://www.googleapis.com/auth/documents", "https://www.googleapis.com/auth/drive"]
@@ -15,208 +16,319 @@ GEMINI_API_KEY = settings.GEMINI_API_KEY
 genai.configure(api_key=GEMINI_API_KEY)
 
 
-def generate_advisor_content(topic, study_duration, language="en"):
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    lang_note = "Please write the entire content in Vietnamese, using clear, formal academic language suitable for university-level learners." if language == "vi" else "Please write the entire content in English, using clear, formal academic language suitable for university-level learners."
+def parse_study_duration(study_duration):
+    study_duration = study_duration.lower().strip()
+    
+    match = re.search(r'(\d+)\s*(?:tuần|week)', study_duration)
 
+    total_weeks = int(match.group(1))
+
+    if total_weeks == 2:
+        hours_per_week = (25, 30)
+        intensity = "very_high"
+    elif total_weeks == 4:
+        hours_per_week = (15, 20)
+        intensity = "high"
+    elif total_weeks == 6:
+        hours_per_week = (12, 15)
+        intensity = "medium_high"
+    elif total_weeks == 8:
+        hours_per_week = (10, 12)
+        intensity = "medium"
+    elif total_weeks == 10:
+        hours_per_week = (7, 9)
+        intensity = "low_medium"
+    elif total_weeks == 12:
+        hours_per_week = (5, 8)
+        intensity = "low"
+
+    avg_hours_per_week = sum(hours_per_week) // 2
+    total_hours = total_weeks * avg_hours_per_week
+
+    return {
+        "total_weeks": total_weeks,
+        "hours_per_week": hours_per_week,
+        "total_hours": total_hours,
+        "intensity": intensity,
+    }
+
+
+
+def analyze_professor_content(professor_content):
+    model = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
+    
     prompt = f"""
-You are an expert Academic Advisor tasked with creating a comprehensive and detailed learning roadmap for the topic: **"{topic}"**. Your goal is to guide learners from beginner to expert, providing a clear, structured, and engaging path that maximizes understanding and skill development. The roadmap should be suitable for university students and self-learners, designed for integration into a digital research notebook, and detailed enough to support future summarization.
+    Analyze this professor content and extract the following information in JSON format:
 
----
+    ```
+    {{
+        "main_topics": ["topic1", "topic2", ...],
+        "key_concepts": ["concept1", "concept2", ...],
+        "difficulty_levels": {{"basic": ["item1", "item2"], "intermediate": ["item3"], "advanced": ["item4"]}},
+        "prerequisites": ["prereq1", "prereq2", ...],
+        "practical_applications": ["app1", "app2", ...],
+        "recommended_resources": ["resource1", "resource2", ...],
+        "estimated_complexity": "low|medium|high",
+        "content_depth": "introductory|intermediate|advanced|expert"
+    }}
+    ```
+
+    Professor Content:
+    {professor_content}
+    """
+    
+    try:
+        response = model.generate_content(prompt)
+        import json
+        json_start = response.text.find('{')
+        json_end = response.text.rfind('}') + 1
+        if json_start != -1 and json_end > json_start:
+            return json.loads(response.text[json_start:json_end])
+    except:
+        pass
+    
+    return {
+        "main_topics": [],
+        "key_concepts": [],
+        "difficulty_levels": {"basic": [], "intermediate": [], "advanced": []},
+        "prerequisites": [],
+        "practical_applications": [],
+        "recommended_resources": [],
+        "estimated_complexity": "medium",
+        "content_depth": "intermediate"
+    }
+
+
+def generate_advisor_content(topic, study_duration, language="en"):
+    model = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
+    lang_note = "Please write the entire content in Vietnamese, using clear, formal academic language suitable for university-level learners." if language == "vi" else "Please write the entire content in English, using clear, formal academic language suitable for university-level learners."
+    
+    duration_info = parse_study_duration(study_duration)
+    
+    prompt = f"""
+You are an expert Academic Advisor creating a comprehensive learning roadmap for: **"{topic}"**
+
+**Study Duration Analysis:**
+- Total Duration: {study_duration}
+- Total Weeks: {duration_info['total_weeks']}
+- Hours per Week: {duration_info['hours_per_week']}
+- Total Hours: {duration_info['total_hours']}
+- Intensity Level: {duration_info['intensity']}
+
+Create a roadmap that matches this intensity level. For higher intensity (shorter duration), include:
+- More focused, essential topics only
+- Accelerated learning pace
+- More hours of study per week
+- Streamlined phases with core concepts
+
+For lower intensity (longer duration), include:
+- More comprehensive topic coverage
+- Gradual learning pace
+- Additional supplementary materials
+- Extended practice and review phases
 
 ### 📚 Structured Format
 
-Follow this structure with enhanced markdown formatting for clarity and visual appeal:
-
 #### 🎯 Overview  
 - Provide a concise introduction to the topic (3-5 sentences).  
-- Explain its importance in academic, industry, or real-world contexts.  
-- Highlight why a structured roadmap is essential for mastering this topic.
+- Explain its importance and why the {duration_info['intensity']} intensity approach is suitable.
+- Highlight the roadmap structure for {study_duration}.
 
 #### 📋 Learning Objectives  
-- List **6-8 specific, measurable objectives** that learners will achieve by following the roadmap (e.g., "Understand core concepts of X", "Apply Y in a real-world project").  
-- Format as a markdown list with **bold** objectives for emphasis.  
-- Ensure objectives cover knowledge, skills, and practical applications.
+- List **6-8 specific objectives** calibrated for {duration_info['total_hours']} total hours of study.
+- Ensure objectives match the {duration_info['intensity']} intensity level.
 
 #### 🗺 Roadmap Structure  
-- Divide the learning journey into **4-6 phases** (e.g., "Foundations", "Intermediate", "Advanced", "Expert").  
-- For each phase, include:  
-  - **Phase Name**: A clear, descriptive title.  
-  - **Prerequisites**: Skills or knowledge required before starting (e.g., "Basic math" or "None").  
-  - **Key Topics**: 4-6 topics to cover, with brief descriptions (1-2 sentences each).  
-  - **Resources**: 3-5 recommended resources (books, online courses, websites, or tools), with links if possible.  
-  - **Time Estimate**: Estimated hours/weeks to complete, aligned with the total study duration.  
-- Format each phase as a subsection (`#####`) with the following structure:  
-  - **Topic**: [Topic name]  
-    - Description: [Brief description of the topic]  
-    - Resources: [List of recommended resources]  
+- Create **{min(4, max(3, duration_info['total_weeks']//2))} phases** based on duration.
+- Each phase should have realistic time allocation for {duration_info['hours_per_week']} hours/week.
+- Adjust topic depth based on intensity level.
 
 #### 🕒 Suggested Learning Schedule  
-- Create a detailed schedule for the total study duration: **{study_duration}**.  
-- Break down the duration into weeks or months (e.g., "Week 1-2", "Month 1").  
-- Assign specific tasks or topics from the roadmap to each time period, with estimated hours per week.  
-- Include milestones (e.g., "Complete a small project by Week 4").  
-- Format the schedule as follows:  
-  - **Time Period**: [Specific time period, e.g., Week 1-2]  
-    - Tasks/Topics: [List of tasks or topics]  
-    - Hours: [Estimated hours]  
-    - Milestones: [Description of milestone, if any]   
+- Weekly breakdown for {duration_info['total_weeks']} weeks
+- {duration_info['hours_per_week']} hours per week allocation
+- Specific milestones aligned with intensity level
 
 #### 📝 Summary  
-- Recap the roadmap in **6-8 concise bullet points**.  
-- Emphasize key phases, objectives, and expected outcomes for learners.  
-- Highlight how the roadmap prepares learners for academic or professional success.
-
----
-
-### 🛠 Additional Instructions  
-- Use **enhanced markdown** for readability:  
-  - `####` for main sections, `#####` for subsections.  
-  - Use `-` for bullet points, `**bold** for emphasis, and tables where specified.  
-  - Add emojis (e.g., 📚, 🎯, 🗺) to make sections visually distinct.  
-  - Ensure short paragraphs (2-4 sentences) and clear spacing.  
-- Write in a **formal yet encouraging academic tone** suitable for beginners to advanced learners.  
-- **Maximize detail in every section** to provide a robust foundation for learning and summarization.  
-- Align the roadmap with the total study duration (**{study_duration}**), ensuring realistic time estimates and balanced pacing.  
-- Recommend high-quality, accessible resources (e.g., open-access materials, MOOCs, or reputable websites).  
-- Avoid fluff, repetition, or overly technical jargon unless explained.  
-- Do not include external references unless specified; rely on general knowledge or provided resources.  
+- Emphasize how the roadmap optimizes learning for the given time constraints
+- Highlight expected proficiency level after {study_duration}
 
 {lang_note}
-    """
+"""
     return model.generate_content(prompt).text.strip()
 
 
 def generate_advisor_from_professor(topic, professor_content, study_duration, language="en"):
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
     lang_note = "Please write the entire content in Vietnamese, using clear, formal academic language suitable for university-level learners." if language == "vi" else "Please write the entire content in English, using clear, formal academic language suitable for university-level learners."
-
+    
+    content_analysis = analyze_professor_content(professor_content)
+    duration_info = parse_study_duration(study_duration)
+    
     prompt = f"""
-You are an expert Academic Advisor tasked with creating a comprehensive and detailed learning roadmap for the topic: **"{topic}"**. Your goal is to guide learners from beginner to expert, leveraging an existing professor knowledge base to ensure accuracy and depth. The roadmap should be suitable for university students and self-learners, designed for integration into a digital research notebook, and detailed enough to support future summarization.
+You are an expert Academic Advisor creating a learning roadmap for: **"{topic}"**
 
-Here is the professor knowledge base:
+**Professor Knowledge Base Analysis:**
+- Main Topics: {content_analysis['main_topics']}
+- Key Concepts: {content_analysis['key_concepts']}
+- Content Complexity: {content_analysis['estimated_complexity']}
+- Content Depth: {content_analysis['content_depth']}
 
+**Study Duration Optimization:**
+- Total Duration: {study_duration}
+- Total Weeks: {duration_info['total_weeks']}
+- Hours per Week: {duration_info['hours_per_week']}
+- Total Hours: {duration_info['total_hours']}
+- Intensity Level: {duration_info['intensity']}
+
+**Content-Duration Alignment Strategy:**
+{get_intensity_strategy(duration_info['intensity'], content_analysis)}
+
+Professor Knowledge Base:
 --- BEGIN KNOWLEDGE BASE ---
 {professor_content}
 --- END KNOWLEDGE BASE ---
 
----
+**CRITICAL REQUIREMENTS:**
+1. **Content Fidelity**: Stick closely to the professor's content structure and topics
+2. **Duration Logic**: Shorter duration = more intensive study, fewer but deeper topics
+3. **Hour Allocation**: Distribute {duration_info['total_hours']} total hours logically across topics
+4. **Progressive Difficulty**: Match content complexity with available time
 
 ### 📚 Structured Format
 
-Follow this structure with enhanced markdown formatting for clarity and visual appeal:
-
 #### 🎯 Overview  
-- Provide a concise introduction to the topic (3-5 sentences), based on the knowledge base.  
-- Explain its importance in academic, industry, or real-world contexts.  
-- Highlight how the roadmap will use the knowledge base to guide learners effectively.
+- Introduce the topic based on professor content (3-5 sentences)
+- Explain why this {duration_info['intensity']} intensity approach works for this content
+- Connect professor expertise to learning pathway
 
 #### 📋 Learning Objectives  
-- List **6-8 specific, measurable objectives** derived from the knowledge base (e.g., "Master key concepts like X", "Develop skills in Y").  
-- Format as a markdown list with **bold** objectives for emphasis.  
-- Ensure objectives align with the knowledge base and cover knowledge, skills, and applications.
+- Extract **6-8 objectives** directly from professor content
+- Scale objectives to match {duration_info['total_hours']} hours available
+- Prioritize core concepts for shorter durations
 
 #### 🗺 Roadmap Structure  
-- Divide the learning journey into **4-6 phases** (e.g., "Foundations", "Intermediate", "Advanced", "Expert"), based on the knowledge base.  
-- For each phase, include:  
-  - **Phase Name**: A clear, descriptive title.  
-  - **Prerequisites**: Skills or knowledge required, referencing the knowledge base (e.g., "Understand terms from Key Terminology").  
-  - **Key Topics**: 4-6 topics from the knowledge base (e.g., from Fundamental Concepts, Advanced Topics), with brief descriptions (1-2 sentences each).  
-  - **Resources**: 3-5 recommended resources (books, courses, websites, or tools), prioritizing those mentioned in the knowledge base’s references.  
-  - **Time Estimate**: Estimated hours/weeks, aligned with the total study duration: **{study_duration}**.  
-- Format each phase as a subsection (`#####`) with the following structure: 
-  - **Topic**: [Topic name]  
-    - Description: [Brief description of the topic]  
-    - Resources: [List of recommended resources]
+**CONTENT PRIORITIZATION RULES:**
+- **High Intensity ({duration_info['total_weeks']} ≤ 4 weeks)**: Focus on professor's core concepts only
+- **Medium Intensity (4-8 weeks)**: Include main topics + some applications  
+- **Low Intensity (8+ weeks)**: Comprehensive coverage of all professor content
+
+Create **{calculate_phases(duration_info['total_weeks'])} phases** with:
+- Topics extracted directly from professor content
+- Time allocation: {duration_info['hours_per_week']} hours/week × {duration_info['total_weeks']} weeks
+- Resources prioritizing professor's recommendations
 
 #### 🕒 Suggested Learning Schedule  
-- Create a detailed schedule for the total study duration: **{study_duration}**.  
-- Break down the duration into weeks or months (e.g., "Week 1-2", "Month 1").  
-- Assign specific tasks or topics from the roadmap to each time period, with estimated hours per week.  
-- Include milestones (e.g., "Complete a project based on Practical Applications by Month 2").  
-- Format the schedule as follows:  
-  - **Time Period**: [Specific time period, e.g., Week 1-2]  
-    - Tasks/Topics: [List of tasks or topics]  
-    - Hours: [Estimated hours]  
-    - Milestones: [Description of milestone, if any]  
+**Weekly Schedule for {duration_info['total_weeks']} weeks:**
+- **Hours per week**: {duration_info['hours_per_week']}
+- **Daily commitment**: {duration_info['hours_per_week']//7 if isinstance(duration_info['hours_per_week'], int) else f"{min(duration_info['hours_per_week'])//7}-{max(duration_info['hours_per_week'])//7}"} hours/day
+- Map professor topics to specific weeks
+- Include review cycles appropriate for intensity level
 
 #### 📝 Summary  
-- Recap the roadmap in **6-8 concise bullet points**.  
-- Emphasize how the knowledge base shapes the roadmap, key phases, and expected outcomes.  
-- Highlight readiness for academic or professional applications.
-
----
-
-### 🛠 Additional Instructions  
-- Use **enhanced markdown** for readability:  
-  - `####` for main sections, `#####` for subsections.  
-  - Use `-` for bullet points, `**bold** for emphasis, and tables where specified.  
-  - Add emojis (e.g., 📚, 🎯, 🗺) to make sections visually distinct.  
-  - Ensure short paragraphs (2-4 sentences) and clear spacing.  
-- Write in a **formal yet encouraging academic tone** suitable for beginners to advanced learners.  
-- **Maximize detail in every section**, leveraging the knowledge base for accuracy and depth, to support summarization.  
-- Align the roadmap with the total study duration (**{study_duration}**), ensuring realistic time estimates and balanced pacing.  
-- Use resources from the knowledge base’s references where possible; supplement with high-quality, accessible resources (e.g., MOOCs, open-access materials).  
-- Avoid fluff, repetition, or overly technical jargon unless explained.  
-- Do not invent new references; use only those in the knowledge base or general knowledge.  
+- Highlight alignment between professor content and time constraints
+- Emphasize achievable proficiency level
+- Note content coverage percentage based on duration
 
 {lang_note}
-    """
+"""
     return model.generate_content(prompt).text.strip()
 
 
+def get_intensity_strategy(intensity, content_analysis):
+    strategies = {
+        "very_high": f"""
+        - **Ultra-Focused Approach**: Cover only the most critical concepts from professor content
+        - **Accelerated Learning**: {content_analysis['estimated_complexity']} complexity requires intensive daily commitment
+        - **Essential Topics Only**: Prioritize core concepts over comprehensive coverage
+        - **Frequent Assessment**: Daily progress checks to maintain pace
+        """,
+        "high": f"""
+        - **Intensive Coverage**: Focus on main topics with practical applications
+        - **Streamlined Path**: Cover professor's key concepts efficiently
+        - **Active Learning**: Emphasize hands-on practice over theoretical depth
+        - **Weekly Milestones**: Clear progress markers every week
+        """,
+        "medium": f"""
+        - **Balanced Approach**: Comprehensive coverage of professor's main topics
+        - **Theory + Practice**: Balance conceptual understanding with applications
+        - **Flexible Pacing**: Allow time for deeper exploration of complex topics
+        - **Bi-weekly Reviews**: Regular assessment and adjustment periods
+        """,
+        "low_medium": f"""
+        - **Thorough Coverage**: Include most professor content with extensions
+        - **Deep Learning**: Time for thorough understanding and practice
+        - **Supplementary Materials**: Add related topics beyond core content
+        - **Monthly Assessments**: Comprehensive review cycles
+        """,
+        "low": f"""
+        - **Comprehensive Mastery**: Complete coverage of all professor content
+        - **Expert-Level Depth**: Time for advanced topics and research
+        - **Independent Projects**: Extensive practical applications
+        - **Flexible Timeline**: Accommodate thorough exploration
+        """
+    }
+    return strategies.get(intensity, strategies["medium"])
+
+
+def calculate_phases(total_weeks):
+    if total_weeks <= 2:
+        return 2
+    elif total_weeks <= 4:
+        return 3
+    elif total_weeks <= 8:
+        return 4
+    elif total_weeks <= 12:
+        return 5
+    else:
+        return 6
+
+
 def generate_advisor_update(content_summary, study_duration, language="en"):
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
     lang_note = "Please write the entire content in Vietnamese, using clear, formal academic language suitable for university-level learners." if language == "vi" else "Please write the entire content in English, using clear, formal academic language suitable for university-level learners."
-
+    
+    duration_info = parse_study_duration(study_duration)
+    
     prompt = f"""
-You are an expert Academic Advisor tasked with updating an existing learning roadmap to reflect a new study duration: **{study_duration}**. Your goal is to adjust the roadmap while preserving its structure, objectives, and depth, ensuring it remains clear, detailed, and suitable for university students and self-learners. The updated roadmap should support integration into a digital research notebook and future summarization.
+You are updating a learning roadmap with new study duration: **{study_duration}**
 
-Here is the current roadmap summary:
+**New Duration Analysis:**
+- Total Weeks: {duration_info['total_weeks']}
+- Hours per Week: {duration_info['hours_per_week']}
+- Total Hours: {duration_info['total_hours']}
+- New Intensity: {duration_info['intensity']}
 
+**Content Adjustment Rules:**
+- **Shorter Duration**: Increase intensity, focus on core topics, more hours/week
+- **Longer Duration**: Reduce intensity, add supplementary content, fewer hours/week
+- **Maintain Content Quality**: Preserve learning objectives while adjusting pace
+
+Current Roadmap Summary:
 --- BEGIN SUMMARY ---
 {content_summary}
 --- END SUMMARY ---
 
----
-
-### 📚 Structured Format
-
-Follow this structure with enhanced markdown formatting, updating only the relevant sections:
+**CRITICAL UPDATES NEEDED:**
+1. **Recalculate Schedule**: Redistribute content across {duration_info['total_weeks']} weeks
+2. **Adjust Intensity**: Match new {duration_info['intensity']} intensity level
+3. **Rebalance Hours**: {duration_info['hours_per_week']} hours per week allocation
+4. **Update Milestones**: Align checkpoints with new timeline
 
 #### 🕒 Updated Suggested Learning Schedule  
-- Adjust the schedule to fit the new study duration: **{study_duration}**.  
-- Break down the duration into weeks or months (e.g., "Week 1-2", "Month 1").  
-- Reassign tasks or topics from the original roadmap to each time period, with updated estimated hours per week.  
-- Update milestones to align with the new timeline (e.g., "Complete a project by Week 3").  
-- Format the schedule as follows:  
-  - **Time Period**: [Specific time period, e.g., Week 1-2]  
-    - Tasks/Topics: [List of tasks or topics]  
-    - Hours: [Estimated hours]  
-    - Milestones: [Description of milestone, if any]  
+**New Schedule for {duration_info['total_weeks']} weeks:**
+- **Intensity Level**: {duration_info['intensity']}
+- **Hours per Week**: {duration_info['hours_per_week']}
+- **Total Commitment**: {duration_info['total_hours']} hours
+
+[Provide detailed weekly breakdown matching new intensity]
 
 #### 📝 Updated Summary  
-- Recap the updated roadmap in **6-8 concise bullet points**.  
-- Highlight changes to the schedule, new milestones, and how the new duration affects learning outcomes.  
-- Emphasize readiness for academic or professional success.
-
----
-
-### 🛠 Additional Instructions  
-- Use **enhanced markdown** for readability:  
-  - `####` for main sections, `#####` for subsections.  
-  - Use `-` for bullet points, `**bold** for emphasis, and tables where specified.  
-  - Add emojis (e.g., 🕒, 📝) to make sections visually distinct.  
-  - Ensure short paragraphs (2-4 sentences) and clear spacing.  
-- Write in a **formal yet encouraging academic tone** suitable for learners.  
-- **Maximize detail in updated sections** to maintain depth and support summarization.  
-- Adjust pacing and time estimates to align with the new study duration (**{study_duration}**), ensuring realistic and balanced scheduling.  
-- Preserve the original roadmap’s objectives and structure, only updating time-related elements.  
-- Avoid fluff, repetition, or introducing new topics unless necessary.  
-- Do not include external references; rely on the provided summary.  
+- Compare old vs new approach
+- Highlight intensity changes and their impact
+- Emphasize adapted learning outcomes
 
 {lang_note}
-    """
+"""
     return model.generate_content(prompt).text.strip()
 
 
@@ -252,20 +364,36 @@ class AcademicAdvisorAgentAPIView(APIView):
                 try:
                     existing_doc = api_models.UserDocument.objects.get(doc_url=doc_url, ai_type="advisor")
                     old_duration = existing_doc.study_duration or ""
+                    
+                    old_duration_info = parse_study_duration(old_duration) if old_duration else None
+                    new_duration_info = parse_study_duration(study_duration)
+                    
+                    if (old_duration_info and 
+                        old_duration_info['total_weeks'] == new_duration_info['total_weeks'] and
+                        old_duration_info['intensity'] == new_duration_info['intensity']):
+                        return Response({
+                            "error": "New study_duration is too similar to existing one. Please choose a significantly different duration."
+                        }, status=400)
+                        
                 except api_models.UserDocument.DoesNotExist:
                     old_duration = ""
-
-                if study_duration.lower().strip() == old_duration.lower().strip():
-                    return Response({"error": "New study_duration must be different from existing one."}, status=400)
 
                 update_text = generate_advisor_update(existing_content, study_duration, language)
                 update_google_doc(doc_url, update_text, creds)
 
-                new_combined_duration = f"{old_duration} + {study_duration}" if old_duration else study_duration
-                existing_doc.study_duration = new_combined_duration
+                existing_doc.study_duration = study_duration
                 existing_doc.save()
 
-                return Response({"message": "Document updated with new study duration.", "doc_url": doc_url})
+                duration_info = new_duration_info
+
+                return Response({
+                    "message": "Document updated with new study duration.",
+                    "doc_url": doc_url,
+                    "duration_info": duration_info
+                })
+
+            # Tính duration_info trước khi tạo nội dung mới
+            duration_info = parse_study_duration(study_duration)
 
             if professor_input:
                 if isinstance(professor_input, dict) and "doc_url" in professor_input:
@@ -278,11 +406,11 @@ class AcademicAdvisorAgentAPIView(APIView):
                     return Response({"error": "Invalid professor_content format"}, status=400)
             
                 content = generate_advisor_from_professor(topic, professor_content, study_duration, language)
-
             else:
                 content = generate_advisor_content(topic, study_duration, language)
 
-            doc_url = create_google_doc(f"🗺️ Learning Roadmap - {topic}", content, creds, user.email)
+            doc_title = f"🗺️ Learning Roadmap - {topic}"
+            doc_url = create_google_doc(doc_title, content, creds, user.email)
 
             api_models.UserDocument.objects.create(
                 user=user,
@@ -293,9 +421,14 @@ class AcademicAdvisorAgentAPIView(APIView):
                 study_duration=study_duration
             )
 
-            return Response({"message": "Document created successfully", "doc_url": doc_url})
+            return Response({
+                "message": "Document created successfully",
+                "doc_url": doc_url,
+                "duration_info": duration_info,
+                "content_preview": content[:200] + "..." if len(content) > 200 else content
+            })
 
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=404)
         except Exception as e:
-            return Response({"error": str(e)}, status=500)
+            return Response({"error": f"Internal server error: {str(e)}"}, status=500)
