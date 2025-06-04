@@ -6,6 +6,49 @@ import UserData from "../plugin/UserData";
 import apiInstance from "../../utils/axios";
 import { useNavigate } from "react-router-dom";
 
+const tooltipStyles = `
+  .custom-tooltip {
+    position: relative;
+  }
+  
+  .custom-tooltip .tooltip-text {
+    visibility: hidden;
+    background-color: #333;
+    color: white;
+    text-align: center;
+    border-radius: 8px;
+    padding: 12px 16px;
+    position: absolute;
+    z-index: 1000;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    font-size: 14px;
+    line-height: 1.4;
+    max-width: 280px;
+    white-space: normal;
+  }
+  
+  .custom-tooltip .tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #333 transparent transparent transparent;
+  }
+  
+  .custom-tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+  }
+`;
+
 const agents = [
   {
     icon: "🧠",
@@ -13,6 +56,7 @@ const agents = [
     type: "professor",
     endpoint: "/professor-agent/",
     description: "Creates or updates a knowledge base with structured explanations in a Google Doc.",
+    hint: "💡 Tip: You can explore additional information about your topic by selecting an existing professor document you've created before.",
   },
   {
     icon: "💼",
@@ -20,6 +64,7 @@ const agents = [
     type: "advisor",
     endpoint: "/academic-advisor-agent/",
     description: "Designs a clear and structured learning roadmap, outlining prerequisites and milestones in a Google Doc.",
+    hint: "💡 Tip: You can create a learning roadmap based on existing professor content by selecting a professor file, or modify the timeline by choosing a new duration with an existing advisor document.",
   },
   {
     icon: "📚",
@@ -27,6 +72,7 @@ const agents = [
     type: "librarian",
     endpoint: "/research-librarian-agent/",
     description: "Collects high-quality reference materials, categorized by difficulty level and reliability, in a detailed document.",
+    hint: "💡 Tip: You can find curated learning resources based on topics you've already explored by selecting an existing professor document.",
   },
   {
     icon: "✍️",
@@ -34,6 +80,7 @@ const agents = [
     type: "assistant",
     endpoint: "/teaching-assistant-agent/",
     description: "Creates exercises with guided solutions to reinforce key concepts covered in the topic.",
+    hint: "💡 Tip: You can generate practice questions and exercises based on topics you've studied by selecting an existing professor document.",
   },
 ];
 
@@ -56,7 +103,8 @@ const AITeachingAgents = () => {
     }), {})
   );
   const [checking, setChecking] = useState(false);
-  const [step, setStep] = useState(0);
+  const [topicStatus, setTopicStatus] = useState({ status: null, message: "" });
+  const [existingAgents, setExistingAgents] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -71,6 +119,7 @@ const AITeachingAgents = () => {
         setAdvisorDocs(advisorOnly);
       } catch (err) {
         console.error("Failed to fetch documents", err);
+        Toast.error("Failed to fetch documents");
       }
     };
     fetchDocs();
@@ -98,6 +147,11 @@ const AITeachingAgents = () => {
     return extraData;
   };
 
+  const validateTopicInput = (topic) => {
+    const specialCharPattern = /[!@#$%^&*()_+\=\[\]{};':"\\|,.<>\/?`~]/;
+    return !specialCharPattern.test(topic);
+  };
+
   const handleCallAgent = async (agentType, endpoint) => {
     const agentState = agentStates[agentType];
     let finalTopic = globalTopic;
@@ -109,7 +163,7 @@ const AITeachingAgents = () => {
     } else if (agentType === "advisor" && agentState.selectedAdvisorDoc) {
       finalTopic = agentState.selectedAdvisorDoc.topic;
       finalLanguage = agentState.selectedAdvisorDoc.language;
-}
+    }
 
     if (!finalTopic) return Toast.warning("Please enter a topic or select a professor document");
 
@@ -147,28 +201,66 @@ const AITeachingAgents = () => {
   };
 
   const handleRunAll = async () => {
-    if (!globalTopic && !agents.some(agent => agentStates[agent.type].selectedProfessorDoc)) {
-      return Toast.warning("Please enter a global topic or select a professor document for at least one agent");
+    if (!globalTopic) {
+      return Toast.warning("Please enter a global topic to run all agents");
     }
-    setIsRunningGlobal(true);
-    setStep(1);
+    
+    if (!validateTopicInput(globalTopic)) {
+      return Toast.error("Global topic cannot contain special characters");
+    }
 
-    for (const agent of agents) {
-      await handleCallAgent(agent.type, agent.endpoint);
-      setStep((prev) => prev + 1);
+    setIsRunningGlobal(true);
+
+    try {
+      const payload = {
+        user_id: UserData()?.user_id,
+        topic: globalTopic,
+        language: globalLanguage,
+      };
+
+      const res = await apiInstance.post("/all-agent/", payload, { timeout: 600000 });
+      Toast.success("All agents completed successfully!");
+      
+      agents.forEach((agent) => {
+        updateAgentState(agent.type, { 
+          docUrl: res.data[`${agent.type}_doc_url`] || res.data.doc_url 
+        });
+      });
+    } catch (error) {
+      console.error(error);
+      Toast.error(error.response?.data?.error || "Failed to run all agents");
+    } finally {
+      setIsRunningGlobal(false);
     }
-    setStep(0);
-    setIsRunningGlobal(false);
   };
 
   const handleCheckFeasibility = async () => {
     if (!globalTopic) return Toast.warning("Please enter a topic");
+    
+    if (!validateTopicInput(globalTopic)) {
+      setTopicStatus({ status: "Not Allow", message: "Topic cannot contain special characters" });
+      setExistingAgents([]);
+      return;
+    }
+
     setChecking(true);
     try {
-      const res = await apiInstance.post("/check-topic/", { topic: globalTopic });
-      Toast.success(`✅ ${res.data?.message || "Topic is feasible"}`);
+      const res = await apiInstance.post("/check-global-topic/", { 
+        topic: globalTopic, 
+        language: globalLanguage,
+        user_id: UserData()?.user_id,
+      });
+      
+      setTopicStatus({ status: res.data.status, message: res.data.message });
+      if (res.data.message.includes("already exists for AI")) {
+        const agentTypes = res.data.message.match(/AI: ([\w\s,]+)/)?.[1].split(",").map(type => type.trim());
+        setExistingAgents(agentTypes.filter(type => type !== "professor" && ["advisor", "librarian", "assistant"].includes(type)));
+      } else {
+        setExistingAgents([]);
+      }
     } catch (err) {
-      Toast.error(err.response?.data?.error || "❌ Topic may be too vague or unsupported");
+      setTopicStatus({ status: "Not Allow", message: err.response?.data?.message || "Failed to check topic feasibility" });
+      setExistingAgents([]);
     } finally {
       setChecking(false);
     }
@@ -198,46 +290,120 @@ const AITeachingAgents = () => {
     }
   };
 
+  const checkIfAgentDocExistsForTopic = async (topic, agentType) => {
+    try {
+      const res = await apiInstance.get("/ai-document-list/", {
+        params: { user_id: UserData()?.user_id },
+      });
 
-  const handleProfessorDocChange = (agentType, selectedDocId) => {
+      return res.data.some(
+        (doc) =>
+          doc.ai_type === agentType &&
+          doc.topic?.trim().toLowerCase() === topic.trim().toLowerCase()
+      );
+    } catch (err) {
+      console.error("Check failed", err);
+      return false;
+    }
+  };
+
+  const handleProfessorDocChange = async (agentType, selectedDocId) => {
     if (globalTopic.trim()) {
       Toast.warning("You cannot select a professor document when a global topic is entered.");
       return;
     }
 
     const selected = professorDocs.find((doc) => doc.id === Number(selectedDocId));
-    if (selected && agentType === "advisor") {
+    if (!selected) {
+      updateAgentState(agentType, { selectedProfessorDoc: null });
+      return;
+    }
+
+    if (agentType !== "professor") {
+      const exists = await checkIfAgentDocExistsForTopic(selected.topic, agentType);
+      if (exists) {
+        const agentName = {
+          advisor: "Academic Advisor",
+          librarian: "Research Librarian",
+          assistant: "Teaching Assistant"
+        }[agentType] || agentType;
+
+        Toast.error(`A ${agentName} document already exists for topic "${selected.topic}". Cannot use this professor document.`);
+        updateAgentState(agentType, { selectedProfessorDoc: null });
+        return;
+      }
+    }
+
+    if (agentType === "advisor") {
       updateAgentState(agentType, {
         selectedProfessorDoc: selected,
         selectedAdvisorDoc: null,
       });
     } else {
-      updateAgentState(agentType, { selectedProfessorDoc: selected || null });
+      updateAgentState(agentType, { selectedProfessorDoc: selected });
     }
   };
 
+  const capitalizeTopic = (topic) => {
+    return topic
+      .split(" ")
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
+
+  const getIsRunEnabled = (agentType) => {
+    return (
+      (topicStatus.status === "Allow" && !existingAgents.includes(agentType)) ||
+      agentStates[agentType].selectedProfessorDoc ||
+      (agentType === "advisor" && agentStates[agentType].selectedAdvisorDoc)
+    );
+  };
+
+  const isAnyDocSelectedExcept = (currentAgentType) => {
+    return Object.entries(agentStates).some(
+      ([type, state]) =>
+        type !== currentAgentType &&
+        (state.selectedProfessorDoc || state.selectedAdvisorDoc)
+    );
+  };
 
   return (
     <>
+      <style>{tooltipStyles}</style>
       <BaseHeader />
       <div className="container py-4">
         <h2 className="mb-4 text-center">AI Teaching Team</h2>
 
         <div className="mb-4 text-center">
           <h5>Global Settings</h5>
-          <input
-            type="text"
-            className="form-control w-50 mx-auto mb-2"
-            placeholder="Enter a global topic (e.g., Machine Learning)"
-            value={globalTopic}
-            onChange={(e) => setGlobalTopic(e.target.value)}
-            disabled={isRunningGlobal}
-          />
+          <div className="custom-tooltip">
+            <input
+              type="text"
+              className="form-control w-50 mx-auto mb-2"
+              placeholder="Enter a global topic (e.g., Machine Learning)"
+              value={globalTopic}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (!validateTopicInput(value)) {
+                  Toast.error("Special characters are not allowed in topic");
+                  return;
+                }
+                const formattedTopic = capitalizeTopic(value);
+                setGlobalTopic(formattedTopic);
+                setTopicStatus({ status: null, message: "" });
+                setExistingAgents([]);
+              }}
+              disabled={isRunningGlobal || agents.some(agent => agentStates[agent.type].selectedProfessorDoc || agentStates[agent.type].selectedAdvisorDoc)}
+            />
+            <span className="tooltip-text">
+              💡 Please enter a scientific topic in English with proper spelling. This helps ensure the best learning experience for all agents.
+            </span>
+          </div>
           <select
             className="form-select w-25 mx-auto mb-2"
             value={globalLanguage}
             onChange={(e) => setGlobalLanguage(e.target.value)}
-            disabled={isRunningGlobal}
+            disabled={isRunningGlobal || agents.some(agent => agentStates[agent.type].selectedProfessorDoc || agentStates[agent.type].selectedAdvisorDoc)}
           >
             <option value="en">English</option>
             <option value="vi">Vietnamese</option>
@@ -245,10 +411,15 @@ const AITeachingAgents = () => {
           <button
             className="btn btn-outline-info mt-2"
             onClick={handleCheckFeasibility}
-            disabled={checking || isRunningGlobal}
+            disabled={checking || isRunningGlobal || !globalTopic.trim()}
           >
             {checking ? "Checking..." : "🔍 Check Topic Feasibility"}
           </button>
+          {topicStatus.message && (
+            <div className={`mt-2 p-2 rounded ${topicStatus.status === "Allow" ? "text-success bg-success-subtle" : "text-danger bg-danger-subtle"}`}>
+              {topicStatus.message}
+            </div>
+          )}
         </div>
 
         <div className="row">
@@ -259,12 +430,19 @@ const AITeachingAgents = () => {
                   <span className="me-2">{agent.icon}</span> {agent.title}
                 </h4>
                 <p className="text-muted small mb-3">{agent.description}</p>
-
+                <div className="alert alert-info py-2 px-3 mb-3" style={{fontSize: '12px', lineHeight: '1.4'}}>
+                  {agent.hint}
+                </div>
                 <select
                   className="form-select mb-2"
                   value={agentStates[agent.type].selectedProfessorDoc?.id || ""}
                   onChange={(e) => handleProfessorDocChange(agent.type, e.target.value)}
-                  disabled={!!globalTopic || (agent.type === "advisor" && agentStates[agent.type].selectedAdvisorDoc) || isRunningGlobal}
+                  disabled={
+                    !!globalTopic ||
+                    (agent.type === "advisor" && agentStates[agent.type].selectedAdvisorDoc) ||
+                    isRunningGlobal ||
+                    isAnyDocSelectedExcept(agent.type)
+                  }
                 >
                   <option value="">-- Select Professor Document (Optional) --</option>
                   {professorDocs.map((doc) => (
@@ -280,7 +458,7 @@ const AITeachingAgents = () => {
                       className="form-select mb-2"
                       value={agentStates[agent.type].selectedAdvisorDoc?.id || ""}
                       onChange={(e) => handleAdvisorDocChange(agent.type, e.target.value)}
-                      disabled={!!globalTopic || agentStates[agent.type].selectedProfessorDoc || isRunningGlobal}
+                      disabled={!!globalTopic || agentStates[agent.type].selectedProfessorDoc || isRunningGlobal || isAnyDocSelectedExcept(agent.type)}
                     >
                       <option value="">-- Select Advisor Document (Optional) --</option>
                       {advisorDocs.map((doc) => (
@@ -293,7 +471,7 @@ const AITeachingAgents = () => {
                       className="form-select mb-2"
                       value={agentStates[agent.type].duration}
                       onChange={(e) => updateAgentState(agent.type, { duration: e.target.value })}
-                      disabled = {isRunningGlobal} 
+                      disabled={isRunningGlobal}
                     >
                       {["2 weeks", "4 weeks", "6 weeks", "8 weeks", "10 weeks", "12 weeks"].map((opt) => (
                         <option key={opt} value={opt}>{opt}</option>
@@ -305,7 +483,7 @@ const AITeachingAgents = () => {
                 <button
                   className="btn btn-primary"
                   onClick={() => handleCallAgent(agent.type, agent.endpoint)}
-                  disabled={agentStates[agent.type].loading || isRunningGlobal}
+                  disabled={agentStates[agent.type].loading || isRunningGlobal || !getIsRunEnabled(agent.type)}
                 >
                   {agentStates[agent.type].loading ? "Generating..." : `Run ${agent.title}`}
                 </button>
@@ -328,9 +506,12 @@ const AITeachingAgents = () => {
         </div>
 
         <div className="text-center mt-4">
-          <button className="btn btn-success me-3" onClick={handleRunAll} disabled={isRunningGlobal}>
+          <button
+            className="btn btn-success me-3"
+            onClick={handleRunAll}
+            disabled={isRunningGlobal || topicStatus.status !== "Allow"}
+          >
             🚀 Run All Agents
-            {step > 0 && <span className="ms-2">(Step {step}/{agents.length})</span>}
           </button>
           <button
             className="btn btn-outline-secondary"

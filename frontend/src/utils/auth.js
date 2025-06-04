@@ -1,39 +1,20 @@
 import { useAuthStore } from "../store/auth";
-import axios from "./axios";
+import axios from "axios"; // Import axios directly, not the custom instance
 import jwt_decode from "jwt-decode";
 import Cookie from "js-cookie";
-import Swal from "sweetalert2";
 
-// OLD CODE COMMENTED WITH EXPLANATIONS
+// Create a separate axios instance for auth operations to avoid circular dependency
+const authApi = axios.create({
+  baseURL: import.meta.env.VITE_REACT_APP_API_URL || "http://127.0.0.1:8000/api/v1/",
+  timeout: 15000,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
-/*
-// The original login function lacked error feedback if the status was not 200
 export const login = async (email, password) => {
     try {
-        const { data, status } = await axios.post(`user/token/`, {
-            email,
-            password,
-        });
-
-        if (status === 200) {
-            setAuthUser(data.access, data.refresh);
-        }
-
-        return { data, error: null };
-    } catch (error) {
-        return {
-            data: null,
-            error: error.response.data?.detail || "Something went wrong",
-        };
-    }
-};
-*/
-
-// CHANGES:
-// - Added better error handling and logging to provide detailed feedback in case of failure
-export const login = async (email, password) => {
-    try {
-        const { data, status } = await axios.post(`user/token/`, {
+        const { data, status } = await authApi.post(`user/token/`, {
             email,
             password,
         });
@@ -50,13 +31,9 @@ export const login = async (email, password) => {
     }
 };
 
-// OLD CODE
-
-/*
-// No changes in the register function, but logging could also be added for debugging
 export const register = async (full_name, email, password, password2) => {
     try {
-        const { data } = await axios.post(`user/register/`, {
+        const { data } = await authApi.post(`user/register/`, {
             full_name,
             email,
             password,
@@ -68,190 +45,128 @@ export const register = async (full_name, email, password, password2) => {
     } catch (error) {
         return {
             data: null,
-            error: `${error.response.data.full_name} - ${error.response.data.email}` || "Something went wrong",
-        };
-    }
-};
-*/
-
-// CHANGES:
-// - No significant changes to this function. Left as is for now
-export const register = async (full_name, email, password, password2) => {
-    try {
-        const { data } = await axios.post(`user/register/`, {
-            full_name,
-            email,
-            password,
-            password2,
-        });
-
-        await login(email, password);
-        return { data, error: null };
-    } catch (error) {
-        return {
-            data: null,
-            error: `${error.response.data.full_name} - ${error.response.data.email}` || "Something went wrong",
+            error: `${error.response?.data?.full_name || ''} - ${error.response?.data?.email || ''}` || "Something went wrong",
         };
     }
 };
 
-// OLD CODE COMMENTED WITH EXPLANATIONS
-
-/*
-// The original logout function is fine. No need for changes here
 export const logout = () => {
+    // Clear cookies with all possible options
     Cookie.remove("access_token");
     Cookie.remove("refresh_token");
-    useAuthStore.getState().setUser(null);
-};
-*/
-
-// No changes needed for `logout`
-export const logout = () => {
-    Cookie.remove("access_token");
-    Cookie.remove("refresh_token");
-    useAuthStore.getState().setUser(null);
-};
-
-// OLD CODE
-
-/*
-// Issue: getRefreshToken was called but not awaited, potentially leading to invalid tokens being used
-export const setUser = async () => {
-    const access_token = Cookie.get("access_token");
-    const refresh_token = Cookie.get("refresh_token");
-
-    if (!access_token || !refresh_token) {
-        return;
-    }
-
-    if (isAccessTokenExpired(access_token)) {
-        const response = getRefreshToken(refresh_token);  // MISSING await!
-        setAuthUser(response.access, response.refresh);
-    } else {
-        setAuthUser(access_token, refresh_token);
+    Cookie.remove("access_token", { path: "/" });
+    Cookie.remove("refresh_token", { path: "/" });
+    
+    useAuthStore.getState().clearUser();
+    
+    // Redirect to login page
+    if (typeof window !== 'undefined') {
+        window.location.href = "/login";
     }
 };
-*/
 
-// CHANGES:
-// - Added `await` to `getRefreshToken` to ensure token refresh is properly awaited
 export const setUser = async () => {
+    useAuthStore.getState().initializeAuth(); // Set loading true
+    
     const access_token = Cookie.get("access_token");
     const refresh_token = Cookie.get("refresh_token");
 
     if (!access_token || !refresh_token) {
         console.log("Tokens do not exist");
+        useAuthStore.getState().setLoading(false);
         return;
     }
 
-    if (isAccessTokenExpired(access_token)) {
-        const response = await getRefreshToken(refresh_token); // Properly awaited
-        setAuthUser(response.data.access, response.data.refresh); // Corrected access of token data
-    } else {
-        setAuthUser(access_token, refresh_token);
-    }
-};
-
-// OLD CODE
-
-/*
-// The original function could lead to invalid tokens being stored without checks
-export const setAuthUser = (access_token, refresh_token) => {
-    Cookie.set("access_token", access_token, {
-        expires: 1,
-        secure: true,
-    });
-
-    Cookie.set("refresh_token", refresh_token, {
-        expires: 7,
-        secure: true,
-    });
-
-    const user = jwt_decode(access_token) ?? null;
-
-    if (user) {
-        useAuthStore.getState().setUser(user);
-    }
-    useAuthStore.getState().setLoading(false);
-};
-*/
-
-// CHANGES:
-// - Added checks to ensure that tokens are valid before setting them in cookies
-export const setAuthUser = (access_token, refresh_token) => {
-    if (access_token && refresh_token) {
-        Cookie.set("access_token", access_token, {
-            expires: 1,
-            secure: true,
-        });
-
-        Cookie.set("refresh_token", refresh_token, {
-            expires: 7,
-            secure: true,
-        });
-
-        const user = access_token ? jwt_decode(access_token) : null; // Ensure valid token is passed
-        if (user) {
-            useAuthStore.getState().setUser(user);
-        }
-    } else {
-        console.error("Invalid tokens, could not set user.");
-    }
-    useAuthStore.getState().setLoading(false);
-};
-
-// OLD CODE
-
-/*
-// The original token refresh function lacked error handling
-export const getRefreshToken = async () => {
-    const refresh_token = Cookie.get("refresh_token");
-    const response = await axios.post(`user/token/refresh/`, {
-        refresh: refresh_token,
-    });
-    return response;
-};
-*/
-
-// CHANGES:
-// - Added error handling in case the token refresh fails (e.g., expired refresh token)
-export const getRefreshToken = async () => {
     try {
-        const refresh_token = Cookie.get("refresh_token");
-        const response = await axios.post(`user/token/refresh/`, {
+        if (isAccessTokenExpired(access_token)) {
+            console.log("Access token expired, refreshing...");
+            const response = await getRefreshToken(refresh_token);
+            setAuthUser(response.data.access, response.data.refresh);
+        } else {
+            setAuthUser(access_token, refresh_token);
+        }
+    } catch (error) {
+        console.error("Error setting user:", error);
+        // Nếu có lỗi (refresh token expired, etc.), logout user
+        logout();
+    }
+};
+
+export const setAuthUser = (access_token, refresh_token) => {
+    try {
+        if (access_token && refresh_token) {
+            // Fix cookie settings for development
+            const cookieOptions = {
+                expires: 1,
+                secure: window.location.protocol === 'https:', // Only secure in production
+                sameSite: 'strict'
+            };
+
+            const refreshCookieOptions = {
+                expires: 7,
+                secure: window.location.protocol === 'https:', // Only secure in production
+                sameSite: 'strict'
+            };
+
+            Cookie.set("access_token", access_token, cookieOptions);
+            Cookie.set("refresh_token", refresh_token, refreshCookieOptions);
+
+            const user = jwt_decode(access_token);
+            if (user) {
+                useAuthStore.getState().setUser(user);
+            }
+        } else {
+            console.error("Invalid tokens, could not set user.");
+            logout();
+        }
+    } catch (error) {
+        console.error("Error setting auth user:", error);
+        logout();
+    }
+    useAuthStore.getState().setLoading(false);
+};
+
+export const getRefreshToken = async (refresh_token) => {
+    try {
+        if (!refresh_token) {
+            throw new Error("Refresh token not provided");
+        }
+
+        const response = await authApi.post(`user/token/refresh/`, {
             refresh: refresh_token,
         });
+        
         return response;
     } catch (error) {
         console.error("Failed to refresh token:", error);
-        logout(); // Log the user out if refresh fails
         throw error;
     }
 };
 
-// OLD CODE
-
-/*
-// The original isAccessTokenExpired function is mostly fine, but the check should be thorough
 export const isAccessTokenExpired = (access_token) => {
     try {
+        if (!access_token) return true;
+        
         const decodedToken = jwt_decode(access_token);
-        return decodedToken.exp < Date.now() / 1000;
+        const currentTime = Date.now() / 1000;
+        
+        // Thêm buffer 30 giây để tránh trường hợp token expire ngay khi đang gọi API
+        return decodedToken.exp < (currentTime + 30);
     } catch (error) {
-        console.log(error);
+        console.error("Error decoding token:", error);
         return true;
     }
 };
-*/
 
-// No changes needed here, but made sure that any error during decoding defaults to token expiration
-export const isAccessTokenExpired = (access_token) => {
+// Hàm helper để check refresh token có expired không
+export const isRefreshTokenExpired = (refresh_token) => {
     try {
-        const decodedToken = jwt_decode(access_token);
+        if (!refresh_token) return true;
+        
+        const decodedToken = jwt_decode(refresh_token);
         return decodedToken.exp < Date.now() / 1000;
     } catch (error) {
-        console.error("Error decoding token:", error);
-        return true; // Consider token expired if decoding fails
+        console.error("Error decoding refresh token:", error);
+        return true;
     }
 };

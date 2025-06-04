@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Route, Routes, BrowserRouter } from "react-router-dom";
 import { ClerkProvider } from "@clerk/clerk-react";
-
+import { setUser } from "./utils/auth";
 import './locales/i18n';
 
 import { CartContext, ProfileContext } from "./views/plugin/Context";
@@ -55,21 +55,36 @@ function App() {
     const [cartCount, setCartCount] = useState(0);
     const [profile, setProfile] = useState([]);
     const [wishlist, setWishlist] = useState([]);
+    const [isReady, setIsReady] = useState(false);
 
     useEffect(() => {
-        
-        apiInstance.get(`course/cart-list/${CartId()}/`).then((res) => {
-            setCartCount(res.data?.length);
-        });
-
-        apiInstance.get(`user/profile/${UserData()?.user_id}/`).then((res) => {
-            setProfile(res.data);
-        });
-
-        apiInstance.get(`student/wishlist/${UserData()?.user_id}/`).then((res) => {
-          setWishlist(res.data.wishlist || []); 
-        })
+        const init = async () => {
+            await setUser();
+            setIsReady(true);
+        };
+        init();
     }, []);
+
+    useEffect(() => {
+        const fetchAll = async () => {
+            if (!isReady) return;
+
+            const cartRes = await apiInstance.get(`course/cart-list/${CartId()}/`);
+            setCartCount(cartRes.data?.length);
+
+            const profileRes = await apiInstance.get(`user/profile/${UserData()?.user_id}/`);
+            setProfile(profileRes.data);
+
+            const wishlistRes = await apiInstance.get(`student/wishlist/${UserData()?.user_id}/`);
+            setWishlist(wishlistRes.data.wishlist || []);
+        };
+
+        fetchAll();
+        }, [isReady]);
+
+        if (!isReady) {
+        return <div className="flex items-center justify-center h-screen">Loading...</div>;
+        }
 
     return (
         <CartContext.Provider value={[cartCount, setCartCount]}>

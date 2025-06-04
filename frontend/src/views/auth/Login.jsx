@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect} from "react";
 import { useNavigate, Link } from "react-router-dom";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 import { login } from "../../utils/auth";
-import apiInstance from "../../utils/axios";
+import { useAuthStore } from "../../store/auth";
 import Toast from "../plugin/Toast";
 import { useClerk } from "@clerk/clerk-react";
 
@@ -15,7 +15,14 @@ function Login() {
   const [oauthLoading, setOauthLoading] = useState(false);
 
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuthStore();
 
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isLoggedIn()) {
+      navigate("/", { replace: true });
+    }
+  }, [isLoggedIn, navigate]);
   const handleSubmit = async (e) => {
     e.preventDefault();
 
