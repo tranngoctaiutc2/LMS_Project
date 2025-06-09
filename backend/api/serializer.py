@@ -168,6 +168,74 @@ class TeacherSerializer(serializers.ModelSerializer):
         fields = [ "user", "image", "full_name", "bio", "facebook", "twitter", "linkedin", "about", "country", "students", "courses", "review",]
         model = api_models.Teacher
 
+class TeacherRegistrationSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.Teacher
+        fields = [
+            "full_name", "bio", "facebook", "twitter", 
+            "linkedin", "about", "country", "image"
+        ]
+        extra_kwargs = {
+            'full_name': {'required': True},
+            'bio': {'required': False},
+            'facebook': {'required': False},
+            'twitter': {'required': False},
+            'linkedin': {'required': False},
+            'about': {'required': False},
+            'country': {'required': False},
+            'image': {'required': False},
+        }
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        
+        if hasattr(user, 'teacher'):
+            raise serializers.ValidationError("Bạn đã đăng ký làm giáo viên rồi!")
+        
+        teacher = api_models.Teacher.objects.create(
+            user=user,
+            **validated_data
+        )
+        return teacher
+
+
+class TeacherUpdateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = api_models.Teacher
+        fields = [
+            "image", "full_name", "bio", "facebook", 
+            "twitter", "linkedin", "about", "country"
+        ]
+        extra_kwargs = {
+            'full_name': {'required': False},
+        }
+
+class TeacherDetailSerializer(serializers.ModelSerializer):
+    teacher_id = serializers.IntegerField(source='id', read_only=True)
+    students = serializers.SerializerMethodField()
+    courses = serializers.SerializerMethodField()
+    review = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = api_models.Teacher
+        fields = [
+            "teacher_id", "user", "image", "full_name", "bio", "facebook", 
+            "twitter", "linkedin", "about", "country", "students", 
+            "courses", "review"
+        ]
+        read_only_fields = ["teacher_id", "user", "students", "courses", "review"]
+    
+    def get_students(self, obj):
+        return obj.students().count()
+    
+    def get_courses(self, obj):
+        return obj.courses().count()
+    
+    def get_review(self, obj):
+        return obj.review()
+
 class VariantItemSerializer(serializers.ModelSerializer):
     
     class Meta:
@@ -568,3 +636,88 @@ class UserDocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = api_models.UserDocument
         fields = '__all__'
+
+class SimpleNestedTopReviewSerializer(serializers.Serializer):
+    """Serializer với format nested nhưng đơn giản"""
+    
+    id = serializers.IntegerField()
+    review = serializers.CharField()
+    rating = serializers.IntegerField()
+    reply = serializers.CharField(allow_null=True)
+    date = serializers.DateTimeField()
+    
+    user = serializers.SerializerMethodField()
+    profile = serializers.SerializerMethodField()
+    course = serializers.SerializerMethodField()
+    
+    def get_user(self, obj):
+        if obj.user:
+            return {
+                'id': obj.user.id,
+                'username': obj.user.username,
+                'full_name': getattr(obj.user, 'full_name', '')
+            }
+        return None
+    
+    def get_profile(self, obj):
+        try:
+            if obj.user:
+                # Kiểm tra profile tồn tại trước khi get
+                if Profile.objects.filter(user=obj.user).exists():
+                    profile = obj.profile()
+                    profile_image = None
+                    if hasattr(profile, 'image') and profile.image:
+                        request = self.context.get('request')
+                        if request:
+                            profile_image = request.build_absolute_uri(profile.image.url)
+                        else:
+                            profile_image = profile.image.url
+                    
+                    return {
+                        'id': profile.id,
+                        'full_name': profile.full_name,
+                        'image': profile_image,
+                        'country': profile.country
+                    }
+        except (AttributeError, ValueError):
+            pass
+        return None
+    
+    def get_course(self, obj):
+        try:
+            if obj.course:
+                course_image = None
+                if hasattr(obj.course, 'image') and obj.course.image:
+                    request = self.context.get('request')
+                    if request:
+                        course_image = request.build_absolute_uri(obj.course.image.url)
+                    else:
+                        course_image = obj.course.image.url
+                
+                teacher_image = None
+                if obj.course.teacher and hasattr(obj.course.teacher, 'image') and obj.course.teacher.image:
+                    request = self.context.get('request')
+                    if request:
+                        teacher_image = request.build_absolute_uri(obj.course.teacher.image.url)
+                    else:
+                        teacher_image = obj.course.teacher.image.url
+                
+                return {
+                    'id': obj.course.id,
+                    'title': obj.course.title,
+                    'image': course_image,
+                    'price': str(obj.course.price) if obj.course.price else None,
+                    'level': obj.course.level,
+                    'language': obj.course.language,
+                    'slug': obj.course.slug,
+                    'category': {
+                        'title': obj.course.category.title
+                    } if obj.course.category else None,
+                    'teacher': {
+                        'name': obj.course.teacher.full_name,
+                        'image': teacher_image
+                    } if obj.course.teacher else None
+                }
+        except (AttributeError, ValueError):
+            pass
+        return None

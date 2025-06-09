@@ -13,7 +13,6 @@
   "earning": "Thu nhập",
   "settings_profile": "Cài đặt & Hồ sơ",
   "profile_settings": "Hồ sơ & Cài đặt",
-  "wishlist": "Danh sách yêu thích",
   "search_courses": "Tìm kiếm khóa học",
   "search": "Tìm kiếm",
   "logout": "Đăng xuất",
@@ -31,7 +30,7 @@
   "contact": "Liên hệ",
   "support": "Hỗ trợ",
   "help_support": "Trợ giúp & Hỗ trợ",
-  "become_instructor": "Trở thành giảng viên",
+  "become_instructor_text": "Trở thành giảng viên",
   "get_the_app": "Tải ứng dụng",
   "faq": "Câu hỏi thường gặp",
   "tutorial": "Hướng dẫn",
@@ -45,5 +44,64 @@
   "terms_of_use": "Điều khoản sử dụng",
   "copyright": "Bản quyền",
   "english": "Tiếng Anh",
-  "vietnamese": "Tiếng Việt"
+  "vietnamese": "Tiếng Việt",
+
+  "become_instructor": {
+    "title": "Chia sẻ kiến thức, tạo ảnh hưởng",
+    "description": "Hàng triệu học viên trên toàn thế giới đang tìm kiếm những người hướng dẫn như bạn. Chúng tôi cung cấp nền tảng và công cụ giúp bạn giảng dạy điều bạn đam mê, phát triển sự nghiệp và truyền cảm hứng cho lớp học toàn cầu.",
+    "button": "Bắt đầu giảng dạy ngay"
+  },
+
+    "student_reviews": {
+    "title": "Học viên nói gì về chúng tôi",
+    "description": "Lắng nghe chia sẻ từ những học viên thực tế về cách các khóa học đã giúp họ thành công và thay đổi sự nghiệp.",
+    "join_message": "Tham gia cùng hơn 10.000 học viên hài lòng"
+  },
+
+  "hero_platform": {
+    "trusted": "Nền tảng giáo dục đáng tin cậy nhất",
+    "title": "Phát triển kỹ năng và thăng tiến sự nghiệp",
+    "description": "Bắt đầu, chuyển hướng hoặc nâng cao sự nghiệp của bạn với hơn 5.000 khóa học, chứng chỉ chuyên nghiệp và văn bằng từ các trường đại học và công ty hàng đầu thế giới.",
+    "join_now": "Tham gia miễn phí ngay",
+    "watch_demo": "Xem video giới thiệu"
+  },
+
+  "stats": {
+    "instructors": "Giảng viên đủ điều kiện",
+    "enrolments": "Lượt đăng ký khóa học",
+    "languages": "Khóa học bằng 42 ngôn ngữ",
+    "videos": "Video học trực tuyến"
+  },
+
+  "popular_courses": {
+    "title": "Khóa học phổ biến nhất",
+    "subtitle": "Khám phá các khóa học được đánh giá cao nhất từ học viên toàn cầu"
+  },
+
+  "loading": {
+    "aria": "Đang tải...",
+    "text": "Đang tải dữ liệu khóa học..."
+  },
+
+  "course": {
+    "by": "Giảng viên",
+    "unknown": "Chưa rõ",
+    "student_count": "{{count}} học viên",
+    "student_count_plural": "{{count}} học viên",
+    "review_count": "{{count}} đánh giá",
+    "review_count_plural": "{{count}} đánh giá",
+    "add_cart": "Thêm vào giỏ",
+    "enroll": "Ghi danh ngay"
+  },
+
+  "wishlist": {
+    "add": "Thêm vào yêu thích",
+    "remove": "Bỏ khỏi yêu thích",
+    "text": "Yêu thích"
+  },
+
+  "pagination": {
+    "prev": "Trước",
+    "next": "Sau"
+  }
 }

@@ -126,6 +126,8 @@ function CourseCreate() {
 
     const validateForm = () => {
         const e = {};
+        if (!courseData.image || !(courseData.image instanceof File)) {
+            e.image = "Thumbnail image is required.";}
         if (!courseData.title) e.title = "Title required.";
         if (!courseData.category) e.category = "Select category.";
         if (!courseData.level) e.level = "Select level.";

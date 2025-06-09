@@ -104,6 +104,7 @@ const AITeachingAgents = () => {
   );
   const [checking, setChecking] = useState(false);
   const [topicStatus, setTopicStatus] = useState({ status: null, message: "" });
+  const [topicSuggestions, setTopicSuggestions] = useState([]);
   const [existingAgents, setExistingAgents] = useState([]);
   const navigate = useNavigate();
 
@@ -252,6 +253,7 @@ const AITeachingAgents = () => {
       });
       
       setTopicStatus({ status: res.data.status, message: res.data.message });
+      setTopicSuggestions(res.data.suggestions || []);
       if (res.data.message.includes("already exists for AI")) {
         const agentTypes = res.data.message.match(/AI: ([\w\s,]+)/)?.[1].split(",").map(type => type.trim());
         setExistingAgents(agentTypes.filter(type => type !== "professor" && ["advisor", "librarian", "assistant"].includes(type)));
@@ -418,6 +420,43 @@ const AITeachingAgents = () => {
           {topicStatus.message && (
             <div className={`mt-2 p-2 rounded ${topicStatus.status === "Allow" ? "text-success bg-success-subtle" : "text-danger bg-danger-subtle"}`}>
               {topicStatus.message}
+            </div>
+          )}
+          {topicStatus.status === "Allow" && topicSuggestions.length > 0 && (
+            <div className="mt-3 d-flex justify-content-center">
+              <div className="card border-info shadow-sm" style={{ maxWidth: "600px", width: "100%" }}>
+                <div className="card-header bg-info-subtle text-info fw-semibold">
+                  {globalLanguage === "vi" ? "🔎 Gợi ý chủ đề liên quan" : "🔎 Suggested Related Topics"}
+                </div>
+                <div className="card-body d-flex flex-column gap-2">
+                  {topicSuggestions.map((suggestion, idx) => (
+                    <div
+                      key={idx}
+                      className="d-flex justify-content-between align-items-center border rounded px-3 py-2"
+                    >
+                      <span
+                        className="text-dark"
+                        style={{ fontSize: "15px" }}
+                      >
+                        {suggestion}
+                      </span>
+                      <button
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={() => {
+                          navigator.clipboard.writeText(suggestion);
+                          Toast.success(
+                            globalLanguage === "vi"
+                              ? `Đã sao chép: "${suggestion}"`
+                              : `Copied: "${suggestion}"`
+                          );
+                        }}
+                      >
+                        📋 {globalLanguage === "vi" ? "Sao chép" : "Copy"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>

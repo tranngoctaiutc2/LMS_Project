@@ -1,5 +1,5 @@
 import { useAuthStore } from "../store/auth";
-import axios from "axios"; // Import axios directly, not the custom instance
+import axios from "axios";
 import jwt_decode from "jwt-decode";
 import Cookie from "js-cookie";
 
@@ -21,6 +21,12 @@ export const login = async (email, password) => {
 
         if (status === 200) {
             setAuthUser(data.access, data.refresh);
+            
+            // ✅ THÊM: Trigger reload data sau khi login thành công
+            // Dispatch custom event để App.jsx biết cần reload data
+            window.dispatchEvent(new CustomEvent('auth-changed', { 
+                detail: { type: 'login', user: jwt_decode(data.access) } 
+            }));
         }
 
         return { data, error: null };
@@ -50,6 +56,7 @@ export const register = async (full_name, email, password, password2) => {
     }
 };
 
+// ✅ FIXED: Logout không reload trang
 export const logout = () => {
     // Clear cookies with all possible options
     Cookie.remove("access_token");
@@ -59,10 +66,11 @@ export const logout = () => {
     
     useAuthStore.getState().clearUser();
     
-    // Redirect to login page
-    if (typeof window !== 'undefined') {
-        window.location.href = "/login";
-    }
+    // ✅ THAY ĐỔI: Sử dụng React Router thay vì window.location.href
+    // Dispatch custom event để App.jsx handle navigation
+    window.dispatchEvent(new CustomEvent('auth-changed', { 
+        detail: { type: 'logout' } 
+    }));
 };
 
 export const setUser = async () => {
@@ -85,10 +93,14 @@ export const setUser = async () => {
         } else {
             setAuthUser(access_token, refresh_token);
         }
+        
+        // ✅ THÊM: Return success để App.jsx biết auth đã sẵn sàng
+        return true;
     } catch (error) {
         console.error("Error setting user:", error);
         // Nếu có lỗi (refresh token expired, etc.), logout user
         logout();
+        return false;
     }
 };
 

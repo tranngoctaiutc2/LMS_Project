@@ -4,6 +4,7 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.db import models
+from django.db.models import Count
 from django.db.models.functions import ExtractMonth
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.files.storage import default_storage
@@ -1154,7 +1155,7 @@ class TeacherNotificationDetailAPIView(generics.RetrieveUpdateAPIView):
 class TeacherCourseCreateAPIView(generics.CreateAPIView):
     queryset = api_models.Course.objects.all()
     serializer_class = api_serializer.CourseSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
 class TeacherCourseDetailAPIView(generics.RetrieveAPIView):
     serializer_class = api_serializer.CourseSerializer
@@ -1168,7 +1169,7 @@ class TeacherCourseDetailAPIView(generics.RetrieveAPIView):
 class TeacherCourseUpdateAPIView(generics.UpdateAPIView):
     queryset = api_models.Course.objects.all()
     serializer_class = api_serializer.CourseSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get_object(self):
         course_id = self.kwargs.get('course_id')
@@ -1177,7 +1178,7 @@ class TeacherCourseUpdateAPIView(generics.UpdateAPIView):
 
 class TeacherCourseDeleteAPIView(generics.DestroyAPIView):
     queryset = api_models.Course.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get_object(self):
         course_id = self.kwargs.get('course_id')
@@ -1209,7 +1210,7 @@ class CourseVariantDeleteAPIView(generics.DestroyAPIView):
 class CourseVariantItemDeleteAPIVIew(generics.DestroyAPIView):
 
     serializer_class = api_serializer.VariantItemSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get_object(self):
         variant_id = self.kwargs['variant_id']
@@ -1396,4 +1397,99 @@ class UserDocumentListView(generics.ListAPIView):
 
         return api_models.UserDocument.objects.filter(user__id=user_id).order_by("-created_at")
 
+
+
+class TopReviewsView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from django.db.models import F, FloatField
+        from django.db.models.functions import Cast
+        
+        top_reviews = api_models.Review.objects.select_related('course').annotate(
+            course_enrolled_count=Count('course__enrolledcourse'),
+            popularity_score=F('rating') * Cast(F('course_enrolled_count'), FloatField())
+        ).filter(
+            active=True,
+            course_enrolled_count__gt=0
+        ).order_by('-popularity_score', '-rating', '-date')[:20]
+
+        serializer = api_serializer.SimpleNestedTopReviewSerializer(top_reviews, many=True, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class TeacherRegistrationView(generics.CreateAPIView):
+    serializer_class = api_serializer.TeacherRegistrationSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            teacher = serializer.save()
+            detail_serializer = api_serializer.TeacherDetailSerializer(teacher)
+            return Response({
+                'message': 'Đăng ký làm giáo viên thành công!',
+                'teacher': detail_serializer.data
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TeacherProfileView(generics.RetrieveUpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get_serializer_class(self):
+        if self.request.method == 'PUT' or self.request.method == 'PATCH':
+            return api_serializer.TeacherUpdateSerializer
+        return api_serializer.TeacherDetailSerializer
+    
+    def get_object(self):
+        try:
+            return self.request.user.teacher
+        except api_models.Teacher.DoesNotExist:
+            return None
+    
+    def retrieve(self, request, *args, **kwargs):
+        teacher = self.get_object()
+        if not teacher:
+            return Response({
+                'error': 'Bạn chưa đăng ký làm giáo viên!'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = self.get_serializer(teacher)
+        return Response(serializer.data)
+    
+    def update(self, request, *args, **kwargs):
+        teacher = self.get_object()
+        if not teacher:
+            return Response({
+                'error': 'Bạn chưa đăng ký làm giáo viên!'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        partial = kwargs.pop('partial', False)
+        serializer = self.get_serializer(teacher, data=request.data, partial=partial)
+        
+        if serializer.is_valid():
+            serializer.save()
+            detail_serializer = api_serializer.TeacherDetailSerializer(teacher)
+            return Response({
+                'message': 'Cập nhật thông tin thành công!',
+                'teacher': detail_serializer.data
+            })
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_teacher_status(request):
+    try:
+        teacher = request.user.teacher
+        serializer = api_serializer.TeacherDetailSerializer(teacher)
+        return Response({
+            'is_teacher': True,
+            'teacher': serializer.data
+        })
+    except api_models.Teacher.DoesNotExist:
+        return Response({
+            'is_teacher': False,
+            'message': 'Bạn chưa đăng ký làm giáo viên'
+        })
 

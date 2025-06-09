@@ -7,9 +7,6 @@ import jwt_decode from "jwt-decode";
 const apiInstance = axios.create({
   baseURL: import.meta.env.VITE_REACT_APP_API_URL || "http://127.0.0.1:8000/api/v1/",
   timeout: 15000,
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 // State for token refresh management
@@ -106,7 +103,6 @@ const setAuthUser = (access_token, refresh_token) => {
   useAuthStore.getState().setLoading(false);
 };
 
-// Utility to clear auth cookies and redirect to login
 const handleUnauthorized = () => {
   // Clear cookies with all possible path combinations
   Cookie.remove("access_token");
@@ -120,10 +116,9 @@ const handleUnauthorized = () => {
     console.warn("Could not clear auth store:", error);
   }
   
-  // Redirect to login
-  if (typeof window !== 'undefined') {
-    window.location.href = "/login";
-  }
+  window.dispatchEvent(new CustomEvent('auth-changed', { 
+    detail: { type: 'unauthorized' } 
+  }));
 };
 
 // Helper function to check if URL should skip auth

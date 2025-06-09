@@ -393,21 +393,34 @@ function CourseDetail() {
                                                         </div>
 
                                                         <div className="row">
-                                                            {course?.reviews?.map((r, index) => (
-                                                                <>
-                                                                    <div className="d-md-flex my-4">
-                                                                        <div className="avatar avatar-xl me-4 flex-shrink-0"></div>
-                                                                        <div>
-                                                                            <div className="d-sm-flex mt-1 mt-md-0 align-items-center">
-                                                                                <h5 className="me-3 mb-0">{r?.profile?.full_name}</h5>({r?.rating}/5)
-                                                                            </div>
-                                                                            <p className="small mb-2">{moment(r?.date).format("DD MMM, YYYY")}</p>
-                                                                            <p className="mb-2">{r?.review || ""}</p>
-                                                                        </div>
+                                                            {course?.reviews?.length > 0 ? (
+                                                                course.reviews.map((r, index) => (
+                                                                    <div key={index} className="d-md-flex my-4">
+                                                                    {/* Avatar */}
+                                                                    <div className="me-4 flex-shrink-0">
+                                                                        <img
+                                                                        src={r?.profile?.image || "/default-avatar.png"}
+                                                                        alt={r?.profile?.full_name}
+                                                                        className="rounded-circle"
+                                                                        style={{ width: "64px", height: "64px", objectFit: "cover" }}
+                                                                        />
                                                                     </div>
-                                                                    <hr />
-                                                                </>
-                                                            ))}
+
+                                                                    {/* Review Content */}
+                                                                    <div>
+                                                                        <div className="d-sm-flex align-items-center">
+                                                                        <h5 className="me-2 mb-0">{r?.profile?.full_name}</h5>
+                                                                        <span className="text-warning fw-semibold">({r?.rating}/5 ⭐)</span>
+                                                                        </div>
+                                                                        <p className="text-muted small mb-1">{moment(r?.date).format("DD MMM, YYYY")}</p>
+                                                                        <p className="mb-2">{r?.review || <i className="text-muted">No comment.</i>}</p>
+                                                                        <hr />
+                                                                    </div>
+                                                                    </div>
+                                                                ))
+                                                                ) : (
+                                                                <p className="text-muted fst-italic">No reviews yet.</p>
+                                                                )}
                                                         </div>
                                                     </div>
                                                     <div className="tab-pane fade" id="course-pills-5" role="tabpanel" aria-labelledby="course-pills-tab-5">

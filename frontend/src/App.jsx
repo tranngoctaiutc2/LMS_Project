@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Route, Routes, BrowserRouter } from "react-router-dom";
+import { Route, Routes, BrowserRouter, useNavigate } from "react-router-dom";
 import { ClerkProvider } from "@clerk/clerk-react";
 import { setUser } from "./utils/auth";
+import { useAuthStore } from "./store/auth";
 import './locales/i18n';
 
 import { CartContext, ProfileContext } from "./views/plugin/Context";
@@ -48,253 +49,328 @@ import CourseEdit from "./views/instructor/CourseEdit";
 import StudentQA from "./views/student/QA";
 import AITeaching from "./views/student/AITeachingTeam";
 import Documentation from "./views/student/Documentation";
+import RegisterTeacher from "./views/instructor/RegisterTeacher";
 
 import Chatbot from "./views/chat/Chatbot";
 
-function App() {
+function AppContent() {
+    const navigate = useNavigate();
     const [cartCount, setCartCount] = useState(0);
     const [profile, setProfile] = useState([]);
     const [wishlist, setWishlist] = useState([]);
     const [isReady, setIsReady] = useState(false);
+    const [dataLoaded, setDataLoaded] = useState(false);
+    
+    const { allUserData, loading } = useAuthStore();
 
     useEffect(() => {
         const init = async () => {
-            await setUser();
+            const success = await setUser();
             setIsReady(true);
+            
+            if (success && !loading) {
+                await loadUserData();
+            }
         };
         init();
     }, []);
 
     useEffect(() => {
-        const fetchAll = async () => {
-            if (!isReady) return;
+        if (isReady && !loading && allUserData && !dataLoaded) {
+            loadUserData();
+        } else if (!allUserData) {
+            // Clear data khi logout
+            setCartCount(0);
+            setProfile([]);
+            setWishlist([]);
+            setDataLoaded(false);
+        }
+    }, [isReady, loading, allUserData, dataLoaded]);
 
-            const cartRes = await apiInstance.get(`course/cart-list/${CartId()}/`);
-            setCartCount(cartRes.data?.length);
+    const loadUserData = async () => {
+        try {
+            const userData = UserData();
+            if (!userData?.user_id) return;
 
-            const profileRes = await apiInstance.get(`user/profile/${UserData()?.user_id}/`);
-            setProfile(profileRes.data);
+            const [cartRes, profileRes, wishlistRes] = await Promise.allSettled([
+                apiInstance.get(`course/cart-list/${CartId()}/`),
+                apiInstance.get(`user/profile/${userData.user_id}/`),
+                apiInstance.get(`student/wishlist/${userData.user_id}/`)
+            ]);
 
-            const wishlistRes = await apiInstance.get(`student/wishlist/${UserData()?.user_id}/`);
-            setWishlist(wishlistRes.data.wishlist || []);
+            if (cartRes.status === 'fulfilled') {
+                setCartCount(cartRes.value.data?.length || 0);
+            }
+            
+            if (profileRes.status === 'fulfilled') {
+                setProfile(profileRes.value.data);
+            }
+            
+            if (wishlistRes.status === 'fulfilled') {
+                setWishlist(wishlistRes.value.data.wishlist || []);
+            }
+            
+            setDataLoaded(true);
+        } catch (error) {
+            console.error("Error loading user data:", error);
+        }
+    };
+
+    useEffect(() => {
+        const handleAuthChanged = (event) => {
+            const { type } = event.detail;
+            
+            switch (type) {
+                case 'login':
+                    // Reload data sau khi login
+                    setDataLoaded(false);
+                    loadUserData();
+                    break;
+                    
+                case 'logout':
+                case 'unauthorized':
+                    // Navigate to login without reload
+                    navigate('/login', { replace: true });
+                    break;
+                    
+                default:
+                    break;
+            }
         };
 
-        fetchAll();
-        }, [isReady]);
+        window.addEventListener('auth-changed', handleAuthChanged);
+        
+        return () => {
+            window.removeEventListener('auth-changed', handleAuthChanged);
+        };
+    }, [navigate]);
 
-        if (!isReady) {
+    if (!isReady) {
         return <div className="flex items-center justify-center h-screen">Loading...</div>;
-        }
+    }
 
     return (
         <CartContext.Provider value={[cartCount, setCartCount]}>
             <ProfileContext.Provider value={[profile, setProfile]}>
-                <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}>
-                <BrowserRouter>
-                    <MainWrapper>
-                        <Routes>
-                            <Route path="/register/" element={<Register />} />
-                            <Route path="/login/" element={<Login />} />                           
-                            <Route path="/clerk-callback" element={<ClerkCallback />} />
-                            <Route path="/logout/" element={<Logout />} />
-                            <Route path="/forgot-password/" element={<ForgotPassword />} />
-                            <Route path="/create-new-password/" element={<CreateNewPassword />} />
+                <MainWrapper>
+                    <Routes>
+                        <Route path="/register/" element={<Register />} />
+                        <Route path="/login/" element={<Login />} />                           
+                        <Route path="/clerk-callback" element={<ClerkCallback />} />
+                        <Route path="/logout/" element={<Logout />} />
+                        <Route path="/forgot-password/" element={<ForgotPassword />} />
+                        <Route path="/create-new-password/" element={<CreateNewPassword />} />
 
-                            {/* Base Routes */}
-                            <Route path="/" element={<Index />} />
-                            <Route path="/course-detail/:slug/" element={<CourseDetail />} />
-                            <Route path="/cart/" element={<Cart />} />
-                            <Route path="/checkout/:order_oid/" element={<Checkout />} />
-                            <Route path="/payment-success/:order_oid/" element={<Success />} />
-                            <Route path="/search/" element={<Search />} />
+                        {/* Base Routes */}
+                        <Route path="/" element={<Index />} />
+                        <Route path="/course-detail/:slug/" element={<CourseDetail />} />
+                        <Route path="/cart/" element={<Cart />} />
+                        <Route path="/checkout/:order_oid/" element={<Checkout />} />
+                        <Route path="/payment-success/:order_oid/" element={<Success />} />
+                        <Route path="/search/" element={<Search />} />
 
-                            {/* Student Routes */}
-                            <Route
-                                path="/student/dashboard/"
-                                element={
-                                    <PrivateRoute>
-                                        <StudentDashboard />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/student/courses/"
-                                element={
-                                    <PrivateRoute>
-                                        <StudentCourses />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/student/courses/:enrollment_id/"
-                                element={
-                                    <PrivateRoute>
-                                        <StudentCourseDetail />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/student/wishlist/"
-                                element={
-                                    <PrivateRoute>
-                                        <Wishlist />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/student/profile/"
-                                element={
-                                    <PrivateRoute>
-                                        <StudentProfile />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/student/change-password/"
-                                element={
-                                    <PrivateRoute>
-                                        <StudentChangePassword />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/student/question-answer/"
-                                element={
-                                    <PrivateRoute>
-                                        <StudentQA />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/student/ai-teaching-agent/"
-                                element={
-                                    <PrivateRoute>
-                                        <AITeaching />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/student/ai-document-list/"
-                                element={
-                                    <PrivateRoute>
-                                        <Documentation/>
-                                    </PrivateRoute>
-                                }
-                            />
+                        {/* Student Routes */}
+                        <Route
+                            path="/student/dashboard/"
+                            element={
+                                <PrivateRoute>
+                                    <StudentDashboard />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/student/courses/"
+                            element={
+                                <PrivateRoute>
+                                    <StudentCourses />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/student/courses/:enrollment_id/"
+                            element={
+                                <PrivateRoute>
+                                    <StudentCourseDetail />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/student/wishlist/"
+                            element={
+                                <PrivateRoute>
+                                    <Wishlist />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/student/profile/"
+                            element={
+                                <PrivateRoute>
+                                    <StudentProfile />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/student/change-password/"
+                            element={
+                                <PrivateRoute>
+                                    <StudentChangePassword />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/student/question-answer/"
+                            element={
+                                <PrivateRoute>
+                                    <StudentQA />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/student/ai-teaching-agent/"
+                            element={
+                                <PrivateRoute>
+                                    <AITeaching />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/student/ai-document-list/"
+                            element={
+                                <PrivateRoute>
+                                    <Documentation/>
+                                </PrivateRoute>
+                            }
+                        />
 
-                            {/* Teacher Routes */}
-
-                            <Route
-                                path="/instructor/dashboard/"
-                                element={
-                                    <PrivateRoute>
-                                        <Dashboard />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/instructor/courses/"
-                                element={
-                                    <PrivateRoute>
-                                        <Courses />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/instructor/reviews/"
-                                element={
-                                    <PrivateRoute>
-                                        <Review />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/instructor/students/"
-                                element={
-                                    <PrivateRoute>
-                                        <Students />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/instructor/earning/"
-                                element={
-                                    <PrivateRoute>
-                                        <Earning />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/instructor/orders/"
-                                element={
-                                    <PrivateRoute>
-                                        <Orders />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/instructor/coupon/"
-                                element={
-                                    <PrivateRoute>
-                                        <Coupon />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/instructor/notifications/"
-                                element={
-                                    <PrivateRoute>
-                                        <TeacherNotification />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/instructor/question-answer/"
-                                element={
-                                    <PrivateRoute>
-                                        <QA />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/instructor/change-password/"
-                                element={
-                                    <PrivateRoute>
-                                        <ChangePassword />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/instructor/profile/"
-                                element={
-                                    <PrivateRoute>
-                                        <Profile />
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/instructor/create-course/"
-                                element={
-                                    <PrivateRoute>
-                                        <CourseCreate/>
-                                    </PrivateRoute>
-                                }
-                            />
-                            <Route
-                                path="/instructor/edit-course/:course_id/"
-                                element={
-                                    <PrivateRoute>
-                                        <CourseEdit />
-                                    </PrivateRoute>
-                                }
-                            />
-                        </Routes>
-                        <Chatbot/>
-                    </MainWrapper>
-                </BrowserRouter>
-                </ClerkProvider>
+                        {/* Teacher Routes */}
+                        <Route
+                            path="/instructor/register/"
+                            element={
+                                <PrivateRoute>
+                                    <RegisterTeacher />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/instructor/dashboard/"
+                            element={
+                                <PrivateRoute>
+                                    <Dashboard />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/instructor/courses/"
+                            element={
+                                <PrivateRoute>
+                                    <Courses />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/instructor/reviews/"
+                            element={
+                                <PrivateRoute>
+                                    <Review />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/instructor/students/"
+                            element={
+                                <PrivateRoute>
+                                    <Students />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/instructor/earning/"
+                            element={
+                                <PrivateRoute>
+                                    <Earning />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/instructor/orders/"
+                            element={
+                                <PrivateRoute>
+                                    <Orders />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/instructor/coupon/"
+                            element={
+                                <PrivateRoute>
+                                    <Coupon />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/instructor/notifications/"
+                            element={
+                                <PrivateRoute>
+                                    <TeacherNotification />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/instructor/question-answer/"
+                            element={
+                                <PrivateRoute>
+                                    <QA />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/instructor/change-password/"
+                            element={
+                                <PrivateRoute>
+                                    <ChangePassword />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/instructor/profile/"
+                            element={
+                                <PrivateRoute>
+                                    <Profile />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/instructor/create-course/"
+                            element={
+                                <PrivateRoute>
+                                    <CourseCreate/>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/instructor/edit-course/:course_id/"
+                            element={
+                                <PrivateRoute>
+                                    <CourseEdit />
+                                </PrivateRoute>
+                            }
+                        />
+                    </Routes>
+                    <Chatbot/>
+                </MainWrapper>
             </ProfileContext.Provider>
         </CartContext.Provider>
+    );
+}
+
+function App() {
+    return (
+        <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}>
+            <BrowserRouter>
+                <AppContent />
+            </BrowserRouter>
+        </ClerkProvider>
     );
 }
 

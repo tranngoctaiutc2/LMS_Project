@@ -73,7 +73,13 @@ urlpatterns = [
     path("teacher/course/variant-delete/<variant_id>/<teacher_id>/<course_id>/", api_views.CourseVariantDeleteAPIView.as_view()),
     path("teacher/course/variant-item-delete/<variant_id>/<variant_item_id>/<teacher_id>/<course_id>/", api_views.CourseVariantItemDeleteAPIVIew.as_view()),
 
+    path('teacher/register/', api_views.TeacherRegistrationView.as_view()),
+    path('teacher/profile/', api_views.TeacherProfileView.as_view()),
+    path('teacher/status/', api_views.check_teacher_status),
+
+
     path("file-upload/", api_views.FileUploadAPIView.as_view()),
+    path('top-reviews/', api_views.TopReviewsView.as_view()),
 
     path('chat/', api_views.ChatBotAPIView.as_view()),
     path('chat/history/', api_views.GetChatHistoryAPIView.as_view()),

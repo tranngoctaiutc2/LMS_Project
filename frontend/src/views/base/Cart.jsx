@@ -22,19 +22,44 @@ function Cart() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchCartItem();
+    const currentUserId = userId();
+    const hasGuestCartData = localStorage.getItem("guestCartId");
+    
+    if (currentUserId || hasGuestCartData) {
+      fetchCartItem();
+    } else {
+      setCart([]);
+      setCartStats({});
+      setCartCount(0);
+    }
   }, []);
 
   const fetchCartItem = async () => {
     try {
+      const cartId = CartId();
+      const currentUserId = userId();
+      
+      const config = currentUserId ? {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+        }
+      } : {};
+      
       const [cartRes, statsRes] = await Promise.all([
-        apiInstance.get(`course/cart-list/${CartId()}/`),
-        apiInstance.get(`cart/stats/${CartId()}/`),
+        apiInstance.get(`course/cart-list/${cartId}/`, config),
+        apiInstance.get(`cart/stats/${cartId}/`, config),
       ]);
+      
       setCart(cartRes.data);
       setCartStats(statsRes.data);
       setCartCount(cartRes.data?.length || 0);
     } catch (error) {
+      if (error.response?.status === 403 && !userId()) {
+        setCart([]);
+        setCartStats({});
+        setCartCount(0);
+        return;
+      }
       Toast.error("Failed to fetch cart");
     }
   };

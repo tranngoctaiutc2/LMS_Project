@@ -78,7 +78,7 @@ function Sidebar() {
             <ul className="list-unstyled ms-n2 mb-0">
               <li className="nav-item">
                 <Link className="nav-link py-2 px-3 rounded d-flex align-items-center gap-2 hover-bg-light" to="/instructor/profile/">
-                  <i className="fas fa-user-edit text-warning"></i> Edit Profile
+                  <i className="fas fa-chalkboard-teacher text-warning"></i> Edit Teacher Profile
                 </Link>
               </li>
               <li className="nav-item">

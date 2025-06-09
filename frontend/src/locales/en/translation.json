@@ -13,7 +13,6 @@
   "earning": "Earning",
   "settings_profile": "Settings & Profile",
   "profile_settings": "Profile & Settings",
-  "wishlist": "Wishlist",
   "search_courses": "Search Courses",
   "search": "Search",
   "logout": "Logout",
@@ -31,7 +30,7 @@
   "contact": "Contact",
   "support": "Support",
   "help_support": "Help & Support",
-  "become_instructor": "Become an Instructor",
+  "become_instructor_text": "Become an Instructor",
   "get_the_app": "Get the App",
   "faq": "FAQ",
   "tutorial": "Tutorial",
@@ -45,5 +44,66 @@
   "terms_of_use": "Terms of Use",
   "copyright": "Copyright",
   "english": "English",
-  "vietnamese": "Vietnamese"
+  "vietnamese": "Vietnamese",
+
+  "become_instructor": {
+    "title": "Share your knowledge. Make an impact.",
+    "description": "Millions of learners around the world are looking for instructors like you. We give you the platform and tools to teach what you love, grow your career, and inspire a global classroom.",
+    "button": "Start Teaching Today"
+  },
+
+  "student_reviews": {
+    "title": "What Our Students Say",
+    "description": "Hear directly from learners about how our courses helped them succeed and transform their careers.",
+    "join_message": "Join 10,000+ happy students"
+  },
+
+  "hero_platform": {
+    "trusted": "Most trusted education platform",
+    "title": "Grow your skills and advance career",
+    "description": "Start, switch, or advance your career with more than 5,000 courses, Professional Certificates, and degrees from world-class universities and companies.",
+    "join_now": "Join Free Now",
+    "watch_demo": "Watch Demo"
+  },
+
+  "stats": {
+    "instructors": "Qualified Instructors",
+    "enrolments": "Course enrolments",
+    "languages": "Courses in 42 languages",
+    "videos": "Online Videos"
+  },
+
+  "popular_courses": {
+    "title": "Most Popular Courses",
+    "subtitle": "Discover the top-rated courses among our learners worldwide"
+  },
+
+  "loading": {
+    "aria": "Loading...",
+    "text": "Loading course data..."
+  },
+
+  "course": {
+    "by": "By",
+    "unknown": "Unknown Instructor",
+    "student_count": "{{count}} Student",
+    "student_count_plural": "{{count}} Students",
+    "review_count": "{{count}} Review",
+    "review_count_plural": "{{count}} Reviews",
+    "add_cart": "Add to cart",
+    "enroll": "Enroll Now"
+  },
+
+  "wishlist": {
+    "add": "Add to wishlist",
+    "remove": "Remove from wishlist",
+    "text": "Wishlist"
+  },
+
+  "pagination": {
+    "prev": "Previous",
+    "next": "Next"
+  }
+  
 }
+
