@@ -136,836 +136,459 @@ function CourseDetail() {
         return `${hours}:${minutes}:${seconds}`;
     };
 
-  return (
+    return (
         <>
             <BaseHeader />
-
-            <>
-                {isLoading ? (
-                    <div className="d-flex justify-content-center align-items-center py-5">
-                        <div className="spinner-border text-primary me-3" role="status">
-                        <span className="visually-hidden">Loading...</span>
+            <main className="course-detail-page">
+            {isLoading ? (
+                <div className="loading-container text-center py-5">
+                <div className="spinner-border text-primary me-3" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </div>
+                <span className="h5 mb-0 text-muted">Loading course data...</span>
+                </div>
+            ) : (
+                <>
+                {/* Hero Section */}
+                <section className="course-hero bg-light py-4 py-md-5">
+                    <div className="container">
+                    <div className="row">
+                        <div className="col-12">
+                        <Link to="/" className="btn btn-outline-secondary mb-4">
+                            <i className="fas fa-arrow-left me-2"></i>Back to courses
+                        </Link>
                         </div>
-                        <span className="h5 mb-0 text-muted">Loading course data...</span>
+                        
+                        <div className="col-lg-8">
+                        {/* Badge */}
+                        <span className="badge bg-primary text-white py-2 px-3 mb-3">
+                            {course.category.title}
+                        </span>
+                        
+                        {/* Title */}
+                        <h1 className="display-5 fw-bold mb-3">{course.title}</h1>
+                        
+                        {/* Short Description */}
+                        <div className="lead text-muted mb-4">
+                            <div dangerouslySetInnerHTML={{
+                            __html: `${course?.description?.slice(0, 200)}${course?.description?.length > 200 ? '...' : ''}`,
+                            }} />
+                        </div>
+                        
+                        {/* Meta Info */}
+                        <div className="course-meta d-flex flex-wrap gap-3 mb-4">
+                            <div className="d-flex align-items-center">
+                            <i className="fas fa-star text-warning me-2"></i>
+                            <span>{course.average_rating}/5</span>
+                            </div>
+                            <div className="d-flex align-items-center">
+                            <i className="fas fa-user-graduate text-orange me-2"></i>
+                            <span>{course.students?.length} Enrolled</span>
+                            </div>
+                            <div className="d-flex align-items-center">
+                            <i className="fas fa-signal text-success me-2"></i>
+                            <span>{course.level}</span>
+                            </div>
+                            <div className="d-flex align-items-center">
+                            <i className="bi bi-patch-exclamation-fill text-danger me-2"></i>
+                            <span>{moment(course.date).format("DD MMM, YYYY")}</span>
+                            </div>
+                            <div className="d-flex align-items-center">
+                            <i className="fas fa-globe text-info me-2"></i>
+                            <span>{course.language}</span>
+                            </div>
+                        </div>
+                        </div>
                     </div>
-                    ) : (
-                    <>
-                        <section className="bg-light py-0 py-sm-5">
-                            <div className="container">
-                                <div className="row py-5">
-                                    <div className="col-lg-8">
-                                        {/* Badge */}
-                                        <h6 className="mb-3 font-base bg-primary text-white py-2 px-4 rounded-2 d-inline-block">{course.category.title}</h6>
-                                        {/* Title */}
-                                        <h1 className="mb-3">{course.title}</h1>
-                                        <p
-                                            className="mb-3"
-                                            dangerouslySetInnerHTML={{
-                                                __html: `${course?.description?.slice(0, 200)}`,
-                                            }}
-                                        ></p>
-                                        {/* Content */}
-                                        <ul className="list-inline mb-0">
-                                            <li className="list-inline-item h6 me-3 mb-1 mb-sm-0">
-                                                <i className="fas fa-star text-warning me-2" />
-                                                {course.average_rating}/5
-                                            </li>
-                                            <li className="list-inline-item h6 me-3 mb-1 mb-sm-0">
-                                                <i className="fas fa-user-graduate text-orange me-2" />
-                                                {course.students?.length} Enrolled
-                                            </li>
-                                            <li className="list-inline-item h6 me-3 mb-1 mb-sm-0">
-                                                <i className="fas fa-signal text-success me-2" />
-                                                {course.level}
-                                            </li>
-                                            <li className="list-inline-item h6 me-3 mb-1 mb-sm-0">
-                                                <i className="bi bi-patch-exclamation-fill text-danger me-2" />
-                                                {moment(course.date).format("DD MMM, YYYY")}
-                                            </li>
-                                            <li className="list-inline-item h6 mb-0">
-                                                <i className="fas fa-globe text-info me-2" />
-                                                {course.language}
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
+                    </div>
+                </section>
+
+                {/* Main Content Section */}
+                <section className="course-content py-5">
+                    <div className="container">
+                    <div className="row g-4">
+                        {/* Main Content */}
+                        <div className="col-lg-8">
+                        <div className="card shadow-sm rounded-3 overflow-hidden">
+                            {/* Tabs Navigation */}
+                            <div className="card-header bg-white border-bottom p-0">
+                            <ul className="nav nav-tabs nav-justified" id="courseTabs" role="tablist">
+                                <li className="nav-item" role="presentation">
+                                <button className="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                                    <i className="fas fa-info-circle me-2"></i>Overview
+                                </button>
+                                </li>
+                                <li className="nav-item" role="presentation">
+                                <button className="nav-link" id="curriculum-tab" data-bs-toggle="tab" data-bs-target="#curriculum" type="button" role="tab">
+                                    <i className="fas fa-list-ul me-2"></i>Curriculum
+                                </button>
+                                </li>
+                                <li className="nav-item" role="presentation">
+                                <button className="nav-link" id="instructor-tab" data-bs-toggle="tab" data-bs-target="#instructor" type="button" role="tab">
+                                    <i className="fas fa-user-tie me-2"></i>Instructor
+                                </button>
+                                </li>
+                                <li className="nav-item" role="presentation">
+                                <button className="nav-link" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews" type="button" role="tab">
+                                    <i className="fas fa-star-half-alt me-2"></i>Reviews
+                                </button>
+                                </li>
+                            </ul>
                             </div>
-                        </section>
-                        <section className="pb-0 py-lg-5">
-                            <div className="container">
-                                <div className="row">
-                                    {/* Main content START */}
-                                    <div className="col-lg-8">
-                                        <div className="card shadow rounded-2 p-0">
-                                            {/* Tabs START */}
-                                            <div className="card-header border-bottom px-4 py-3">
-                                                <ul className="nav nav-pills nav-tabs-line py-0" id="course-pills-tab" role="tablist">
-                                                    {/* Tab item */}
-                                                    <li className="nav-item me-2 me-sm-4" role="presentation">
-                                                        <button className="nav-link mb-2 mb-md-0 active" id="course-pills-tab-1" data-bs-toggle="pill" data-bs-target="#course-pills-1" type="button" role="tab" aria-controls="course-pills-1" aria-selected="true">
-                                                            Overview
-                                                        </button>
-                                                    </li>
-                                                    {/* Tab item */}
-                                                    <li className="nav-item me-2 me-sm-4" role="presentation">
-                                                        <button className="nav-link mb-2 mb-md-0" id="course-pills-tab-2" data-bs-toggle="pill" data-bs-target="#course-pills-2" type="button" role="tab" aria-controls="course-pills-2" aria-selected="false">
-                                                            Curriculum
-                                                        </button>
-                                                    </li>
-                                                    {/* Tab item */}
-                                                    <li className="nav-item me-2 me-sm-4" role="presentation">
-                                                        <button className="nav-link mb-2 mb-md-0" id="course-pills-tab-3" data-bs-toggle="pill" data-bs-target="#course-pills-3" type="button" role="tab" aria-controls="course-pills-3" aria-selected="false">
-                                                            Instructor
-                                                        </button>
-                                                    </li>
-                                                    {/* Tab item */}
-                                                    <li className="nav-item me-2 me-sm-4" role="presentation">
-                                                        <button className="nav-link mb-2 mb-md-0" id="course-pills-tab-4" data-bs-toggle="pill" data-bs-target="#course-pills-4" type="button" role="tab" aria-controls="course-pills-4" aria-selected="false">
-                                                            Reviews
-                                                        </button>
-                                                    </li>
-                                                    {/* Tab item */}
-                                                    <li className="nav-item me-2 me-sm-4 d-none" role="presentation">
-                                                        <button className="nav-link mb-2 mb-md-0" id="course-pills-tab-5" data-bs-toggle="pill" data-bs-target="#course-pills-5" type="button" role="tab" aria-controls="course-pills-5" aria-selected="false">
-                                                            FAQs
-                                                        </button>
-                                                    </li>
-                                                    {/* Tab item */}
-                                                    <li className="nav-item me-2 me-sm-4 d-none" role="presentation">
-                                                        <button className="nav-link mb-2 mb-md-0" id="course-pills-tab-6" data-bs-toggle="pill" data-bs-target="#course-pills-6" type="button" role="tab" aria-controls="course-pills-6" aria-selected="false">
-                                                            Comment
-                                                        </button>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                            {/* Tabs END */}
-                                            {/* Tab contents START */}
-                                            <div className="card-body p-4">
-                                                <div className="tab-content pt-2" id="course-pills-tabContent">
-                                                    {/* Content START */}
-                                                    <div className="tab-pane fade show active" id="course-pills-1" role="tabpanel" aria-labelledby="course-pills-tab-1">
-                                                        <h5 className="mb-3">Course Description</h5>
-                                                        <p
-                                                            className="mb-3"
-                                                            dangerouslySetInnerHTML={{
-                                                                __html: `${course?.description}`,
-                                                            }}
-                                                        ></p>
 
-                                                        {/* Course detail END */}
+                            {/* Tabs Content */}
+                            <div className="card-body p-4">
+                            <div className="tab-content" id="courseTabsContent">
+                                {/* Overview Tab */}
+                                <div className="tab-pane fade show active" id="overview" role="tabpanel">
+                                <h4 className="mb-4">Course Description</h4>
+                                <div className="course-description" dangerouslySetInnerHTML={{ __html: course?.description }} />
+                                </div>
+
+                                {/* Curriculum Tab */}
+                                <div className="tab-pane fade" id="curriculum" role="tabpanel">
+                                <h4 className="mb-4">Course Curriculum</h4>
+                                <div className="accordion curriculum-accordion" id="curriculumAccordion">
+                                    {course?.variants?.map((variant, index) => (
+                                    <div className="accordion-item border-0 mb-3" key={variant.variant_id}>
+                                        <h5 className="accordion-header">
+                                        <button 
+                                            className="accordion-button collapsed bg-light rounded-3" 
+                                            type="button" 
+                                            data-bs-toggle="collapse" 
+                                            data-bs-target={`#variant-${variant.variant_id}`}
+                                        >
+                                            <i className="fas fa-folder-open text-primary me-3"></i>
+                                            {variant.title}
+                                        </button>
+                                        </h5>
+                                        <div id={`variant-${variant.variant_id}`} className="accordion-collapse collapse" data-bs-parent="#curriculumAccordion">
+                                        <div className="accordion-body pt-3">
+                                            {variant.items?.map((lesson, idx) => (
+                                            <div className="lesson-item mb-3" key={idx}>
+                                                <div className="d-flex justify-content-between align-items-center p-3 bg-light rounded-3">
+                                                <div className="d-flex align-items-center">
+                                                    {lesson.preview === true || lesson.preview === 'true' ? (
+                                                    <>
+                                                        <button 
+                                                        className="btn btn-sm btn-outline-primary me-3"
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target={`#videoModal-${lesson.variant_item_id}`}
+                                                        >
+                                                        <i className="fas fa-play"></i>
+                                                        </button>
+                                                        <span>{lesson.title}</span>
+                                                    </>
+                                                    ) : (
+                                                    <>
+                                                        <i className="fas fa-lock text-muted me-3"></i>
+                                                        <span className="text-muted">{lesson.title}</span>
+                                                    </>
+                                                    )}
+                                                </div>
+                                                {lesson.content_duration && (
+                                                    <span className="badge bg-light text-dark">
+                                                    <i className="fas fa-clock me-1"></i>
+                                                    {lesson.content_duration}
+                                                    </span>
+                                                )}
+                                                </div>
+
+                                                {/* Video Modal */}
+                                                <div className="modal fade" id={`videoModal-${lesson.variant_item_id}`} tabIndex="-1" aria-hidden="true">
+                                                <div className="modal-dialog modal-lg">
+                                                    <div className="modal-content">
+                                                    <div className="modal-header">
+                                                        <h5 className="modal-title">{lesson.title}</h5>
+                                                        <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                     </div>
-                                                    {/* Content END */}
-                                                    {/* Content START */}
-                                                    <div className="tab-pane fade" id="course-pills-2" role="tabpanel" aria-labelledby="course-pills-tab-2">
-                                                        {/* Course accordion START */}
-                                                        <div className="accordion accordion-icon accordion-bg-light" id="accordionExample2">
-                                                            {/* Item */}
-                                                            {course?.variants?.map((c, index) => (
-                                                                <div className="accordion-item mb-3">
-                                                                    <h6 className="accordion-header font-base" id="heading-1">
-                                                                        <button
-                                                                            className="accordion-button fw-bold rounded d-sm-flex d-inline-block collapsed"
-                                                                            type="button"
-                                                                            data-bs-toggle="collapse"
-                                                                            data-bs-target={`#collapse-${c.variant_id}`}
-                                                                            aria-expanded="true"
-                                                                            aria-controls={`collapse-${c.variant_id}`}
-                                                                        >
-                                                                            {c.title}
-                                                                        </button>
-                                                                    </h6>
-                                                                    <div id={`collapse-${c.variant_id}`} className="accordion-collapse collapse show" aria-labelledby="heading-1" data-bs-parent="#accordionExample2">
-                                                                        <div className="accordion-body mt-3">
-                                                                            {/* Course lecture */}
-                                                                            {c.items?.map((l, index) => (
-                                                                                <>
-                                                                                    <div className="d-flex justify-content-between align-items-center">
-                                                                                        <div className="position-relative d-flex align-items-center">
-                                                                                        {l.preview === true || l.preview === 'true' ? (
-                                                                                            <div>
-                                                                                                <div className="m-auto rounded-2 mt-2 d-flex justify-content-center align-items-center" style={{ backgroundColor: "#ededed" }}>
-                                                                                                    <a
-                                                                                                        data-bs-toggle="modal"
-                                                                                                        data-bs-target={`#videoModal-${l.variant_item_id}`}
-                                                                                                        href={l.file || '#'}
-                                                                                                        className="btn btn-lg text-danger btn-round btn-white-shadow mb-0"
-                                                                                                    >
-                                                                                                        <i className="fas fa-play" />
-                                                                                                    </a>
-                                                                                                    <span data-bs-toggle="modal" data-bs-target={`#videoModal-${l.variant_item_id}`} className="fw-bold">
-                                                                                                    </span>
-                                                                                                    <div className="modal fade" id={`videoModal-${l.variant_item_id}`} tabIndex={-1} aria-labelledby="exampleModalLabel" aria-hidden="true">
-                                                                                                        <div className="modal-dialog">
-                                                                                                            <div className="modal-content">
-                                                                                                                <div className="modal-header">
-                                                                                                                    <h1 className="modal-title fs-5" id="exampleModalLabel">
-                                                                                                                        {l.title}
-                                                                                                                    </h1>
-                                                                                                                    <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
-                                                                                                                </div>
-                                                                                                                <div className="modal-body">
-                                                                                                                    <video
-                                                                                                                        src={l.file || ''}
-                                                                                                                        width="100%"
-                                                                                                                        className="w-100 rounded-3"
-                                                                                                                        height="240"
-                                                                                                                        controls
-                                                                                                                    />
-                                                                                                                </div>
-                                                                                                                <div className="modal-footer">
-                                                                                                                    <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">
-                                                                                                                        Close
-                                                                                                                    </button>
-                                                                                                                </div>
-                                                                                                            </div>
-                                                                                                        </div>
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        ) : (
-                                                                                            <i className="fas fa-lock me-0" />
-                                                                                        )}
-                                                                                            <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light w-100px w-sm-200px w-md-400px">{l.title}</span>
-                                                                                        </div>
-                                                                                        {l.content_duration && (
-                                                                                            <p className="mb-0 text-muted">
-                                                                                                <strong>Duration:</strong> {l.content_duration}
-                                                                                            </p>
-                                                                                        )}
-                                                                                    </div>
-                                                                                    <hr />
-                                                                                </>
-                                                                            ))}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                        {/* Course accordion END */}
+                                                    <div className="modal-body p-0">
+                                                        <video 
+                                                        src={lesson.file || ''}
+                                                        className="w-100"
+                                                        controls
+                                                        autoPlay
+                                                        />
                                                     </div>
-                                                    {/* Content END */}
-                                                    {/* Content START */}
-                                                    <div className="tab-pane fade" id="course-pills-3" role="tabpanel" aria-labelledby="course-pills-tab-3">
-                                                        {/* Card START */}
-                                                        <div className="card mb-0 mb-md-4">
-                                                            <div className="row g-0 align-items-center">
-                                                                <div className="col-md-5">
-                                                                    {/* Image */}
-                                                                    <img src={course.teacher.image} className="img-fluid rounded-3" alt="instructor-image" />
-                                                                </div>
-                                                                <div className="col-md-7">
-                                                                    {/* Card body */}
-                                                                    <div className="card-body">
-                                                                        {/* Title */}
-                                                                        <h3 className="card-title mb-0">{course.teacher.full_name}</h3>
-                                                                        <p className="mb-2">{course.teacher.bio}</p>
-                                                                        {/* Social button */}
-                                                                        <ul className="list-inline mb-3">
-                                                                            <li className="list-inline-item me-3">
-                                                                                <a href={course.teacher.twitter} className="fs-5 text-twitter">
-                                                                                    <i className="fab fa-twitter-square" />
-                                                                                </a>
-                                                                            </li>
-                                                                            <li className="list-inline-item me-3">
-                                                                                <a href={course.teacher.facebook} className="fs-5 text-facebook">
-                                                                                    <i className="fab fa-facebook-square" />
-                                                                                </a>
-                                                                            </li>
-                                                                            <li className="list-inline-item me-3">
-                                                                                <a href={course.teacher.linkedin} className="fs-5 text-linkedin">
-                                                                                    <i className="fab fa-linkedin" />
-                                                                                </a>
-                                                                            </li>
-                                                                        </ul>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        {/* Card END */}
-                                                        {/* Instructor info */}
-                                                        <h5 className="mb-3">About Instructor</h5>
-                                                        <p className="mb-3">{course.teacher.about}</p>
-                                                    </div>
-                                                    <div className="tab-pane fade" id="course-pills-4" role="tabpanel" aria-labelledby="course-pills-tab-4">
-                                                        {/* Review START */}
-                                                        <div className="row mb-1">
-                                                            <h5 className="mb-4">Our Student Reviews</h5>
-                                                        </div>
-
-                                                        <div className="row">
-                                                            {course?.reviews?.length > 0 ? (
-                                                                course.reviews.map((r, index) => (
-                                                                    <div key={index} className="d-md-flex my-4">
-                                                                    {/* Avatar */}
-                                                                    <div className="me-4 flex-shrink-0">
-                                                                        <img
-                                                                        src={r?.profile?.image || "/default-avatar.png"}
-                                                                        alt={r?.profile?.full_name}
-                                                                        className="rounded-circle"
-                                                                        style={{ width: "64px", height: "64px", objectFit: "cover" }}
-                                                                        />
-                                                                    </div>
-
-                                                                    {/* Review Content */}
-                                                                    <div>
-                                                                        <div className="d-sm-flex align-items-center">
-                                                                        <h5 className="me-2 mb-0">{r?.profile?.full_name}</h5>
-                                                                        <span className="text-warning fw-semibold">({r?.rating}/5 ⭐)</span>
-                                                                        </div>
-                                                                        <p className="text-muted small mb-1">{moment(r?.date).format("DD MMM, YYYY")}</p>
-                                                                        <p className="mb-2">{r?.review || <i className="text-muted">No comment.</i>}</p>
-                                                                        <hr />
-                                                                    </div>
-                                                                    </div>
-                                                                ))
-                                                                ) : (
-                                                                <p className="text-muted fst-italic">No reviews yet.</p>
-                                                                )}
-                                                        </div>
-                                                    </div>
-                                                    <div className="tab-pane fade" id="course-pills-5" role="tabpanel" aria-labelledby="course-pills-tab-5">
-                                                        {/* Title */}
-                                                        <h5 className="mb-3">Frequently Asked Questions</h5>
-                                                        {/* Accordion START */}
-                                                        <div className="accordion accordion-flush" id="accordionExample">
-                                                            {/* Item */}
-                                                            <div className="accordion-item">
-                                                                <h2 className="accordion-header" id="headingOne">
-                                                                    <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                                                                        <span className="text-secondary fw-bold me-3">01</span>
-                                                                        <span className="h6 mb-0">How Digital Marketing Work?</span>
-                                                                    </button>
-                                                                </h2>
-                                                                <div id="collapseOne" className="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
-                                                                    <div className="accordion-body pt-0">
-                                                                        Comfort reached gay perhaps chamber his six detract besides add. Moonlight newspaper up its enjoyment agreeable depending. Timed voice share led him to widen noisy young. At weddings believed laughing although the material does
-                                                                        the exercise of. Up attempt offered ye civilly so sitting to. She new course gets living within Elinor joy. She rapturous suffering concealed.
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            {/* Item */}
-                                                            <div className="accordion-item">
-                                                                <h2 className="accordion-header" id="headingTwo">
-                                                                    <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                                                                        <span className="text-secondary fw-bold me-3">02</span>
-                                                                        <span className="h6 mb-0">What is SEO?</span>
-                                                                    </button>
-                                                                </h2>
-                                                                <div id="collapseTwo" className="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
-                                                                    <div className="accordion-body pt-0">
-                                                                        Pleasure and so read the was hope entire first decided the so must have as on was want up of I will rival in came this touched got a physics to travelling so all especially refinement monstrous desk they was arrange the overall
-                                                                        helplessly out of particularly ill are purer.
-                                                                        <p className="mt-2">
-                                                                            Person she control of to beginnings view looked eyes Than continues its and because and given and shown creating curiously to more in are man were smaller by we instead the these sighed Avoid in the sufficient me real man
-                                                                            longer of his how her for countries to brains warned notch important Finds be to the of on the increased explain noise of power deep asking contribution this live of suppliers goals bit separated poured sort several the was
-                                                                            organization the if relations go work after mechanic But we've area wasn't everything needs of and doctor where would.
-                                                                        </p>
-                                                                        Go he prisoners And mountains in just switching city steps Might rung line what Mr Bulk; Was or between towards the have phase were its world my samples are the was royal he luxury the about trying And on he to my enough is was
-                                                                        the remember a although lead in were through serving their assistant fame day have for its after would cheek dull have what in go feedback assignment Her of a any help if the a of semantics is rational overhauls following in
-                                                                        from our hazardous and used more he themselves the parents up just regulatory.
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            {/* Item */}
-                                                            <div className="accordion-item">
-                                                                <h2 className="accordion-header" id="headingThree">
-                                                                    <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                                                                        <span className="text-secondary fw-bold me-3">03</span>
-                                                                        <span className="h6 mb-0">Who should join this course?</span>
-                                                                    </button>
-                                                                </h2>
-                                                                <div id="collapseThree" className="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
-                                                                    <div className="accordion-body pt-0">
-                                                                        Post no so what deal evil rent by real in. But her ready least set lived spite solid. September how men saw tolerably two behavior arranging. She offices for highest and replied one venture pasture. Applauded no discovery in
-                                                                        newspaper allowance am northward. Frequently partiality possession resolution at or appearance unaffected me. Engaged its was the evident pleased husband. Ye goodness felicity do disposal dwelling no. First am plate jokes to
-                                                                        began to cause a scale.
-                                                                        <strong>Subjects he prospect elegance followed no overcame</strong>
-                                                                        possible it on.
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            {/* Item */}
-                                                            <div className="accordion-item">
-                                                                <h2 className="accordion-header" id="headingFour">
-                                                                    <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
-                                                                        <span className="text-secondary fw-bold me-3">04</span>
-                                                                        <span className="h6 mb-0">What are the T&amp;C for this program?</span>
-                                                                    </button>
-                                                                </h2>
-                                                                <div id="collapseFour" className="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#accordionExample">
-                                                                    <div className="accordion-body pt-0">
-                                                                        Night signs creeping yielding green Seasons together man green fruitful make fish behold earth unto you'll lights living moving sea open for fish day multiply tree good female god had fruitful of creature fill shall don't day
-                                                                        fourth lesser he the isn't let multiply may Creeping earth under was You're without which image stars in Own creeping night of wherein Heaven years their he over doesn't whose won't kind seasons light Won't that fish him whose
-                                                                        won't also it dominion heaven fruitful Whales created And likeness doesn't that Years without divided saying morning creeping hath you'll seas cattle in multiply under together in us said above dry tree herb saw living darkness
-                                                                        without have won't for i behold meat brought winged Moving living second beast Over fish place beast image very him evening Thing they're fruit together forth day Seed lights Land creature together Multiply waters form brought.
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            {/* Item */}
-                                                            <div className="accordion-item">
-                                                                <h2 className="accordion-header" id="headingFive">
-                                                                    <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
-                                                                        <span className="text-secondary fw-bold me-3">05</span>
-                                                                        <span className="h6 mb-0">What certificates will I be received for this program?</span>
-                                                                    </button>
-                                                                </h2>
-                                                                <div id="collapseFive" className="accordion-collapse collapse" aria-labelledby="headingFive" data-bs-parent="#accordionExample">
-                                                                    <div className="accordion-body pt-0">
-                                                                        Smile spoke total few great had never their too Amongst moments do in arrived at my replied Fat weddings servants but man believed prospect Companions understood is as especially pianoforte connection introduced Nay newspaper
-                                                                        can sportsman are admitting gentleman belonging his Is oppose no he summer lovers twenty in Not his difficulty boisterous surrounded bed Seems folly if in given scale Sex contented dependent conveying advantage.
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        {/* Accordion END */}
-                                                    </div>
-                                                    {/* Content END */}
-                                                    {/* Content START */}
-                                                    <div className="tab-pane fade" id="course-pills-6" role="tabpanel" aria-labelledby="course-pills-tab-6">
-                                                        {/* Review START */}
-                                                        <div className="row">
-                                                            <div className="col-12">
-                                                                <h5 className="mb-4">Group Chat & Q/A Forum</h5>
-
-                                                                {/* Comment item START */}
-                                                                <div className="border p-2 p-sm-4 rounded-3 mb-4">
-                                                                    <ul className="list-unstyled mb-0">
-                                                                        <li className="comment-item">
-                                                                            <div className="d-flex mb-3">
-                                                                                <div className="ms-2">
-                                                                                    {/* Comment by */}
-                                                                                    <div className="bg-light p-3 rounded">
-                                                                                        <div className="d-flex justify-content-center">
-                                                                                            <div className="me-2">
-                                                                                                <h6 className="mb-1 lead fw-bold">
-                                                                                                    <a href="#!" className="text-decoration-none text-dark">
-                                                                                                        <span className="text-secondary">By:</span> Frances Guerrero{" "}
-                                                                                                    </a>
-                                                                                                </h6>
-                                                                                                <p className="mb-0">Removed demands expense account in outward tedious do. Particular waythoroughly unaffected projection ar waythoroughly unaffected projection?...</p>
-                                                                                                <p className="mt-4 fw-bold">16 Replies</p>
-                                                                                            </div>
-                                                                                            <small>5hr</small>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    {/* Comment react */}
-                                                                                    <ul className="nav nav-divider py-2 small">
-                                                                                        <li className="nav-item">
-                                                                                            <a className="btn btn-primary btn-sm" href="#">
-                                                                                                Join Conversation <i className="fas fa-arrow-right"></i>
-                                                                                            </a>
-                                                                                        </li>
-                                                                                    </ul>
-                                                                                </div>
-                                                                            </div>
-                                                                        </li>
-
-                                                                        <li className="comment-item">
-                                                                            <div className="d-flex mb-3">
-                                                                                <div className="ms-2">
-                                                                                    {/* Comment by */}
-                                                                                    <div className="bg-light p-3 rounded">
-                                                                                        <div className="d-flex justify-content-center">
-                                                                                            <div className="me-2">
-                                                                                                <h6 className="mb-1 lead fw-bold">
-                                                                                                    <a href="#!" className="text-decoration-none text-dark">
-                                                                                                        <span className="text-secondary">By:</span> Frances Guerrero{" "}
-                                                                                                    </a>
-                                                                                                </h6>
-                                                                                                <p className="mb-0">Removed demands expense account in outward tedious do. Particular waythoroughly unaffected projection ar waythoroughly unaffected projection?...</p>
-                                                                                                <p className="mt-4 fw-bold">16 Replies</p>
-                                                                                            </div>
-                                                                                            <small>5hr</small>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    {/* Comment react */}
-                                                                                    <ul className="nav nav-divider py-2 small">
-                                                                                        <li className="nav-item">
-                                                                                            <a className="btn btn-primary btn-sm" href="#">
-                                                                                                Join Conversation <i className="fas fa-arrow-right"></i>
-                                                                                            </a>
-                                                                                        </li>
-                                                                                    </ul>
-                                                                                </div>
-                                                                            </div>
-                                                                        </li>
-                                                                    </ul>
-                                                                </div>
-                                                                {/* Chat Detail Page */}
-                                                                <div className="border p-2 p-sm-4 rounded-3">
-                                                                    <ul
-                                                                        className="list-unstyled mb-0"
-                                                                        style={{
-                                                                            overflowY: "scroll",
-                                                                            height: "500px",
-                                                                        }}
-                                                                    >
-                                                                        <li className="comment-item mb-3">
-                                                                            <div className="d-flex">
-                                                                                <div className="avatar avatar-sm flex-shrink-0">
-                                                                                    <a href="#">
-                                                                                        <img
-                                                                                            className="avatar-img rounded-circle"
-                                                                                            src="https://desphixs.com/geeks/assets/images/avatar/avatar-3.jpg"
-                                                                                            style={{
-                                                                                                width: "40px",
-                                                                                                height: "40px",
-                                                                                                borderRadius: "50%",
-                                                                                                objectFit: "cover",
-                                                                                            }}
-                                                                                            alt="womans image"
-                                                                                        />
-                                                                                    </a>
-                                                                                </div>
-                                                                                <div className="ms-2">
-                                                                                    {/* Comment by */}
-                                                                                    <div className="bg-light p-3 rounded w-100">
-                                                                                        <div className="d-flex w-100 justify-content-center">
-                                                                                            <div className="me-2 ">
-                                                                                                <h6 className="mb-1 lead fw-bold">
-                                                                                                    <a href="#!" className="text-decoration-none text-dark">
-                                                                                                        {" "}
-                                                                                                        Louis Ferguson{" "}
-                                                                                                    </a>
-                                                                                                    <br />
-                                                                                                    <span
-                                                                                                        style={{
-                                                                                                            fontSize: "12px",
-                                                                                                            color: "gray",
-                                                                                                        }}
-                                                                                                    >
-                                                                                                        5hrs Ago
-                                                                                                    </span>
-                                                                                                </h6>
-                                                                                                <p className="mb-0 mt-3  ">Removed demands expense account</p>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </li>
-
-                                                                        <li className="comment-item mb-3">
-                                                                            <div className="d-flex">
-                                                                                <div className="avatar avatar-sm flex-shrink-0">
-                                                                                    <a href="#">
-                                                                                        <img
-                                                                                            className="avatar-img rounded-circle"
-                                                                                            src="https://desphixs.com/geeks/assets/images/avatar/avatar-3.jpg"
-                                                                                            style={{
-                                                                                                width: "40px",
-                                                                                                height: "40px",
-                                                                                                borderRadius: "50%",
-                                                                                                objectFit: "cover",
-                                                                                            }}
-                                                                                            alt="womans image"
-                                                                                        />
-                                                                                    </a>
-                                                                                </div>
-                                                                                <div className="ms-2">
-                                                                                    {/* Comment by */}
-                                                                                    <div className="bg-light p-3 rounded w-100">
-                                                                                        <div className="d-flex w-100 justify-content-center">
-                                                                                            <div className="me-2 ">
-                                                                                                <h6 className="mb-1 lead fw-bold">
-                                                                                                    <a href="#!" className="text-decoration-none text-dark">
-                                                                                                        {" "}
-                                                                                                        Louis Ferguson{" "}
-                                                                                                    </a>
-                                                                                                    <br />
-                                                                                                    <span
-                                                                                                        style={{
-                                                                                                            fontSize: "12px",
-                                                                                                            color: "gray",
-                                                                                                        }}
-                                                                                                    >
-                                                                                                        5hrs Ago
-                                                                                                    </span>
-                                                                                                </h6>
-                                                                                                <p className="mb-0 mt-3  ">Removed demands expense account from the debby building in a hall town tak with</p>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </li>
-
-                                                                        <li className="comment-item mb-3">
-                                                                            <div className="d-flex">
-                                                                                <div className="avatar avatar-sm flex-shrink-0">
-                                                                                    <a href="#">
-                                                                                        <img
-                                                                                            className="avatar-img rounded-circle"
-                                                                                            src="https://desphixs.com/geeks/assets/images/avatar/avatar-3.jpg"
-                                                                                            style={{
-                                                                                                width: "40px",
-                                                                                                height: "40px",
-                                                                                                borderRadius: "50%",
-                                                                                                objectFit: "cover",
-                                                                                            }}
-                                                                                            alt="womans image"
-                                                                                        />
-                                                                                    </a>
-                                                                                </div>
-                                                                                <div className="ms-2">
-                                                                                    {/* Comment by */}
-                                                                                    <div className="bg-light p-3 rounded w-100">
-                                                                                        <div className="d-flex w-100 justify-content-center">
-                                                                                            <div className="me-2 ">
-                                                                                                <h6 className="mb-1 lead fw-bold">
-                                                                                                    <a href="#!" className="text-decoration-none text-dark">
-                                                                                                        {" "}
-                                                                                                        Louis Ferguson{" "}
-                                                                                                    </a>
-                                                                                                    <br />
-                                                                                                    <span
-                                                                                                        style={{
-                                                                                                            fontSize: "12px",
-                                                                                                            color: "gray",
-                                                                                                        }}
-                                                                                                    >
-                                                                                                        5hrs Ago
-                                                                                                    </span>
-                                                                                                </h6>
-                                                                                                <p className="mb-0 mt-3  ">Removed demands expense account</p>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </li>
-
-                                                                        <li className="comment-item mb-3">
-                                                                            <div className="d-flex">
-                                                                                <div className="avatar avatar-sm flex-shrink-0">
-                                                                                    <a href="#">
-                                                                                        <img
-                                                                                            className="avatar-img rounded-circle"
-                                                                                            src="https://desphixs.com/geeks/assets/images/avatar/avatar-3.jpg"
-                                                                                            style={{
-                                                                                                width: "40px",
-                                                                                                height: "40px",
-                                                                                                borderRadius: "50%",
-                                                                                                objectFit: "cover",
-                                                                                            }}
-                                                                                            alt="womans image"
-                                                                                        />
-                                                                                    </a>
-                                                                                </div>
-                                                                                <div className="ms-2">
-                                                                                    {/* Comment by */}
-                                                                                    <div className="bg-light p-3 rounded w-100">
-                                                                                        <div className="d-flex w-100 justify-content-center">
-                                                                                            <div className="me-2 ">
-                                                                                                <h6 className="mb-1 lead fw-bold">
-                                                                                                    <a href="#!" className="text-decoration-none text-dark">
-                                                                                                        {" "}
-                                                                                                        Louis Ferguson{" "}
-                                                                                                    </a>
-                                                                                                    <br />
-                                                                                                    <span
-                                                                                                        style={{
-                                                                                                            fontSize: "12px",
-                                                                                                            color: "gray",
-                                                                                                        }}
-                                                                                                    >
-                                                                                                        5hrs Ago
-                                                                                                    </span>
-                                                                                                </h6>
-                                                                                                <p className="mb-0 mt-3  ">Removed demands expense account</p>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </li>
-                                                                    </ul>
-
-                                                                    <form class="w-100 d-flex">
-                                                                        <textarea class="one form-control pe-4 bg-light w-75" id="autoheighttextarea" rows="1" placeholder="Write a message..."></textarea>
-                                                                        <button class="btn btn-primary ms-2 mb-0 w-25" type="button">
-                                                                            Post <i className="fas fa-paper-plane"></i>
-                                                                        </button>
-                                                                    </form>
-                                                                </div>
-                                                            </div>
-                                                        </div>
                                                     </div>
                                                 </div>
+                                                </div>
                                             </div>
+                                            ))}
+                                        </div>
                                         </div>
                                     </div>
-                                    {/* Main content END */}
-                                    {/* Right sidebar START */}
-                                    <div className="col-lg-4 pt-5 pt-lg-0">
-                                        <div className="row mb-5 mb-lg-0">
-                                            <div className="col-md-6 col-lg-12">
-                                                {/* Video START */}
-                                                <div className="card shadow p-2 mb-4 z-index-9">
-                                                    <div className="overflow-hidden rounded-3">
-                                                        <img src={course.image} className="card-img" alt="course image" />
-                                                        {course?.file && (
-                                                            <div>
-                                                                <div className="m-auto rounded-2 mt-2 d-flex justify-content-center align-items-center" style={{ backgroundColor: "#ededed" }}>
-                                                                    <a data-bs-toggle="modal" data-bs-target="#exampleModal" href="https://www.youtube.com/embed/tXHviS-4ygo" className="btn btn-lg text-danger btn-round btn-white-shadow mb-0" data-glightbox="" data-gallery="course-video">
-                                                                        <i className="fas fa-play" />
-                                                                    </a>
-                                                                    <span data-bs-toggle="modal" data-bs-target="#exampleModal" className="fw-bold">
-                                                                        Course Introduction Video
-                                                                    </span>
-                                                                    <div className="modal fade" id="exampleModal" tabIndex={-1} aria-labelledby="exampleModalLabel" aria-hidden="true">
-                                                                        <div className="modal-dialog">
-                                                                            <div className="modal-content">
-                                                                                <div className="modal-header">
-                                                                                    <h1 className="modal-title fs-5" id="exampleModalLabel">
-                                                                                        Introduction Videos
-                                                                                    </h1>
-                                                                                    <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
-                                                                                </div>
-                                                                                <div className="modal-body">
-                                                                                    <video src={course?.file || ""} width="100" className="w-100 rounded-3" height="240" controls />
-                                                                                </div>
-                                                                                <div className="modal-footer">
-                                                                                    <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">
-                                                                                        Close
-                                                                                    </button>
-                                                                                    {/* <button type="button" className="btn btn-primary">
-                                                                                        Save changes
-                                                                                    </button> */}
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    {/* Card body */}
-                                                    <div className="card-body px-3">
-                                                        {/* Info */}
-                                                        <div className="d-flex justify-content-between align-items-center">
-                                                            {/* Price and time */}
-                                                            <div>
-                                                                <div className="d-flex align-items-center">
-                                                                    <h3 className="fw-bold mb-0 me-2">${course.price}</h3>
-                                                                </div>
-                                                            </div>
-                                                            {/* Share button with dropdown */}
-                                                            <div className="dropdown">
-                                                                {/* Share button */}
-                                                                <a href="#" className="btn btn-sm btn-light rounded small" role="button" id="dropdownShare" data-bs-toggle="dropdown" aria-expanded="false">
-                                                                    <i className="fas fa-fw fa-share-alt" />
-                                                                </a>
-                                                                {/* dropdown button */}
-                                                                <ul className="dropdown-menu dropdown-w-sm dropdown-menu-end min-w-auto shadow rounded" aria-labelledby="dropdownShare">
-                                                                    <li>
-                                                                        <a className="dropdown-item" href="#">
-                                                                            <i className="fab fa-twitter-square me-2" />
-                                                                            Twitter
-                                                                        </a>
-                                                                    </li>
-                                                                    <li>
-                                                                        <a className="dropdown-item" href="#">
-                                                                            <i className="fab fa-facebook-square me-2" />
-                                                                            Facebook
-                                                                        </a>
-                                                                    </li>
-                                                                    <li>
-                                                                        <a className="dropdown-item" href="#">
-                                                                            <i className="fab fa-linkedin me-2" />
-                                                                            LinkedIn
-                                                                        </a>
-                                                                    </li>
-                                                                    <li>
-                                                                        <a className="dropdown-item" href="#">
-                                                                            <i className="fas fa-copy me-2" />
-                                                                            Copy link
-                                                                        </a>
-                                                                    </li>
-                                                                </ul>
-                                                            </div>
-                                                        </div>
-                                                        {/* Buttons */}
-                                                        <div className="mt-3 d-sm-flex justify-content-sm-between ">
-                                                            {addToCartBtn === "Add To Cart" && (
-                                                                <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" onClick={() => addToCart(course?.id, userId, course.price, country, CartId())}>
-                                                                    <i className="fas fa-shopping-cart"></i> Add To Cart
-                                                                </button>
-                                                            )}
+                                    ))}
+                                </div>
+                                </div>
 
-                                                            {addToCartBtn === "Added To Cart" && (
-                                                                <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" disabled>
-                                                                    <i className="fas fa-check-circle"></i> Added To Cart
-                                                                </button>
-                                                            )}
-
-                                                            {addToCartBtn === "Adding To Cart" && (
-                                                                <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" disabled>
-                                                                    <i className="fas fa-spinner fa-spin"></i> Adding To Cart
-                                                                </button>
-                                                            )}
-
-                                                            {addToCartBtn === "Already enrolled this course" && (
-                                                                <button type="button" className="btn btn-primary mb-0 w-100 me-2 mt-3" disabled>
-                                                                    <i className="fas fa-check-circle"></i> Already enrolled this course
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                {/* Video END */}
-                                                {/* Course info START */}
-                                                <div className="card card-body shadow p-4 mb-4">
-                                                    {/* Title */}
-                                                    <h4 className="mb-3">This course includes</h4>
-                                                    <ul className="list-group list-group-borderless">
-                                                        <li className="list-group-item d-flex justify-content-between align-items-center">
-                                                            <span className="h6 fw-light mb-0">
-                                                                <i className="fas fa-fw fa-book-open text-primary me-2" />
-                                                                Lectures
-                                                            </span>
-                                                            <span>{totalVariantItems}</span>
-                                                        </li>
-                                                        <li className="list-group-item d-flex justify-content-between align-items-center">
-                                                            <span className="h6 fw-light mb-0">
-                                                                <i className="fas fa-fw fa-clock text-primary me-2" />
-                                                                Duration
-                                                            </span>
-                                                            <span>{getTotalFormattedDuration(course)}</span>
-                                                        </li>
-                                                        <li className="list-group-item d-flex justify-content-between align-items-center">
-                                                            <span className="h6 fw-light mb-0">
-                                                                <i className="fas fa-fw fa-signal text-primary me-2" />
-                                                                Skills
-                                                            </span>
-                                                            <span>{course.level}</span>
-                                                        </li>
-                                                        <li className="list-group-item d-flex justify-content-between align-items-center">
-                                                            <span className="h6 fw-light mb-0">
-                                                                <i className="fas fa-fw fa-globe text-primary me-2" />
-                                                                Language
-                                                            </span>
-                                                            <span>{course.language}</span>
-                                                        </li>
-                                                        <li className="list-group-item d-flex justify-content-between align-items-center">
-                                                            <span className="h6 fw-light mb-0">
-                                                                <i className="fas fa-fw fa-user-clock text-primary me-2" />
-                                                                Published
-                                                            </span>
-                                                            <span>{moment(course.date).format("DD MMM, YYYY")}</span>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </div>
+                                {/* Instructor Tab */}
+                                <div className="tab-pane fade" id="instructor" role="tabpanel">
+                                <div className="instructor-card card border-0 mb-4">
+                                    <div className="row g-0">
+                                    <div className="col-md-4">
+                                        <img 
+                                        src={course.teacher.image} 
+                                        className="img-fluid rounded-start h-100 object-fit-cover" 
+                                        alt={course.teacher.full_name} 
+                                        />
+                                    </div>
+                                    <div className="col-md-8">
+                                        <div className="card-body">
+                                        <h4 className="card-title">{course.teacher.full_name}</h4>
+                                        <p className="card-text text-muted">{course.teacher.bio}</p>
+                                        <div className="social-links">
+                                            <a href={course.teacher.twitter} className="text-twitter me-3">
+                                            <i className="fab fa-twitter-square fa-lg"></i>
+                                            </a>
+                                            <a href={course.teacher.facebook} className="text-facebook me-3">
+                                            <i className="fab fa-facebook-square fa-lg"></i>
+                                            </a>
+                                            <a href={course.teacher.linkedin} className="text-linkedin">
+                                            <i className="fab fa-linkedin fa-lg"></i>
+                                            </a>
+                                        </div>
                                         </div>
                                     </div>
+                                    </div>
+                                </div>
+                                
+                                <h5 className="mb-3">About Instructor</h5>
+                                <p className="mb-0">{course.teacher.about}</p>
+                                </div>
+
+                                {/* Reviews Tab */}
+                                <div className="tab-pane fade" id="reviews" role="tabpanel">
+                                <h4 className="mb-4">Student Reviews</h4>
+                                
+                                {course?.reviews?.length > 0 ? (
+                                    <div className="reviews-container">
+                                    {course.reviews.map((review, index) => (
+                                        <div className="review-item mb-4" key={index}>
+                                        <div className="d-flex">
+                                            <img
+                                            src={review?.profile?.image || "/default-avatar.png"}
+                                            alt={review?.profile?.full_name}
+                                            className="rounded-circle me-3"
+                                            width="60"
+                                            height="60"
+                                            />
+                                            <div>
+                                            <div className="d-flex flex-wrap align-items-center mb-2">
+                                                <h5 className="me-3 mb-0">{review?.profile?.full_name}</h5>
+                                                <div className="rating-badge bg-light text-warning px-2 py-1 rounded">
+                                                {review?.rating}/5 <i className="fas fa-star"></i>
+                                                </div>
+                                                <small className="text-muted ms-auto">
+                                                {moment(review?.date).format("MMM D, YYYY")}
+                                                </small>
+                                            </div>
+                                            <p className="mb-0">{review?.review || <em className="text-muted">No comment provided.</em>}</p>
+                                            </div>
+                                        </div>
+                                        </div>
+                                    ))}
+                                    </div>
+                                ) : (
+                                    <div className="alert alert-info">
+                                    No reviews yet. Be the first to review this course!
+                                    </div>
+                                )}
                                 </div>
                             </div>
-                        </section>
-                    </>
+                            </div>
+                        </div>
+                        </div>
+
+                        {/* Sidebar */}
+                        <div className="col-lg-4">
+                        <div className="sticky-top" style={{top: '20px'}}>
+                            {/* Course Preview Card */}
+                            <div className="card shadow-sm mb-4 border-0">
+                            <div className="course-thumbnail position-relative">
+                                <img 
+                                src={course.image} 
+                                className="card-img-top" 
+                                alt={course.title} 
+                                />
+                                {course?.file && (
+                                <div className="play-button-overlay">
+                                    <button 
+                                    className="btn btn-primary btn-lg rounded-circle"
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#coursePreviewModal"
+                                    >
+                                    <i className="fas fa-play"></i>
+                                    </button>
+                                </div>
+                                )}
+                            </div>
+                            
+                            <div className="card-body">
+                                <div className="d-flex justify-content-between align-items-center mb-3">
+                                <h3 className="card-title mb-0">
+                                    ${course.price}
+                                    {course.original_price && (
+                                    <small className="text-muted text-decoration-line-through ms-2">
+                                        ${course.original_price}
+                                    </small>
+                                    )}
+                                </h3>
+                                
+                                <div className="dropdown">
+                                    <button 
+                                    className="btn btn-sm btn-outline-secondary rounded-circle"
+                                    data-bs-toggle="dropdown"
+                                    >
+                                    <i className="fas fa-share-alt"></i>
+                                    </button>
+                                    <ul className="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a 
+                                        className="dropdown-item" 
+                                        href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}`}
+                                        target="_blank"
+                                        >
+                                        <i className="fab fa-twitter me-2 text-primary"></i>Twitter
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a 
+                                        className="dropdown-item" 
+                                        href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
+                                        target="_blank"
+                                        >
+                                        <i className="fab fa-facebook me-2 text-primary"></i>Facebook
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a 
+                                        className="dropdown-item" 
+                                        href={`https://www.linkedin.com/shareArticle?url=${encodeURIComponent(window.location.href)}`}
+                                        target="_blank"
+                                        >
+                                        <i className="fab fa-linkedin me-2 text-primary"></i>LinkedIn
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <button 
+                                        className="dropdown-item" 
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(window.location.href);
+                                            toast.success('Link copied to clipboard!');
+                                        }}
+                                        >
+                                        <i className="fas fa-copy me-2 text-primary"></i>Copy link
+                                        </button>
+                                    </li>
+                                    </ul>
+                                </div>
+                                </div>
+                                
+                                <div className="d-grid gap-2">
+                                {addToCartBtn === "Add To Cart" && (
+                                    <button 
+                                    className="btn btn-primary py-3"
+                                    onClick={() => addToCart(course?.id, userId, course.price, country, CartId())}
+                                    >
+                                    <i className="fas fa-shopping-cart me-2"></i>Add To Cart
+                                    </button>
+                                )}
+
+                                {addToCartBtn === "Added To Cart" && (
+                                    <button className="btn btn-success py-3" disabled>
+                                    <i className="fas fa-check-circle me-2"></i>Added To Cart
+                                    </button>
+                                )}
+
+                                {addToCartBtn === "Adding To Cart" && (
+                                    <button className="btn btn-primary py-3" disabled>
+                                    <i className="fas fa-spinner fa-spin me-2"></i>Adding...
+                                    </button>
+                                )}
+
+                                {addToCartBtn === "Already enrolled this course" && (
+                                    <button className="btn btn-success py-3" disabled>
+                                    <i className="fas fa-check-circle me-2"></i>Already Enrolled
+                                    </button>
+                                )}
+                                </div>
+                            </div>
+                            </div>
+                            
+                            {/* Course Features Card */}
+                            <div className="card shadow-sm border-0 mb-4">
+                            <div className="card-body">
+                                <h5 className="card-title mb-4">This course includes</h5>
+                                <ul className="list-group list-group-flush">
+                                <li className="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-2">
+                                    <span>
+                                    <i className="fas fa-book text-primary me-2"></i>
+                                    Lectures
+                                    </span>
+                                    <span className="badge bg-primary rounded-pill">{totalVariantItems}</span>
+                                </li>
+                                <li className="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-2">
+                                    <span>
+                                    <i className="fas fa-clock text-primary me-2"></i>
+                                    Duration
+                                    </span>
+                                    <span>{getTotalFormattedDuration(course)}</span>
+                                </li>
+                                <li className="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-2">
+                                    <span>
+                                    <i className="fas fa-signal text-primary me-2"></i>
+                                    Level
+                                    </span>
+                                    <span>{course.level}</span>
+                                </li>
+                                <li className="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-2">
+                                    <span>
+                                    <i className="fas fa-globe text-primary me-2"></i>
+                                    Language
+                                    </span>
+                                    <span>{course.language}</span>
+                                </li>
+                                <li className="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-2">
+                                    <span>
+                                    <i className="fas fa-calendar text-primary me-2"></i>
+                                    Published
+                                    </span>
+                                    <span>{moment(course.date).format("MMM D, YYYY")}</span>
+                                </li>
+                                </ul>
+                            </div>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                    </div>
+                </section>
+
+                {/* Course Preview Modal */}
+                {course?.file && (
+                    <div className="modal fade" id="coursePreviewModal" tabIndex="-1" aria-hidden="true">
+                    <div className="modal-dialog modal-dialog-centered modal-lg">
+                        <div className="modal-content">
+                        <div className="modal-header">
+                            <h5 className="modal-title">Course Preview</h5>
+                            <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div className="modal-body p-0">
+                            <video 
+                            src={course.file} 
+                            className="w-100" 
+                            controls 
+                            autoPlay
+                            />
+                        </div>
+                        </div>
+                    </div>
+                    </div>
                 )}
-            </>
-
+                </>
+            )}
+            </main>
             <BaseFooter />
         </>
     );

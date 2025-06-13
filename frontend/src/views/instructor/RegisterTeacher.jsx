@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
@@ -8,7 +7,6 @@ import BaseFooter from "../partials/BaseFooter";
 import { logout } from "../../utils/auth";
 
 const TeacherRegistration = () => {
-  const navigate = useNavigate();
   const [isTeacher, setIsTeacher] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -24,6 +22,9 @@ const TeacherRegistration = () => {
   });
   const [teacherData, setTeacherData] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+
+  const [imagePreview, setImagePreview] = useState('');
+  
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -44,6 +45,7 @@ const TeacherRegistration = () => {
             full_name: profile.full_name || profile.first_name + ' ' + profile.last_name || '',
             about: profile.about || '',
             country: profile.country || '',
+            image: profile.image || null
           }));
         }
 
@@ -60,11 +62,9 @@ const TeacherRegistration = () => {
             facebook: teacher.facebook || '',
             twitter: teacher.twitter || '',
             linkedin: teacher.linkedin || '',
-            image: null
           }));
         }
       } catch (err) {
-        console.error(err);
         setError('Failed to load profile. Please try again.');
       } finally {
         setLoading(false);
@@ -81,7 +81,32 @@ const TeacherRegistration = () => {
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
+    
+    if (!file) {
+      setFormData(prev => ({ ...prev, image: userProfile?.image || null }));
+      setImagePreview('');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be less than 5MB');
+      return;
+    }
+    
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Only JPEG, PNG, GIF and WebP images are allowed');
+      return;
+    }
+
     setFormData(prev => ({ ...prev, image: file }));
+    setError('');
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e) => {
@@ -97,28 +122,53 @@ const TeacherRegistration = () => {
 
     try {
       const data = new FormData();
+      
       Object.entries(formData).forEach(([key, value]) => {
-        if (value !== null && value !== '') {
+        if (key !== 'image' && value !== null && value !== '') {
           data.append(key, value);
         }
       });
+      
+      if (formData.image) {
+        if (formData.image instanceof File) {
+          data.append('image', formData.image);
+        } else {
+          data.append('current_image', formData.image.replace(/^https?:\/\/[^/]+\/media\//, ''));
+        }
+      } else {
+        console.log('No image to send');
+      }
 
       let res;
       if (isTeacher) {
-        res = await apiInstance.put('teacher/profile/', data);
+        res = await apiInstance.put('teacher/profile/', data, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
       } else {
-        res = await apiInstance.post('teacher/register/', data);
+        res = await apiInstance.post('teacher/register/', data, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
         setIsTeacher(true);
       }
 
+      
       Toast.success(res.data.message || 'Submission successful!');
       setTeacherData(res.data.teacher);
       setMessage(res.data.message || 'Success!');
+
+      if (res.data.teacher && res.data.teacher.image) {
+        setFormData(prev => ({ ...prev, image: res.data.teacher.image }));
+      }
+      
+      setImagePreview('');
+      
+      const fileInput = document.querySelector('input[type="file"]');
+      if (fileInput) fileInput.value = '';
+      
       setTimeout(() => {
-      logout();
-    }, 2000);
+        logout();
+      }, 2000);
     } catch (err) {
-      console.error(err);
       setError(err.response?.data?.error || 'Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
@@ -135,9 +185,22 @@ const TeacherRegistration = () => {
         facebook: '',
         twitter: '',
         linkedin: '',
-        image: null
+        image: userProfile.image || null
       });
+      
+      setImagePreview('');
+      
+      const fileInput = document.querySelector('input[type="file"]');
+      if (fileInput) fileInput.value = '';
     }
+  };
+
+  const removeNewImage = () => {
+    setFormData(prev => ({ ...prev, image: userProfile?.image || null }));
+    setImagePreview('');
+
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) fileInput.value = '';
   };
 
   if (loading) {
@@ -220,12 +283,51 @@ const TeacherRegistration = () => {
 
                   <div className="mb-3">
                     <label className="form-label">Profile Picture</label>
+                    
+                    {/* Hiển thị ảnh hiện tại hoặc preview ảnh mới */}
+                    {(imagePreview || formData.image) && (
+                      <div className="mb-2">
+                        <p className="text-muted small">
+                          {imagePreview ? 'New image preview:' : 'Current image:'}
+                        </p>
+                        <div className="position-relative d-inline-block">
+                          <img 
+                            src={imagePreview || formData.image} 
+                            alt={imagePreview ? 'Preview' : 'Current profile'} 
+                            className="img-thumbnail"
+                            style={{ width: '150px', height: '150px', objectFit: 'cover' }}
+                          />
+                          {imagePreview && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-danger position-absolute top-0 end-0"
+                              onClick={removeNewImage}
+                              style={{ transform: 'translate(50%, -50%)' }}
+                            >
+                              <i className="fas fa-times"></i>
+                            </button>
+                          )}
+                        </div>
+                        {imagePreview && (
+                          <p className="text-success small mt-1">
+                            <i className="fas fa-check"></i> New image ready to upload
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                       onChange={handleFileChange}
                       className="form-control"
                     />
+                    <small className="text-muted">
+                      {formData.image 
+                        ? 'Choose a new image to replace current one (leave empty to keep current image)' 
+                        : 'Choose an image file'} 
+                      (Max 5MB, JPEG/PNG/GIF/WebP only)
+                    </small>
                   </div>
 
                   <div className="row g-3 mb-4">

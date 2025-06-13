@@ -32,7 +32,7 @@ function Header() {
               <div>
                 <h4 className="fw-bold text-primary mb-1">{profile.full_name}</h4>
                 <p className="text-muted mb-1">
-                  {profile.about || "No bio provided."}
+                  {profile.about || "No about provided."}
                 </p>
                 <small className="text-muted">
                   <i className="fas fa-globe me-1 text-secondary"></i>

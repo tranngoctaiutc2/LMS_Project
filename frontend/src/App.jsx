@@ -11,6 +11,8 @@ import CartId from "./views/plugin/CartId";
 
 import MainWrapper from "./layouts/MainWrapper";
 import PrivateRoute from "./layouts/PrivateRoute";
+import AboutUs from "./views/auth/AboutUs";
+import ContactUs from "./views/auth/ContactUs";
 
 import Register from "../src/views/auth/Register";
 import Login from "../src/views/auth/Login";
@@ -79,7 +81,6 @@ function AppContent() {
         if (isReady && !loading && allUserData && !dataLoaded) {
             loadUserData();
         } else if (!allUserData) {
-            // Clear data khi logout
             setCartCount(0);
             setProfile([]);
             setWishlist([]);
@@ -122,14 +123,12 @@ function AppContent() {
             
             switch (type) {
                 case 'login':
-                    // Reload data sau khi login
                     setDataLoaded(false);
                     loadUserData();
                     break;
                     
                 case 'logout':
                 case 'unauthorized':
-                    // Navigate to login without reload
                     navigate('/login', { replace: true });
                     break;
                     
@@ -160,6 +159,8 @@ function AppContent() {
                         <Route path="/logout/" element={<Logout />} />
                         <Route path="/forgot-password/" element={<ForgotPassword />} />
                         <Route path="/create-new-password/" element={<CreateNewPassword />} />
+                        <Route path="/about-us/" element={<AboutUs />} />
+                        <Route path="/contact-us/" element={<ContactUs />} />
 
                         {/* Base Routes */}
                         <Route path="/" element={<Index />} />

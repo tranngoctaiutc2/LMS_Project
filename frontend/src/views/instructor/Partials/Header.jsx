@@ -43,7 +43,7 @@ function Header() {
               )}
               <div className="overflow-hidden">
                 <h4 className="fw-bold text-primary mb-1 text-truncate">{profile.full_name}</h4>
-                <p className="text-muted mb-1">{profile.about || "No bio provided."}</p>
+                <p className="text-muted mb-1">{profile.about || "No about provided."}</p>
                 <small className="text-muted d-block mb-2">
                   <i className="fas fa-globe me-1 text-secondary"></i>
                   {profile.country || "Unknown"} &nbsp;|&nbsp;

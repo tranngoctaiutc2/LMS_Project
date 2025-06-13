@@ -17,6 +17,7 @@
   "search": "Search",
   "logout": "Logout",
   "login": "Login",
+  "login_to_continue": "Please login to continue",
   "register": "Register",
   "cart": "Cart",
 
@@ -103,7 +104,137 @@
   "pagination": {
     "prev": "Previous",
     "next": "Next"
-  }
+  },
   
+  "hero": {
+    "title": "About Our Company",
+    "subtitle": "Innovation • Excellence • Partnership",
+    "description": "We are a leading technology company dedicated to transforming ideas into reality through cutting-edge solutions and exceptional service."
+  },
+  "stat": {
+    "projects": "Projects Completed",
+    "clients": "Happy Clients",
+    "experience": "Years Experience",
+    "awards": "Awards Won"
+  },
+  "mission": {
+    "title": "Our Mission",
+    "description": "To empower businesses worldwide with innovative technology solutions that drive growth, efficiency, and success. We believe in creating lasting partnerships that transform challenges into opportunities."
+  },
+  "vision": {
+    "title": "Our Vision",
+    "description": "To be the global leader in technology innovation, setting new standards for excellence and creating a future where technology seamlessly enhances human potential and business success."
+  },
+  "timeline": {
+    "title": "Our Journey",
+    "subtitle": "Milestones that shaped our success story",
+    "2020": {
+      "title": "Company Founded",
+      "description": "Started our journey with a small team of passionate developers and a big vision to revolutionize the tech industry."
+    },
+    "2021": {
+      "title": "First Major Success",
+      "description": "Launched our flagship product and secured partnerships with 50+ clients, establishing our reputation in the market."
+    },
+    "2022": {
+      "title": "International Expansion",
+      "description": "Expanded operations globally, opening offices in 5 countries and growing our team to 100+ professionals."
+    },
+    "2023": {
+      "title": "Innovation Breakthrough",
+      "description": "Developed groundbreaking AI-powered solutions that transformed how businesses approach digital transformation."
+    },
+    "2024": {
+      "title": "Industry Recognition",
+      "description": "Received multiple industry awards and recognition as one of the fastest-growing tech companies in the region."
+    }
+  },
+  "values": {
+    "title": "Our Core Values",
+    "subtitle": "The principles that guide everything we do",
+    "innovation": {
+      "title": "Innovation",
+      "desc": "We constantly push boundaries and embrace new technologies to deliver cutting-edge solutions that exceed expectations."
+    },
+    "integrity": {
+      "title": "Integrity",
+      "desc": "We build trust through transparency, honesty, and ethical practices in all our business relationships and operations."
+    },
+    "excellence": {
+      "title": "Excellence",
+      "desc": "We strive for perfection in every project, delivering high-quality solutions that create lasting value for our clients."
+    },
+    "collaboration": {
+      "title": "Collaboration",
+      "desc": "We believe in teamwork and partnership, working closely with clients and colleagues to achieve shared success."
+    }
+  },
+  "team": {
+    "title": "Our Amazing Team",
+    "subtitle": "Meet the talented individuals behind our success",
+    "message": {
+      "title": "Powered by Passionate Professionals",
+      "description": "Our diverse team of experts from around the world brings together unique perspectives, cutting-edge skills, and unwavering dedication to deliver exceptional results for every project."
+    },
+    "developers": "Developers",
+    "designers": "Designers",
+    "managers": "Project Managers",
+    "countries": "Countries"
+  },
+  "cta": {
+    "title": "Ready to Start Your Project?",
+    "description": "Let's work together to turn your vision into reality. Contact us today to discuss how we can help your business grow and succeed.",
+    "contact": "Contact Us",
+    "portfolio": "View Portfolio"
+  },
+  "theme": {
+    "light": "Light Mode",
+    "dark": "Dark Mode"
+  },
+
+  "contact1": {
+    "title": "Get in Touch",
+    "subtitle": "We'd Love to Hear from You",
+    "description": "Whether you have a question about our services, need support, or just want to say hello, feel free to reach out to us.",
+    "ourLocation": "Our Location",
+    "phoneNumbers": "Phone Numbers",
+    "emailAddresses": "Email Addresses",
+    "businessHours": "Business Hours",
+    "formTitle": "Send Us a Message",
+    "formSubtitle": "Fill out the form below and our team will get back to you as soon as possible.",
+    "namePlaceholder": "Your Name",
+    "emailPlaceholder": "Your Email",
+    "phonePlaceholder": "Your Phone",
+    "companyPlaceholder": "Your Company",
+    "servicePlaceholder": "Select a Service",
+    "messagePlaceholder": "Your Message",
+    "sendMessage": "Send Message",
+    "sending": "Sending...",
+    "successMessage": "Message sent successfully!"
+  },
+  "services": {
+    "webDevelopment": "Web Development",
+    "mobileDevelopment": "Mobile Development",
+    "uiUxDesign": "UI/UX Design",
+    "digitalMarketing": "Digital Marketing",
+    "itConsulting": "IT Consulting",
+    "otherServices": "Other Services"
+  },
+  "social": {
+    "title": "Connect with Us",
+    "subtitle": "Follow us on social media to stay updated with our latest news and projects."
+  },
+  "faq1": {
+    "title": "Frequently Asked Questions",
+    "subtitle": "Find answers to common questions about our services and processes.",
+    "howToGetStarted": "How do I get started with your services?",
+    "getStartedAnswer": "Simply fill out the contact form above, and our team will reach out to discuss your needs and next steps.",
+    "projectTimeline": "What is the typical timeline for a project?",
+    "timelineAnswer": "Timelines vary based on project scope, but we provide a detailed schedule during the planning phase.",
+    "supportQuestion": "Do you offer ongoing support after project completion?",
+    "supportAnswer": "Yes, we provide maintenance and support packages tailored to your needs.",
+    "existingSystems": "Can you integrate with our existing systems?",
+    "systemsAnswer": "Absolutely, our team specializes in seamless integration with various platforms and systems."
+  }
 }
 

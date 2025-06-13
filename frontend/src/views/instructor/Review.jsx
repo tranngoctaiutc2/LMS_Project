@@ -11,6 +11,7 @@ import BaseFooter from "../partials/BaseFooter";
 import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
+import { Link } from "react-router-dom";
 
 function Review() {
     const [reviews, setReviews] = useState([]);
@@ -18,12 +19,14 @@ function Review() {
     const [filteredReviews, setFilteredReview] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [checkingStatus, setCheckingStatus] = useState(true);
+    const [isTeacher, setIsTeacher] = useState(false);
 
     const fetchReviewsData = async () => {
         setLoading(true);
         setError(null);
         try {
-        const res = await apiInstance.get(`teacher/review-lists/${UserData()?.teacher_id}/`);
+            const res = await apiInstance.get(`teacher/review-lists/${UserData()?.teacher_id}/`);
             setReviews(res.data);
             setFilteredReview(res.data);
         } catch (err) {
@@ -35,17 +38,34 @@ function Review() {
     };
 
     useEffect(() => {
-        fetchReviewsData();
+        const checkStatus = async () => {
+            try {
+                const res = await apiInstance.get("/teacher/status");
+                if (res.data.is_teacher) {
+                    setIsTeacher(true);
+                    fetchReviewsData();
+                } else {
+                    setIsTeacher(false);
+                }
+            } catch (err) {
+                Toast.error("Failed to check teacher status.");
+                setIsTeacher(false);
+            } finally {
+                setCheckingStatus(false);
+            }
+        };
+
+        checkStatus();
     }, []);
 
     const handleSubmitReply = async (reviewId) => {
         try {
-        await apiInstance.patch(`teacher/review-detail/${UserData()?.teacher_id}/${reviewId}/`, {
-            reply: reply,
-        });
-        fetchReviewsData();
-        Toast.success("Reply sent.");
-        setReply("");
+            await apiInstance.patch(`teacher/review-detail/${UserData()?.teacher_id}/${reviewId}/`, {
+                reply: reply,
+            });
+            fetchReviewsData();
+            Toast.success("Reply sent.");
+            setReply("");
         } catch (error) {
             Toast.error(error.message || "Failed to send reply.");
         }
@@ -75,67 +95,147 @@ function Review() {
     const handleFilterByCourse = (e) => {
         const query = e.target.value.toLowerCase();
         if (query === "") {
-        setFilteredReview(reviews);
+            setFilteredReview(reviews);
         } else {
-        const filtered = reviews.filter((review) =>
-            review.course.title.toLowerCase().includes(query)
-        );
-        setFilteredReview(filtered);
+            const filtered = reviews.filter((review) =>
+                review.course.title.toLowerCase().includes(query)
+            );
+            setFilteredReview(filtered);
         }
     };
 
+    if (checkingStatus) {
+        return (
+            <div className="d-flex justify-content-center align-items-center" style={{ height: "100vh" }}>
+                <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </div>
+                <span className="ms-3 text-muted">Checking status...</span>
+            </div>
+        );
+    }
+
+    if (!isTeacher) {
+        return (
+            <>
+                <BaseHeader />
+                <section className="pt-6 pb-6 bg-light min-vh-100">
+                    <div className="container">
+                        <div className="row justify-content-center">
+                            <div className="col-lg-8 col-md-10">
+                                <div className="card text-center shadow-lg">
+                                    <div className="card-body p-5">
+                                        <div className="mb-4">
+                                            <i className="fas fa-chalkboard-teacher text-primary display-1"></i>
+                                        </div>
+                                        <h2 className="card-title mb-3">Become an Instructor</h2>
+                                        <p className="card-text text-muted mb-4 fs-5">
+                                            You haven't registered as an instructor yet. Register now to start
+                                            sharing knowledge and managing course orders!
+                                        </p>
+                                        <div className="row text-start mb-4">
+                                            <div className="col-md-6 mb-3">
+                                                <div className="d-flex align-items-center">
+                                                    <i className="fas fa-check-circle text-success me-3"></i>
+                                                    <span>Sell your courses</span>
+                                                </div>
+                                            </div>
+                                            <div className="col-md-6 mb-3">
+                                                <div className="d-flex align-items-center">
+                                                    <i className="fas fa-check-circle text-success me-3"></i>
+                                                    <span>Track order performance</span>
+                                                </div>
+                                            </div>
+                                            <div className="col-md-6 mb-3">
+                                                <div className="d-flex align-items-center">
+                                                    <i className="fas fa-check-circle text-success me-3"></i>
+                                                    <span>Export order history</span>
+                                                </div>
+                                            </div>
+                                            <div className="col-md-6 mb-3">
+                                                <div className="d-flex align-items-center">
+                                                    <i className="fas fa-check-circle text-success me-3"></i>
+                                                    <span>24/7 Support</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="d-grid gap-2 d-md-flex justify-content-md-center">
+                                            <Link
+                                                to="/instructor/register"
+                                                className="btn btn-primary btn-lg px-5 me-md-2"
+                                            >
+                                                <i className="fas fa-user-graduate me-2"></i>
+                                                Become an Instructor
+                                            </Link>
+                                            <Link to="/" className="btn btn-outline-secondary btn-lg px-4">
+                                                <i className="fas fa-home me-2"></i>
+                                                Back to Home
+                                            </Link>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <BaseFooter />
+            </>
+        );
+    }
+
     if (loading) {
         return (
-        <>
-            <BaseHeader />
-            <section className="pt-5 pb-5 bg-light">
-            <div className="container">
-                <Header />
-                <div className="row mt-0 mt-md-4">
-                <Sidebar />
-                <div className="col-lg-9 col-md-8 col-12">
-                    <div className="card border-0 shadow-sm rounded-4">
-                    <div className="card-body p-5 text-center">
-                        <div className="spinner-border text-primary" role="status">
-                        <span className="visually-hidden">Loading...</span>
+            <>
+                <BaseHeader />
+                <section className="pt-5 pb-5 bg-light">
+                    <div className="container">
+                        <Header />
+                        <div className="row mt-0 mt-md-4">
+                            <Sidebar />
+                            <div className="col-lg-9 col-md-8 col-12">
+                                <div className="card border-0 shadow-sm rounded-4">
+                                    <div className="card-body p-5 text-center">
+                                        <div className="spinner-border text-primary" role="status">
+                                            <span className="visually-hidden">Loading...</span>
+                                        </div>
+                                        <p className="mt-3 text-muted">Loading reviews...</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <p className="mt-3 text-muted">Loading reviews...</p>
                     </div>
-                    </div>
-                </div>
-                </div>
-            </div>
-            </section>
-            <BaseFooter />
-        </>
+                </section>
+                <BaseFooter />
+            </>
         );
     }
 
     if (error) {
         return (
-        <>
-            <BaseHeader />
-            <section className="pt-5 pb-5 bg-light">
-            <div className="container">
-                <Header />
-                <div className="row mt-0 mt-md-4">
-                <Sidebar />
-                <div className="col-lg-9 col-md-8 col-12">
-                    <div className="card border-0 shadow-sm rounded-4">
-                    <div className="card-body p-5 text-center text-danger">
-                        <i className="fas fa-exclamation-triangle fa-2x mb-3"></i>
-                        <p className="h5">Error loading reviews</p>
-                        <p className="text-muted">{error}</p>
+            <>
+                <BaseHeader />
+                <section className="pt-5 pb-5 bg-light">
+                    <div className="container">
+                        <Header />
+                        <div className="row mt-0 mt-md-4">
+                            <Sidebar />
+                            <div className="col-lg-9 col-md-8 col-12">
+                                <div className="card border-0 shadow-sm rounded-4">
+                                    <div className="card-body p-5 text-center text-danger">
+                                        <i className="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                                        <p className="h5">Error loading reviews</p>
+                                        <p className="text-muted">{error}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    </div>
-                </div>
-                </div>
-            </div>
-            </section>
-            <BaseFooter />
-        </>
+                </section>
+                <BaseFooter />
+            </>
         );
     }
+
     return (
         <>
             <BaseHeader />

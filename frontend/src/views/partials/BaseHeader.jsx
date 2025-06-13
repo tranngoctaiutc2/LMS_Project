@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { CartContext } from "../plugin/Context";
 import { useAuthStore } from "../../store/auth";
 import { useTranslation } from "react-i18next";
+import Toast from "../plugin/Toast";
 
 function BaseHeader() {
     const [cartCount] = useContext(CartContext);
@@ -240,13 +241,13 @@ function BaseHeader() {
                     <div className="collapse navbar-collapse" id="navbarSupportedContent">
                         <ul className="navbar-nav me-auto">
                             <li className="nav-item">
-                                <Link className="nav-link" to="/pages/contact-us/">
+                                <Link className="nav-link" to="/contact-us/">
                                     <i className="fas fa-phone nav-icon"></i>
                                     {t("contact_us")}
                                 </Link>
                             </li>
                             <li className="nav-item">
-                                <Link className="nav-link" to="/pages/about-us/">
+                                <Link className="nav-link" to="/about-us/">
                                     <i className="fas fa-info-circle nav-icon"></i>
                                     {t("about_us")}
                                 </Link>
@@ -322,11 +323,21 @@ function BaseHeader() {
                                     </Link>
                                 </>
                             )}
-                            <Link className="btn auth-btn cart-btn" to="/cart/">
+                            <button
+                                className="btn auth-btn cart-btn"
+                                onClick={() => {
+                                    if (!isLoggedIn()) {
+                                        Toast.warning(t("login_to_continue"));
+                                        setTimeout(() => navigate("/login"), 1500);
+                                        return;
+                                    }
+                                    navigate("/cart/");
+                                }}
+                            >
                                 <i className="fas fa-shopping-cart"></i>
                                 {t("cart")}
                                 <span className="cart-count">{cartCount}</span>
-                            </Link>
+                            </button>
                         </div>
                     </div>
                 </div>

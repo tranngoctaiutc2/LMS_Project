@@ -17,6 +17,7 @@
   "search": "Tìm kiếm",
   "logout": "Đăng xuất",
   "login": "Đăng nhập",
+  "login_to_continue": "Vui lòng đăng nhập để tiếp tục",
   "register": "Đăng ký",
   "cart": "Giỏ hàng",
 
@@ -103,5 +104,135 @@
   "pagination": {
     "prev": "Trước",
     "next": "Sau"
+  },
+
+  "hero": {
+    "title": "Về Công Ty Chúng Tôi",
+    "subtitle": "Đổi Mới • Xuất Sắc • Hợp Tác",
+    "description": "Chúng tôi là một công ty công nghệ hàng đầu, tận tâm biến ý tưởng thành hiện thực thông qua các giải pháp tiên tiến và dịch vụ đặc biệt."
+  },
+  "stat": {
+    "projects": "Dự Án Hoàn Thành",
+    "clients": "Khách Hàng Hài Lòng",
+    "experience": "Năm Kinh Nghiệm",
+    "awards": "Giải Thưởng Đạt Được"
+  },
+  "mission": {
+    "title": "Sứ Mệnh",
+    "description": "Trao quyền cho các doanh nghiệp trên toàn thế giới với các giải pháp công nghệ đổi mới thúc đẩy tăng trưởng, hiệu quả và thành công. Chúng tôi tin vào việc tạo ra những mối quan hệ đối tác lâu dài biến thách thức thành cơ hội."
+  },
+  "vision": {
+    "title": "Tầm Nhìn",
+    "description": "Trở thành nhà lãnh đạo toàn cầu trong đổi mới công nghệ, thiết lập các tiêu chuẩn mới cho sự xuất sắc và tạo ra một tương lai nơi công nghệ nâng cao tiềm năng con người và thành công kinh doanh một cách liền mạch."
+  },
+  "timeline": {
+    "title": "Hành Trình Của Chúng Tôi",
+    "subtitle": "Những cột mốc định hình câu chuyện thành công",
+    "2020": {
+      "title": "Thành Lập Công Ty",
+      "description": "Bắt đầu hành trình với một đội ngũ nhỏ gồm những nhà phát triển đầy đam mê và tầm nhìn lớn để cách mạng hóa ngành công nghệ."
+    },
+    "2021": {
+      "title": "Thành Công Lớn Đầu Tiên",
+      "description": "Ra mắt sản phẩm chủ lực và đảm bảo quan hệ đối tác với hơn 50 khách hàng, thiết lập danh tiếng của chúng tôi trên thị trường."
+    },
+    "2022": {
+      "title": "Mở Rộng Quốc Tế",
+      "description": "Mở rộng hoạt động toàn cầu, mở văn phòng tại 5 quốc gia và phát triển đội ngũ lên hơn 100 chuyên gia."
+    },
+    "2023": {
+      "title": "Đột Phá Đổi Mới",
+      "description": "Phát triển các giải pháp được hỗ trợ bởi AI đột phá đã thay đổi cách các doanh nghiệp tiếp cận chuyển đổi số."
+    },
+    "2024": {
+      "title": "Công Nhận Ngành",
+      "description": "Nhận được nhiều giải thưởng ngành và được công nhận là một trong những công ty công nghệ phát triển nhanh nhất trong khu vực."
+    }
+  },
+  "values": {
+    "title": "Giá Trị Cốt Lõi",
+    "subtitle": "Những nguyên tắc định hướng mọi việc chúng tôi làm",
+    "innovation": {
+      "title": "Đổi Mới",
+      "desc": "Chúng tôi liên tục vượt qua giới hạn và chấp nhận các công nghệ mới để cung cấp các giải pháp tiên tiến vượt quá mong đợi."
+    },
+    "integrity": {
+      "title": "Chính Trực",
+      "desc": "Chúng tôi xây dựng niềm tin thông qua sự minh bạch, trung thực và thực hành đạo đức trong tất cả các mối quan hệ kinh doanh và hoạt động."
+    },
+    "excellence": {
+      "title": "Xuất Sắc",
+      "desc": "Chúng tôi phấn đấu đạt đến sự hoàn hảo trong mọi dự án, cung cấp các giải pháp chất lượng cao tạo ra giá trị bền vững cho khách hàng."
+    },
+    "collaboration": {
+      "title": "Hợp Tác",
+      "desc": "Chúng tôi tin vào tinh thần đồng đội và quan hệ đối tác, làm việc chặt chẽ với khách hàng và đồng nghiệp để đạt được thành công chung."
+    }
+  },
+  "team": {
+    "title": "Đội Ngũ Tuyệt Vời",
+    "subtitle": "Gặp gỡ những cá nhân tài năng đằng sau thành công của chúng tôi",
+    "message": {
+      "title": "Được Thúc Đẩy Bởi Các Chuyên Gia Đam Mê",
+      "description": "Đội ngũ đa dạng gồm các chuyên gia từ khắp nơi trên thế giới mang đến những góc nhìn độc đáo, kỹ năng tiên tiến và sự cống hiến không ngừng để mang lại kết quả đặc biệt cho mọi dự án."
+    },
+    "developers": "Lập Trình Viên",
+    "designers": "Thiết Kế Viên", 
+    "managers": "Quản Lý Dự Án",
+    "countries": "Quốc Gia"
+  },
+  "cta": {
+    "title": "Sẵn Sàng Bắt Đầu Dự Án?",
+    "description": "Hãy cùng nhau làm việc để biến tầm nhìn của bạn thành hiện thực. Liên hệ với chúng tôi ngay hôm nay để thảo luận về cách chúng tôi có thể giúp doanh nghiệp của bạn phát triển và thành công.",
+    "contact": "Liên Hệ",
+    "portfolio": "Xem danh mục dự án"
+  },
+  "theme": {
+    "light": "Chế Độ Sáng",
+    "dark": "Chế Độ Tối"
+  },
+    "contact1": {
+    "title": "Liên Hệ Với Chúng Tôi",
+    "subtitle": "Chúng Tôi Rất Mong Nhận Được Phản Hồi Từ Bạn",
+    "description": "Dù bạn có câu hỏi về dịch vụ, cần hỗ trợ hay chỉ muốn chào hỏi, hãy thoải mái liên hệ với chúng tôi.",
+    "ourLocation": "Địa Chỉ Của Chúng Tôi",
+    "phoneNumbers": "Số Điện Thoại",
+    "emailAddresses": "Địa Chỉ Email",
+    "businessHours": "Giờ Làm Việc",
+    "formTitle": "Gửi Tin Nhắn Cho Chúng Tôi",
+    "formSubtitle": "Vui lòng điền vào biểu mẫu dưới đây, đội ngũ của chúng tôi sẽ phản hồi bạn sớm nhất có thể.",
+    "namePlaceholder": "Tên Của Bạn",
+    "emailPlaceholder": "Email Của Bạn",
+    "phonePlaceholder": "Số Điện Thoại Của Bạn",
+    "companyPlaceholder": "Công Ty Của Bạn",
+    "servicePlaceholder": "Chọn Dịch Vụ",
+    "messagePlaceholder": "Tin Nhắn Của Bạn",
+    "sendMessage": "Gửi Tin Nhắn",
+    "sending": "Đang Gửi...",
+    "successMessage": "Tin nhắn đã được gửi thành công!"
+  },
+  "services": {
+    "webDevelopment": "Phát Triển Website",
+    "mobileDevelopment": "Phát Triển Ứng Dụng Di Động",
+    "uiUxDesign": "Thiết Kế UI/UX",
+    "digitalMarketing": "Marketing Kỹ Thuật Số",
+    "itConsulting": "Tư Vấn CNTT",
+    "otherServices": "Dịch Vụ Khác"
+  },
+  "social": {
+    "title": "Kết Nối Với Chúng Tôi",
+    "subtitle": "Theo dõi chúng tôi trên mạng xã hội để cập nhật tin tức và dự án mới nhất."
+  },
+  "faq1": {
+    "title": "Câu Hỏi Thường Gặp",
+    "subtitle": "Tìm câu trả lời cho các câu hỏi phổ biến về dịch vụ và quy trình của chúng tôi.",
+    "howToGetStarted": "Làm thế nào để bắt đầu với dịch vụ của các bạn?",
+    "getStartedAnswer": "Chỉ cần điền vào biểu mẫu liên hệ phía trên, đội ngũ của chúng tôi sẽ liên hệ để thảo luận về nhu cầu và các bước tiếp theo.",
+    "projectTimeline": "Thời gian điển hình cho một dự án là bao lâu?",
+    "timelineAnswer": "Thời gian phụ thuộc vào phạm vi dự án, nhưng chúng tôi sẽ cung cấp lịch trình chi tiết trong giai đoạn lập kế hoạch.",
+    "supportQuestion": "Các bạn có cung cấp hỗ trợ liên tục sau khi hoàn thành dự án không?",
+    "supportAnswer": "Có, chúng tôi cung cấp các gói bảo trì và hỗ trợ phù hợp với nhu cầu của bạn.",
+    "existingSystems": "Các bạn có thể tích hợp với hệ thống hiện có của chúng tôi không?",
+    "systemsAnswer": "Chắc chắn rồi, đội ngũ của chúng tôi chuyên về tích hợp liền mạch với nhiều nền tảng và hệ thống."
   }
 }

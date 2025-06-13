@@ -1,7 +1,19 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import moment from "moment";
 import { Bar, Line, Pie } from "react-chartjs-2";
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, ArcElement } from 'chart.js';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+    PointElement,
+    LineElement,
+    ArcElement,
+} from "chart.js";
 
 import Sidebar from "./Partials/Sidebar";
 import Header from "./Partials/Header";
@@ -12,107 +24,190 @@ import apiInstance from "../../utils/axios";
 import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  PointElement,
-  LineElement,
-  ArcElement
-);
+    ChartJS.register(
+        CategoryScale,
+        LinearScale,
+        BarElement,
+        Title,
+        Tooltip,
+        Legend,
+        PointElement,
+        LineElement,
+        ArcElement
+    );
 
-function Earning() {
+    function Earning() {
     const [stats, setStats] = useState({});
     const [earning, setEarning] = useState([]);
     const [bestSellingCourse, setBestSellingCourse] = useState([]);
-    const [timeRange, setTimeRange] = useState('6 Months');
+    const [timeRange, setTimeRange] = useState("6 Months");
     const [isLoading, setIsLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
+    const [isTeacher, setIsTeacher] = useState(false);
+
+    useEffect(() => {
+        const fetchTeacherStatus = async () => {
+        try {
+            const res = await apiInstance.get("/teacher/status");
+            setIsTeacher(res.data.is_teacher);
+        } catch (err) {
+            Toast.error("Failed to check teacher status.");
+        } finally {
+            setLoading(false);
+        }
+        };
+        fetchTeacherStatus();
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
-            try {
-                const [summaryRes, monthsRes, coursesRes] = await Promise.all([
-                    apiInstance.get(`teacher/summary/${UserData()?.teacher_id}/`),
-                    apiInstance.get(`teacher/all-months-earning/${UserData()?.teacher_id}/`),
-                    apiInstance.get(`teacher/best-course-earning/${UserData()?.teacher_id}/`)
-                ]);
-                
-                setStats(summaryRes.data[0] || {});
-                setEarning(monthsRes.data || []);
-                setBestSellingCourse(coursesRes.data || []);
-            } catch (error) {
-                Toast.error("Failed to fetch data.");
-            } finally {
-                setIsLoading(false);
-            }
+        try {
+            const [summaryRes, monthsRes, coursesRes] = await Promise.all([
+            apiInstance.get(`teacher/summary/${UserData()?.teacher_id}/`),
+            apiInstance.get(`teacher/all-months-earning/${UserData()?.teacher_id}/`),
+            apiInstance.get(`teacher/best-course-earning/${UserData()?.teacher_id}/`),
+            ]);
+            setStats(summaryRes.data[0] || {});
+            setEarning(monthsRes.data || []);
+            setBestSellingCourse(coursesRes.data || []);
+        } catch (error) {
+            Toast.error("Failed to fetch data.");
+        } finally {
+            setIsLoading(false);
+        }
         };
-        
-        fetchData();
-    }, []);
+
+        if (isTeacher) fetchData();
+    }, [isTeacher]);
 
     const calculateGrowthRate = () => {
         if (earning.length < 2) return 0;
-        
         const currentMonth = earning[earning.length - 1].total_earning;
         const previousMonth = earning[earning.length - 2].total_earning;
-        
         return ((currentMonth - previousMonth) / previousMonth * 100).toFixed(1);
     };
 
     const filterDataByTimeRange = () => {
-        const monthsToShow = timeRange === '30 Days' ? 1 
-                          : timeRange === '3 Months' ? 3 
-                          : timeRange === '6 Months' ? 6 
-                          : 12;
-        
+        const monthsToShow =
+        timeRange === "30 Days" ? 1 : timeRange === "3 Months" ? 3 : timeRange === "6 Months" ? 6 : 12;
         return earning.slice(-monthsToShow);
     };
 
     const earningChartData = {
-        labels: filterDataByTimeRange().map(e => moment().month(e.month - 1).format("MMM")),
+        labels: filterDataByTimeRange().map((e) => moment().month(e.month - 1).format("MMM")),
         datasets: [
-            {
-                label: 'Monthly Earnings',
-                data: filterDataByTimeRange().map(e => e.total_earning),
-                backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 2,
-                tension: 0.3,
-            }
-        ]
+        {
+            label: "Monthly Earnings",
+            data: filterDataByTimeRange().map((e) => e.total_earning),
+            backgroundColor: "rgba(54, 162, 235, 0.5)",
+            borderColor: "rgba(54, 162, 235, 1)",
+            borderWidth: 2,
+            tension: 0.3,
+        },
+        ],
     };
 
     const bestCoursesChartData = {
-        labels: bestSellingCourse.slice(0, 5).map(b => 
-            b.course_title.substring(0, 15) + (b.course_title.length > 15 ? '...' : '')),
+        labels: bestSellingCourse
+        .slice(0, 5)
+        .map((b) => b.course_title.substring(0, 15) + (b.course_title.length > 15 ? "..." : "")),
         datasets: [
-            {
-                label: 'Revenue',
-                data: bestSellingCourse.slice(0, 5).map(b => b.revenue),
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.7)',
-                    'rgba(54, 162, 235, 0.7)',
-                    'rgba(255, 206, 86, 0.7)',
-                    'rgba(75, 192, 192, 0.7)',
-                    'rgba(153, 102, 255, 0.7)',
-                ],
-                borderWidth: 1,
-            }
-        ]
+        {
+            label: "Revenue",
+            data: bestSellingCourse.slice(0, 5).map((b) => b.revenue),
+            backgroundColor: [
+            "rgba(255, 99, 132, 0.7)",
+            "rgba(54, 162, 235, 0.7)",
+            "rgba(255, 206, 86, 0.7)",
+            "rgba(75, 192, 192, 0.7)",
+            "rgba(153, 102, 255, 0.7)",
+            ],
+            borderWidth: 1,
+        },
+        ],
     };
 
-    const totalRevenueFromTopCourses = bestSellingCourse.reduce((sum, course) => sum + course.revenue, 0);
+    const totalRevenueFromTopCourses = bestSellingCourse.reduce(
+        (sum, course) => sum + course.revenue,
+        0
+    );
 
-    if (isLoading) {
+    if (loading) {
         return (
-            <div className="d-flex justify-content-center align-items-center" style={{height: '100vh'}}>
-                <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
+        <div className="d-flex justify-content-center align-items-center" style={{ height: "100vh" }}>
+            <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+            </div>
+            <span className="ms-3 text-muted">Checking status...</span>
+        </div>
+        );
+    }
+
+    if (!isTeacher) {
+        return (
+        <>
+            <BaseHeader />
+            <section className="pt-6 pb-6 bg-light min-vh-100">
+            <div className="container">
+                <div className="row justify-content-center">
+                <div className="col-lg-8 col-md-10">
+                    <div className="card text-center shadow-lg">
+                    <div className="card-body p-5">
+                        <div className="mb-4">
+                        <i className="fas fa-chalkboard-teacher text-primary display-1"></i>
+                        </div>
+                        <h2 className="card-title mb-3">Become an Instructor</h2>
+                        <p className="card-text text-muted mb-4 fs-5">
+                        You haven't registered as an instructor yet. Register now to start sharing
+                        knowledge and earning from your expertise!
+                        </p>
+                        <div className="row text-start mb-4">
+                        <div className="col-md-6 mb-3">
+                            <div className="d-flex align-items-center">
+                            <i className="fas fa-check-circle text-success me-3"></i>
+                            <span>Track your revenue</span>
+                            </div>
+                        </div>
+                        <div className="col-md-6 mb-3">
+                            <div className="d-flex align-items-center">
+                            <i className="fas fa-check-circle text-success me-3"></i>
+                            <span>Access detailed analytics</span>
+                            </div>
+                        </div>
+                        <div className="col-md-6 mb-3">
+                            <div className="d-flex align-items-center">
+                            <i className="fas fa-check-circle text-success me-3"></i>
+                            <span>Monetize your knowledge</span>
+                            </div>
+                        </div>
+                        <div className="col-md-6 mb-3">
+                            <div className="d-flex align-items-center">
+                            <i className="fas fa-check-circle text-success me-3"></i>
+                            <span>24/7 Support</span>
+                            </div>
+                        </div>
+                        </div>
+                        <div className="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <Link
+                            to="/instructor/register"
+                            className="btn btn-primary btn-lg px-5 me-md-2"
+                        >
+                            <i className="fas fa-user-graduate me-2"></i>
+                            Become an Instructor
+                        </Link>
+                        <Link to="/" className="btn btn-outline-secondary btn-lg px-4">
+                            <i className="fas fa-home me-2"></i>
+                            Back to Home
+                        </Link>
+                        </div>
+                    </div>
+                    </div>
+                </div>
                 </div>
             </div>
+            </section>
+            <BaseFooter />
+        </>
         );
     }
 

@@ -393,18 +393,19 @@ function Index() {
                                 <h5 className="mb-0 text-primary fw-bold">${c.price || '0.00'}</h5>
                                 <div className="d-flex gap-2">
                                     <button
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        if (!userId) {
-                                        Toast().fire({ icon: "warning", title: t("login_required") });
-                                        return;
-                                        }
-                                        addToCart(c.id, userId, c.price, country, cartId);
-                                    }}
-                                    className="btn btn-sm btn-outline-primary border-2 rounded-3 hover:bg-primary hover:text-white transition-colors duration-200"
-                                    aria-label={t("course.add_cart")}
-                                    >
-                                    <i className="fas fa-shopping-cart"></i>
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            if (!userId || !cartId) {
+                                            Toast.warning(t("login_to_continue"));
+                                            setTimeout(() => navigate("/login"), 1500);
+                                            return;
+                                            }
+                                            addToCart(c.id, userId, c.price, country, cartId);
+                                        }}
+                                        className="btn btn-sm btn-outline-primary border-2 rounded-3 hover:bg-primary hover:text-white transition-colors duration-200"
+                                        aria-label={t("course.add_cart")}
+                                        >
+                                        <i className="fas fa-shopping-cart"></i>
                                     </button>
                                     <Link
                                     to={`/course-detail/${c.slug}/`}
@@ -453,7 +454,6 @@ function Index() {
                                 </li>
                             ))}
 
-                            {/* Dấu ... nếu còn trang */}
                             {endPage < totalPages && (
                                 <li className="page-item disabled">
                                 <span className="page-link rounded-3 px-4 py-2 text-dark bg-light border-0 shadow-sm">...</span>

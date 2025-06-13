@@ -94,11 +94,9 @@ export const setUser = async () => {
             setAuthUser(access_token, refresh_token);
         }
         
-        // ✅ THÊM: Return success để App.jsx biết auth đã sẵn sàng
         return true;
     } catch (error) {
         console.error("Error setting user:", error);
-        // Nếu có lỗi (refresh token expired, etc.), logout user
         logout();
         return false;
     }
