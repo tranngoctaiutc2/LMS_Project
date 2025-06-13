@@ -169,12 +169,13 @@ class TeacherSerializer(serializers.ModelSerializer):
         model = api_models.Teacher
 
 class TeacherRegistrationSerializer(serializers.ModelSerializer):
-    
+    current_image = serializers.CharField(required=False, write_only=True)
+
     class Meta:
         model = api_models.Teacher
         fields = [
             "full_name", "bio", "facebook", "twitter", 
-            "linkedin", "about", "country", "image"
+            "linkedin", "about", "country", "image", "current_image"
         ]
         extra_kwargs = {
             'full_name': {'required': True},
@@ -189,16 +190,16 @@ class TeacherRegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = self.context['request'].user
-        
-        if hasattr(user, 'teacher'):
-            raise serializers.ValidationError("Bạn đã đăng ký làm giáo viên rồi!")
-        
-        teacher = api_models.Teacher.objects.create(
-            user=user,
-            **validated_data
-        )
-        return teacher
 
+        if hasattr(user, 'teacher'):
+            raise serializers.ValidationError("You already teacher!")
+
+        current_image = validated_data.pop("current_image", None)
+        if not validated_data.get("image") and current_image:
+            validated_data["image"] = current_image
+
+        teacher = api_models.Teacher.objects.create(user=user, **validated_data)
+        return teacher
 
 class TeacherUpdateSerializer(serializers.ModelSerializer):
 
@@ -637,9 +638,7 @@ class UserDocumentSerializer(serializers.ModelSerializer):
         model = api_models.UserDocument
         fields = '__all__'
 
-class SimpleNestedTopReviewSerializer(serializers.Serializer):
-    """Serializer với format nested nhưng đơn giản"""
-    
+class SimpleNestedTopReviewSerializer(serializers.Serializer):  
     id = serializers.IntegerField()
     review = serializers.CharField()
     rating = serializers.IntegerField()
@@ -662,7 +661,6 @@ class SimpleNestedTopReviewSerializer(serializers.Serializer):
     def get_profile(self, obj):
         try:
             if obj.user:
-                # Kiểm tra profile tồn tại trước khi get
                 if Profile.objects.filter(user=obj.user).exists():
                     profile = obj.profile()
                     profile_image = None

@@ -1066,91 +1066,6 @@ class TeacherNotificationDetailAPIView(generics.RetrieveUpdateAPIView):
         noti_id = self.kwargs['noti_id']
         teacher = api_models.Teacher.objects.get(id=teacher_id)
         return api_models.Notification.objects.get(teacher=teacher, id=noti_id)
-    
-# class CourseCreateAPIView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def post(self, request):
-#         title = request.data.get("title")
-#         description = request.data.get("description")
-#         image = request.data.get("image")
-#         file = request.data.get("file")
-#         level = request.data.get("level")
-#         language = request.data.get("language")
-#         price = request.data.get("price")
-#         category = request.data.get("category")
-
-#         category_obj = api_models.Category.objects.filter(id=category).first()
-#         teacher = api_models.Teacher.objects.get(user=request.user)
-
-#         course = api_models.Course.objects.create(
-#             teacher=teacher,
-#             category=category_obj,
-#             file=file,
-#             image=image,
-#             title=title,
-#             description=description,
-#             price=price,
-#             language=language,
-#             level=level
-#         )
-
-#         return Response({"message": "Course Created", "course_id": course.course_id}, status=status.HTTP_201_CREATED)
-
-# class CourseCreateAPIView(generics.CreateAPIView):
-#     queryset = api_models.Course.objects.all()
-#     serializer_class = api_serializer.CourseSerializer
-#     permission_classes = [IsAuthenticated]
-
-#     def perform_create(self, serializer):
-#         serializer.is_valid(raise_exception=True)
-#         course_instance = serializer.save()
-
-#         variant_data = []
-#         for key, value in self.request.data.items():
-#             if key.startswith('variant') and '[variant_title]' in key:
-#                 index = key.split('[')[1].split(']')[0]
-#                 title = value
-
-#                 variant_dict = {'title': title}
-#                 item_data_list = []
-#                 current_item = {}
-#                 variant_data = []
-
-#                 for item_key, item_value in self.request.data.items():
-#                     if f'variants[{index}][items]' in item_key:
-#                         field_name = item_key.split('[')[-1].split(']')[0]
-#                         if field_name == "title":
-#                             if current_item:
-#                                 item_data_list.append(current_item)
-#                             current_item = {}
-#                         current_item.update({field_name: item_value})
-                    
-#                 if current_item:
-#                     item_data_list.append(current_item)
-
-#                 variant_data.append({'variant_data': variant_dict, 'variant_item_data': item_data_list})
-
-#         for data_entry in variant_data:
-#             variant = api_models.Variant.objects.create(title=data_entry['variant_data']['title'], course=course_instance)
-
-#             for item_data in data_entry['variant_item_data']:
-#                 preview_value = item_data.get("preview")
-#                 preview = bool(strtobool(str(preview_value))) if preview_value is not None else False
-
-#                 api_models.VariantItem.objects.create(
-#                     variant=variant,
-#                     title=item_data.get("title"),
-#                     description=item_data.get("description"),
-#                     file=item_data.get("file"),
-#                     preview=preview,
-#                 )
-
-#     def save_nested_data(self, course_instance, serializer_class, data):
-#         serializer = serializer_class(data=data, many=True, context={"course_instance": course_instance})
-#         serializer.is_valid(raise_exception=True)
-#         serializer.save(course=course_instance) 
-# views.py
 
 class TeacherCourseCreateAPIView(generics.CreateAPIView):
     queryset = api_models.Course.objects.all()
@@ -1272,8 +1187,6 @@ class FileUploadAPIView(APIView):
             })
 
         return Response({"error": "No file provided"}, status=400)
-
-
 
 
 class ChatBotAPIView(APIView):
@@ -1427,7 +1340,7 @@ class TeacherRegistrationView(generics.CreateAPIView):
             teacher = serializer.save()
             detail_serializer = api_serializer.TeacherDetailSerializer(teacher)
             return Response({
-                'message': 'Đăng ký làm giáo viên thành công!',
+                'message': 'Register teacher success!',
                 'teacher': detail_serializer.data
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1451,7 +1364,7 @@ class TeacherProfileView(generics.RetrieveUpdateAPIView):
         teacher = self.get_object()
         if not teacher:
             return Response({
-                'error': 'Bạn chưa đăng ký làm giáo viên!'
+                'error': 'You have not registered as a teacher yet!'
             }, status=status.HTTP_404_NOT_FOUND)
         
         serializer = self.get_serializer(teacher)
@@ -1461,7 +1374,7 @@ class TeacherProfileView(generics.RetrieveUpdateAPIView):
         teacher = self.get_object()
         if not teacher:
             return Response({
-                'error': 'Bạn chưa đăng ký làm giáo viên!'
+                'error': 'You have not registered as a teacher yet!'
             }, status=status.HTTP_404_NOT_FOUND)
         
         partial = kwargs.pop('partial', False)
@@ -1471,7 +1384,7 @@ class TeacherProfileView(generics.RetrieveUpdateAPIView):
             serializer.save()
             detail_serializer = api_serializer.TeacherDetailSerializer(teacher)
             return Response({
-                'message': 'Cập nhật thông tin thành công!',
+                'message': 'Profile updated successfully!',
                 'teacher': detail_serializer.data
             })
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1490,6 +1403,6 @@ def check_teacher_status(request):
     except api_models.Teacher.DoesNotExist:
         return Response({
             'is_teacher': False,
-            'message': 'Bạn chưa đăng ký làm giáo viên'
+            'message': 'You have not registered as a teacher yet!'
         })
 
