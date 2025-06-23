@@ -1241,7 +1241,7 @@ class GetChatHistoryAPIView(APIView):
                 }, status=400)
 
             agent = CustomerSupportAIAgent()
-            memories = agent.get_all_memories(user_id)
+            memories = agent.get_user_conversation_history(user_id)
 
             if not memories:
                 return Response({
@@ -1278,7 +1278,7 @@ class DeleteChatHistoryAPIView(APIView):
                 }, status=400)
 
             agent = CustomerSupportAIAgent()
-            success = agent.delete_memories(user_id)
+            success = agent.clear_user_memory(user_id)
 
             if success:
                 return Response({

@@ -58,6 +58,8 @@ INSTALLED_APPS = [
     'storages',
    	'django_ckeditor_5',
     'drf_yasg',
+
+    'django_extensions',
 ]
 
 MIDDLEWARE = [
