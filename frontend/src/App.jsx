@@ -13,6 +13,7 @@ import MainWrapper from "./layouts/MainWrapper";
 import PrivateRoute from "./layouts/PrivateRoute";
 import AboutUs from "./views/auth/AboutUs";
 import ContactUs from "./views/auth/ContactUs";
+import FloatingScrollTopButton from "./views/partials/FloatingScrollTopButton";
 
 import Register from "../src/views/auth/Register";
 import Login from "../src/views/auth/Login";
@@ -358,6 +359,7 @@ function AppContent() {
                             }
                         />
                     </Routes>
+                    <FloatingScrollTopButton />
                     <Chatbot/>
                 </MainWrapper>
             </ProfileContext.Provider>

@@ -1,21 +1,26 @@
-import { useState, useEffect} from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 import { login } from "../../utils/auth";
 import { useAuthStore } from "../../store/auth";
 import Toast from "../plugin/Toast";
-import { useClerk } from "@clerk/clerk-react";
+import { useSignIn } from "@clerk/clerk-react";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState({
+    google: false,
+    facebook: false,
+    github: false,
+  });
 
   const navigate = useNavigate();
   const { isLoggedIn } = useAuthStore();
+  const { signIn } = useSignIn();
 
   // Redirect if already logged in
   useEffect(() => {
@@ -23,6 +28,7 @@ function Login() {
       navigate("/", { replace: true });
     }
   }, [isLoggedIn, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -48,21 +54,26 @@ function Login() {
     setIsLoading(false);
   };
 
-  const { redirectToSignIn } = useClerk();
-  const handleOAuthLogin = async () => {
-  setOauthLoading(true);
-  try {
-    await redirectToSignIn({
-      strategy: "oauth_google",
-      redirectUrl: window.location.origin + "/clerk-callback",
-    });
-  } catch (err) {
-    console.error(err);
-    Toast.error("Google login failed via Clerk");
-    setOauthLoading(false);
-  }
-};
+  const handleOAuthLogin = async (provider) => {
+    if (!signIn) {
+      console.error("signIn is not available. Ensure Clerk is properly initialized.");
+      Toast.error("Authentication service unavailable");
+      return;
+    }
 
+    setOauthLoading((prev) => ({ ...prev, [provider]: true }));
+    try {
+      await signIn.authenticateWithRedirect({
+        strategy: `oauth_${provider}`,
+        redirectUrl: `${window.location.origin}/clerk-callback`,
+        redirectUrlComplete: `${window.location.origin}/clerk-callback`,
+      });
+    } catch (err) {
+      console.error(`${provider} OAuth error:`, err);
+      Toast.error(`${provider.charAt(0).toUpperCase() + provider.slice(1)} login failed: ${err.message}`);
+      setOauthLoading((prev) => ({ ...prev, [provider]: false }));
+    }
+  };
 
   return (
     <>
@@ -76,21 +87,23 @@ function Login() {
                 <div className="mb-4 text-center">
                   <h1 className="fw-bold mb-2">Sign in</h1>
                   <p className="text-muted">
-                    Don’t have an account?
+                    Don't have an account?
                     <Link to="/register/" className="ms-1 text-primary text-decoration-none fw-semibold">
                       Sign up
                     </Link>
                   </p>
                 </div>
 
-                <div className="d-grid mb-4">
+                {/* OAuth Buttons */}
+                <div className="d-grid gap-3 mb-4">
+                  {/* Google OAuth Button */}
                   <button
                     type="button"
                     className="btn btn-outline-dark rounded-3 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
-                    onClick={handleOAuthLogin}
-                    disabled={oauthLoading}
+                    onClick={() => handleOAuthLogin('google')}
+                    disabled={oauthLoading.google}
                   >
-                    {oauthLoading ? (
+                    {oauthLoading.google ? (
                       <>
                         Redirecting <i className="fas fa-spinner fa-spin"></i>
                       </>
@@ -106,8 +119,55 @@ function Login() {
                       </>
                     )}
                   </button>
-                </div>
 
+                  {/* Facebook OAuth Button */}
+                  <button
+                    type="button"
+                    className="btn btn-outline-dark rounded-3 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                    onClick={() => handleOAuthLogin('facebook')}
+                    disabled={oauthLoading.facebook}
+                  >
+                    {oauthLoading.facebook ? (
+                      <>
+                        Redirecting <i className="fas fa-spinner fa-spin"></i>
+                      </>
+                    ) : (
+                      <>
+                        <img
+                          src="https://www.svgrepo.com/show/475647/facebook-color.svg"
+                          alt="Facebook icon"
+                          width="20"
+                          height="20"
+                        />
+                        Continue with Facebook
+                      </>
+                    )}
+                  </button>
+
+                  {/* GitHub OAuth Button */}
+                  <button
+                    type="button"
+                    className="btn btn-outline-dark rounded-3 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                    onClick={() => handleOAuthLogin('github')}
+                    disabled={oauthLoading.github}
+                  >
+                    {oauthLoading.github ? (
+                      <>
+                        Redirecting <i className="fas fa-spinner fa-spin"></i>
+                      </>
+                    ) : (
+                      <>
+                        <img
+                          src="https://www.svgrepo.com/show/475654/github-color.svg"
+                          alt="GitHub icon"
+                          width="20"
+                          height="20"
+                        />
+                        Continue with GitHub
+                      </>
+                    )}
+                  </button>
+                </div>
                 <div className="text-center mb-3 text-muted">
                   <small>or sign in with your email</small>
                 </div>

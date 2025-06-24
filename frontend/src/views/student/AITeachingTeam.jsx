@@ -98,6 +98,7 @@ const AITeachingAgents = () => {
         selectedAdvisorDoc: null,
         loading: false,
         docUrl: null,
+        completed: false, // Thêm trạng thái completed
         ...(agent.type === "advisor" ? { duration: "4 weeks" } : {}),
       },
     }), {})
@@ -153,6 +154,19 @@ const AITeachingAgents = () => {
     return !specialCharPattern.test(topic);
   };
 
+  // Hàm format text với ** thành bold
+  const formatBoldText = (text) => {
+    if (typeof text !== 'string') return text;
+    
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={index}>{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
+
   const handleCallAgent = async (agentType, endpoint) => {
     const agentState = agentStates[agentType];
     let finalTopic = globalTopic;
@@ -189,7 +203,10 @@ const AITeachingAgents = () => {
     try {
       const res = await apiInstance.post(endpoint, payload, { timeout: 300000 });
       Toast.success(`${agentType} completed!`);
-      updateAgentState(agentType, { docUrl: res.data.doc_url });
+      updateAgentState(agentType, { 
+        docUrl: res.data.doc_url,
+        completed: true // Đánh dấu là hoàn thành
+      });
       return res.data;
     } catch (error) {
       console.error(error);
@@ -201,38 +218,44 @@ const AITeachingAgents = () => {
     }
   };
 
-  const handleRunAll = async () => {
-    if (!globalTopic) {
-      return Toast.warning("Please enter a global topic to run all agents");
-    }
+  // Hàm clear để reset trang bất đồng bộ
+  const handleClear = async () => {
+    // Reset tất cả state
+    setGlobalTopic("");
+    setGlobalLanguage("en");
+    setTopicStatus({ status: null, message: "" });
+    setTopicSuggestions([]);
+    setExistingAgents([]);
     
-    if (!validateTopicInput(globalTopic)) {
-      return Toast.error("Global topic cannot contain special characters");
-    }
+    // Reset agent states
+    setAgentStates(
+      agents.reduce((acc, agent) => ({
+        ...acc,
+        [agent.type]: {
+          selectedProfessorDoc: null,
+          selectedAdvisorDoc: null,
+          loading: false,
+          docUrl: null,
+          completed: false,
+          ...(agent.type === "advisor" ? { duration: "4 weeks" } : {}),
+        },
+      }), {})
+    );
 
-    setIsRunningGlobal(true);
-
+    // Fetch lại documents
     try {
-      const payload = {
-        user_id: UserData()?.user_id,
-        topic: globalTopic,
-        language: globalLanguage,
-      };
-
-      const res = await apiInstance.post("/all-agent/", payload, { timeout: 600000 });
-      Toast.success("All agents completed successfully!");
-      
-      agents.forEach((agent) => {
-        updateAgentState(agent.type, { 
-          docUrl: res.data[`${agent.type}_doc_url`] || res.data.doc_url 
-        });
+      const res = await apiInstance.get("/ai-document-list/", {
+        params: { user_id: UserData()?.user_id },
       });
-    } catch (error) {
-      console.error(error);
-      Toast.error(error.response?.data?.error || "Failed to run all agents");
-    } finally {
-      setIsRunningGlobal(false);
+      const professorOnly = res.data?.filter((doc) => doc.ai_type === "professor") || [];
+      const advisorOnly = res.data?.filter((doc) => doc.ai_type === "advisor") || [];
+      setProfessorDocs(professorOnly);
+      setAdvisorDocs(advisorOnly);
+    } catch (err) {
+      console.error("Failed to fetch documents", err);
     }
+
+    Toast.success("Page cleared successfully!");
   };
 
   const handleCheckFeasibility = async () => {
@@ -358,7 +381,7 @@ const AITeachingAgents = () => {
       (topicStatus.status === "Allow" && !existingAgents.includes(agentType)) ||
       agentStates[agentType].selectedProfessorDoc ||
       (agentType === "advisor" && agentStates[agentType].selectedAdvisorDoc)
-    );
+    ) && !agentStates[agentType].completed; // Thêm điều kiện completed
   };
 
   const isAnyDocSelectedExcept = (currentAgentType) => {
@@ -419,7 +442,7 @@ const AITeachingAgents = () => {
           </button>
           {topicStatus.message && (
             <div className={`mt-2 p-2 rounded ${topicStatus.status === "Allow" ? "text-success bg-success-subtle" : "text-danger bg-danger-subtle"}`}>
-              {topicStatus.message}
+              {formatBoldText(topicStatus.message)}
             </div>
           )}
           {topicStatus.status === "Allow" && topicSuggestions.length > 0 && (
@@ -468,9 +491,9 @@ const AITeachingAgents = () => {
                 <h4 className="mb-2">
                   <span className="me-2">{agent.icon}</span> {agent.title}
                 </h4>
-                <p className="text-muted small mb-3">{agent.description}</p>
+                <p className="text-muted small mb-3">{formatBoldText(agent.description)}</p>
                 <div className="alert alert-info py-2 px-3 mb-3" style={{fontSize: '12px', lineHeight: '1.4'}}>
-                  {agent.hint}
+                  {formatBoldText(agent.hint)}
                 </div>
                 <select
                   className="form-select mb-2"
@@ -480,7 +503,8 @@ const AITeachingAgents = () => {
                     !!globalTopic ||
                     (agent.type === "advisor" && agentStates[agent.type].selectedAdvisorDoc) ||
                     isRunningGlobal ||
-                    isAnyDocSelectedExcept(agent.type)
+                    isAnyDocSelectedExcept(agent.type) ||
+                    agentStates[agent.type].completed
                   }
                 >
                   <option value="">-- Select Professor Document (Optional) --</option>
@@ -497,7 +521,13 @@ const AITeachingAgents = () => {
                       className="form-select mb-2"
                       value={agentStates[agent.type].selectedAdvisorDoc?.id || ""}
                       onChange={(e) => handleAdvisorDocChange(agent.type, e.target.value)}
-                      disabled={!!globalTopic || agentStates[agent.type].selectedProfessorDoc || isRunningGlobal || isAnyDocSelectedExcept(agent.type)}
+                      disabled={
+                        !!globalTopic || 
+                        agentStates[agent.type].selectedProfessorDoc || 
+                        isRunningGlobal || 
+                        isAnyDocSelectedExcept(agent.type) ||
+                        agentStates[agent.type].completed
+                      }
                     >
                       <option value="">-- Select Advisor Document (Optional) --</option>
                       {advisorDocs.map((doc) => (
@@ -510,7 +540,7 @@ const AITeachingAgents = () => {
                       className="form-select mb-2"
                       value={agentStates[agent.type].duration}
                       onChange={(e) => updateAgentState(agent.type, { duration: e.target.value })}
-                      disabled={isRunningGlobal}
+                      disabled={isRunningGlobal || agentStates[agent.type].completed}
                     >
                       {["2 weeks", "4 weeks", "6 weeks", "8 weeks", "10 weeks", "12 weeks"].map((opt) => (
                         <option key={opt} value={opt}>{opt}</option>
@@ -524,7 +554,9 @@ const AITeachingAgents = () => {
                   onClick={() => handleCallAgent(agent.type, agent.endpoint)}
                   disabled={agentStates[agent.type].loading || isRunningGlobal || !getIsRunEnabled(agent.type)}
                 >
-                  {agentStates[agent.type].loading ? "Generating..." : `Run ${agent.title}`}
+                  {agentStates[agent.type].loading ? "Generating..." : 
+                   agentStates[agent.type].completed ? "Completed" : 
+                   `Run ${agent.title}`}
                 </button>
 
                 {agentStates[agent.type].docUrl && (
@@ -546,11 +578,11 @@ const AITeachingAgents = () => {
 
         <div className="text-center mt-4">
           <button
-            className="btn btn-success me-3"
-            onClick={handleRunAll}
-            disabled={isRunningGlobal || topicStatus.status !== "Allow"}
+            className="btn btn-warning me-3"
+            onClick={handleClear}
+            disabled={isRunningGlobal}
           >
-            🚀 Run All Agents
+            🧹 Clear All
           </button>
           <button
             className="btn btn-outline-secondary"

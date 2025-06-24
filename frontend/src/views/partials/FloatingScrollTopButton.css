@@ -1,0 +1,33 @@
+.floating-scroll-btn {
+  position: fixed;
+  bottom: 100px;
+  right: 20px;
+  z-index: 9999;
+  transition: opacity 0.3s ease;
+}
+
+.floating-scroll-btn.fade-in {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.floating-scroll-btn.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.scroll-top-button {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #4682b4, #5f9ea0);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 20px;
+  box-shadow: 0 8px 25px rgba(70, 130, 180, 0.4);
+  transition: transform 0.3s ease;
+}
+
+.scroll-top-button:hover {
+  transform: translateY(-3px);
+}

@@ -1,0 +1,101 @@
+.chatbot-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.chatbot-resizable {
+  transition: all 0.3s ease;
+  animation: slideIn 0.3s ease;
+}
+
+.chatbot-card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 10px 15px;
+}
+
+.card-body {
+  flex: 1;
+  overflow-y: auto;
+  background: #f8f9fa;
+}
+
+.card-footer {
+  padding: 10px;
+  background: #fff;
+}
+
+.message-bubble {
+  transition: all 0.2s ease;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.message-user {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.message-assistant {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.chatbot-toggle {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.chatbot-toggle:hover {
+  transform: scale(1.1);
+}
+
+.load-more-btn {
+  transition: all 0.2s ease;
+}
+
+.load-more-btn:hover {
+  background: #e9ecef;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scrollbar styling */
+.card-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.card-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.card-body::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.card-body::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
