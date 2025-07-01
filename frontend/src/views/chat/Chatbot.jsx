@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import apiInstance from "../../utils/axios";
 import moment from "moment";
 import { userId } from "../../utils/constants";
@@ -22,157 +22,237 @@ function Chatbot() {
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [size, setSize] = useState({ width: 350, height: 500 });
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const fetchingRef = useRef(false);
   const location = useLocation();
 
+  // 🔄 Reset và load lại khi user hoặc location thay đổi
   useEffect(() => {
-    setIsOpen(false);
-  }, [location]);
+    const uid = userId();
 
-  const toggleChat = () => setIsOpen(!isOpen);
-  const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!uid) {
+      setMessages([]);
+      setHistoryLoaded(false);
+      setPage(1);
+      setHasMoreMessages(true);
+      return;
+    }
 
+    if (!historyLoaded && !fetchingRef.current) {
+      loadChatHistory();
+    }
+  }, [location]); // hoặc thêm dependency khác nếu dùng auth context
+
+  // 🧠 Auto scroll
   useEffect(() => {
-    if (userId()) fetchChatHistory();
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sessionMessages]);
 
+  // 🧠 Focus input khi mở chat
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [isOpen]);
 
-  const fetchChatHistory = async (pageNum = 1, append = false) => {
+  // ✅ Sửa toggle để tránh gọi load nhiều lần
+  const toggleChat = () => {
+    setIsOpen(prev => {
+      const newState = !prev;
+
+      if (newState && userId() && !historyLoaded && !fetchingRef.current) {
+        loadChatHistory();
+      }
+
+      return newState;
+    });
+  };
+
+  const loadChatHistory = useCallback(async (pageNum = 1, append = false) => {
+    const uid = userId();
+    if (!uid || fetchingRef.current) return;
+
     try {
+      fetchingRef.current = true;
       setLoadingMore(pageNum > 1);
-      const res = await apiInstance.post(`chat/history/`, { 
-        user_id: userId(), 
+
+      const response = await apiInstance.post(`chat/history/`, {
+        user_id: uid,
         page: pageNum,
         limit: 20
       });
-      
-      const newMessages = Array.isArray(res.data.data) ? res.data.data : [];
-      const validMessages = newMessages.filter(msg => msg && typeof msg.text === 'string');
-      
+
+      const historyData = response.data.data || [];
+      const validMessages = historyData.filter(msg =>
+        msg &&
+        typeof msg.text === 'string' &&
+        msg.role &&
+        msg.timestamp
+      );
+
       if (append) {
-        setMessages(prev => [...prev, ...validMessages]);
+        setMessages(prev => {
+          const existingIds = new Set(
+            prev.map(m => `${m.timestamp}_${m.role}_${m.text.substring(0, 50)}`)
+          );
+          const newMessages = validMessages.filter(m =>
+            !existingIds.has(`${m.timestamp}_${m.role}_${m.text.substring(0, 50)}`)
+          );
+          return [...prev, ...newMessages];
+        });
       } else {
         setMessages(validMessages);
+        setHistoryLoaded(true);
       }
-      
-      setHasMoreMessages(newMessages.length === 20);
-    } catch (err) {
-      console.error("Error fetching chat history:", err);
-      setMessages([]);
+
+      setHasMoreMessages(historyData.length === 20);
+      setPage(pageNum);
+    } catch (error) {
+      console.error("Error loading chat history:", error);
+      if (!append) {
+        setMessages([]);
+        setHistoryLoaded(true);
+      }
       setHasMoreMessages(false);
+      Toast.error("Failed to load chat history");
     } finally {
+      fetchingRef.current = false;
       setLoadingMore(false);
     }
-  };
+  }, []);
 
   const loadMoreMessages = async () => {
-    if (!hasMoreMessages || loadingMore) return;
-    
-    const nextPage = page + 1;
-    setPage(nextPage);
-    await fetchChatHistory(nextPage, true);
+    if (!hasMoreMessages || loadingMore || fetchingRef.current) return;
+    await loadChatHistory(page + 1, true);
   };
 
+  const generateMessageId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
   const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return;
-    const now = new Date().toISOString();
+    if (!inputMessage.trim() || isLoading) return;
+    
+    const messageText = inputMessage.trim();
     const uid = userId();
+    const timestamp = new Date().toISOString();
+    const userMessageId = generateMessageId();
+    
+    // Clear input immediately
+    setInputMessage("");
+    setIsLoading(true);
 
     if (!uid) {
-      setSessionMessages((prev) => [...prev, { 
+      // Handle session messages for guests
+      const userMessage = { 
+        id: userMessageId,
         role: "user", 
-        content: inputMessage, 
-        timestamp: now 
-      }]);
-      setInputMessage("");
-      setIsLoading(true);
+        content: messageText, 
+        timestamp: timestamp 
+      };
+      
+      setSessionMessages(prev => [...prev, userMessage]);
       
       try {
-        const res = await apiInstance.post(`chat/`, { query: inputMessage });
-        const message = typeof res.data.message === 'string' ? res.data.message : "Xin lỗi, tôi không thể trả lời ngay bây giờ.";
-        setSessionMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: message,
-            timestamp: now,
-          },
-        ]);
-        setDetectedLang(res.data.language || null);
-      } catch (err) {
-        console.error("Error sending message (no-auth):", err);
-        Toast.error("Không thể gửi tin nhắn");
-      } finally {
-        setIsLoading(false);
+        const response = await apiInstance.post(`chat/`, { query: messageText });
+        
+        const botMessage = {
+          id: generateMessageId(),
+          role: "assistant",
+          content: response.data.message || "Sorry, I couldn't respond right now.",
+          timestamp: new Date().toISOString(),
+        };
+        
+        setSessionMessages(prev => [...prev, botMessage]);
+        setDetectedLang(response.data.language || null);
+      } catch (error) {
+        console.error("Error sending message (guest):", error);
+        Toast.error("Failed to send message");
+        setSessionMessages(prev => prev.filter(m => m.id !== userMessageId));
       }
     } else {
-      setMessages((prev) => [...prev, { 
+      // Handle authenticated user messages
+      const userMessage = { 
+        id: userMessageId,
         role: "user", 
-        text: inputMessage, 
-        timestamp: now 
-      }]);
-      setInputMessage("");
-      setIsLoading(true);
+        text: messageText, 
+        timestamp: timestamp 
+      };
+      
+      // Add user message immediately
+      setMessages(prev => [...prev, userMessage]);
       
       try {
-        const res = await apiInstance.post(`chat/`, { 
+        const response = await apiInstance.post(`chat/`, { 
           user_id: uid, 
-          query: inputMessage 
+          query: messageText 
         });
-        setDetectedLang(res.data.language || null);
-        await fetchChatHistory();
-      } catch (err) {
-        console.error("Error sending message (auth):", err);
-        Toast.error("Không thể gửi tin nhắn");
-        setMessages((prev) => prev.slice(0, -1));
-      } finally {
-        setIsLoading(false);
+        
+        // Only add bot response if we got one
+        if (response.data.message) {
+          const botMessage = {
+            id: generateMessageId(),
+            role: "assistant",
+            text: response.data.message,
+            timestamp: new Date().toISOString()
+          };
+          
+          setMessages(prev => [...prev, botMessage]);
+        }
+        
+        setDetectedLang(response.data.language || null);
+        
+        // DO NOT reload history - we already have the messages in state
+        
+      } catch (error) {
+        console.error("Error sending message (authenticated):", error);
+        Toast.error("Failed to send message");
+        // Remove user message on error
+        setMessages(prev => prev.filter(m => m.id !== userMessageId));
       }
     }
+    
+    setIsLoading(false);
   };
 
   const handleClearChat = async () => {
     const uid = userId();
+    
     if (!uid) {
       setSessionMessages([]);
-      Toast.success("Cuộc trò chuyện đã được xóa.");
+      Toast.success("Chat cleared successfully.");
       return;
     }
 
     const result = await Swal.fire({
-      title: "Bạn có chắc không?",
-      text: "Hành động này sẽ xóa toàn bộ cuộc trò chuyện của bạn.",
+      title: "Are you sure?",
+      text: "This action will delete your entire chat history.",
       icon: "warning",
       showCancelButton: true,
       showConfirmButton: true,
-      confirmButtonText: "Xóa",
-      cancelButtonText: "Hủy",
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
     });
 
     if (result.isConfirmed) {
       try {
         await apiInstance.post(`chat/delete/`, { user_id: uid });
         setMessages([]);
-        Toast.success("Cuộc trò chuyện đã được xóa.");
-      } catch (err) {
-        console.error("Error deleting chat:", err);
-        Toast.error("Không thể xóa cuộc trò chuyện.");
+        setSessionMessages([]);
+        setPage(1);
+        setHasMoreMessages(true);
+        setHistoryLoaded(false);
+        Toast.success("Chat history deleted successfully.");
+      } catch (error) {
+        console.error("Error deleting chat:", error);
+        Toast.error("Failed to delete chat history.");
       }
     }
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -183,14 +263,18 @@ function Chatbot() {
     const currentMessages = uid ? messages.slice().reverse() : sessionMessages;
 
     if (!currentMessages.length && !isLoading) {
-      return <div className="text-center text-muted mt-5">🤖 Bắt đầu một cuộc trò chuyện mới</div>;
+      return (
+        <div className="text-center text-muted mt-5">
+          🤖 Start a new conversation
+        </div>
+      );
     }
 
     const urlRegex = /(https?:\/\/[^\s]+)/g;
 
     return (
       <>
-        {uid && hasMoreMessages && (
+        {uid && hasMoreMessages && !fetchingRef.current && historyLoaded && (
           <div className="text-center mb-3">
             <button 
               className="btn btn-outline-secondary btn-sm load-more-btn"
@@ -200,73 +284,83 @@ function Chatbot() {
               {loadingMore ? (
                 <>
                   <span className="spinner-border spinner-border-sm me-2" />
-                  Đang tải...
+                  Loading...
                 </>
               ) : (
-                '📜 Tải tin nhắn cũ hơn'
+                '📜 Load older messages'
               )}
             </button>
           </div>
         )}
 
+        {uid && !historyLoaded && (
+          <div className="text-center mt-3">
+            <div className="spinner-border text-primary" role="status" />
+            <div className="text-muted mt-2">Loading chat history...</div>
+          </div>
+        )}
+
         {currentMessages
           .filter(msg => msg && msg.role && (msg.text || msg.content))
-          .map((msg, i) => {
+          .map((msg, index) => {
             const sender = msg.role;
             const content = uid ? msg.text : msg.content;
+            const messageKey = msg.id || `${msg.timestamp}-${index}-${sender}`;
 
-            // Convert all URLs to buttons
+            if (!content) return null;
+
+            // Convert URLs to buttons
             const parts = typeof content === 'string' ? content.split(urlRegex) : [content];
-            const contentWithLinks = parts.flatMap((part, index) => {
-              if (part.match(urlRegex)) {
+            const contentWithLinks = parts.flatMap((part, partIndex) => {
+              if (part && typeof part === 'string' && part.match && part.match(urlRegex)) {
                 return [
                   <a
-                    key={`link-${index}`}
+                    key={`link-${partIndex}`}
                     href={part}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn btn-sm btn-outline-primary ms-2 mb-1"
                   >
-                    Truy cập liên kết
+                    Visit Link
                   </a>
                 ];
               }
               return part ? [part] : [];
             });
 
+            // Handle redirect URLs
             const redirectRegex = /👉 Redirect URL: (\/[a-zA-Z0-9\-_/]+)/;
             const matchRedirect = typeof content === 'string' ? content.match(redirectRegex) : null;
-            const cleanedContent = typeof content === 'string' ? content.replace(redirectRegex, '').trim() : '';
+            const cleanedContent = typeof content === 'string' ? content.replace(redirectRegex, '').trim() : content || '';
 
             return (
-              <div key={`${msg.timestamp}-${i}`} className={`mb-3 message-${sender}`}>
+              <div key={messageKey} className={`mb-3 message-${sender}`}>
                 <div
                   className={`p-3 rounded message-bubble ${
                     sender === "user" ? "bg-primary text-white ms-auto" : "bg-light me-auto"
                   }`}
                   style={{ maxWidth: "80%" }}
                 >
-                  <div className="fw-bold small mb-1">{sender === "user" ? "Bạn" : "Bot"}</div>
+                  <div className="fw-bold small mb-1">
+                    {sender === "user" ? "You" : "Assistant"}
+                  </div>
                   <div className="markdown-body">
                     <ReactMarkdown>
-                      {cleanedContent.replace(/<\/?[^>]+(>|$)/g, "")}
+                      {typeof cleanedContent === 'string' ? cleanedContent : ''}
                     </ReactMarkdown>
-                    {contentWithLinks.map((part, index) => (
-                      <span key={`part-${index}`}>{part}</span>
-                    ))}
                   </div>
-                  {matchRedirect && (
+                  {matchRedirect && VITE_HOST_URS && (
                     <div className="mt-2">
                       <Link 
                         to={`${VITE_HOST_URS}${matchRedirect[1]}`} 
                         className="btn btn-sm btn-outline-primary"
                       >
-                        Truy cập ngay
+                        Visit Now
                       </Link>
                     </div>
                   )}
                   <div className="text-muted small mt-1">
-                    {msg.timestamp ? moment(msg.timestamp).format("DD/MM HH:mm") : ''}
+                    {msg.timestamp ? moment(msg.timestamp).format("MM/DD HH:mm") : ''}
                   </div>
                 </div>
               </div>
@@ -295,27 +389,37 @@ function Chatbot() {
         >
           <div className="card shadow-lg chatbot-card">
             <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-              <h6 className="mb-0">Trợ lý ảo</h6>
+              <h6 className="mb-0">AI Assistant</h6>
               <div className="d-flex gap-2">
-                <button className="btn btn-sm btn-danger" onClick={handleClearChat}>
-                  Xóa
+                <button 
+                  className="btn btn-sm btn-danger" 
+                  onClick={handleClearChat}
+                  disabled={isLoading}
+                  title="Clear chat history"
+                >
+                  Clear
                 </button>
-                <button className="btn btn-sm btn-light" onClick={toggleChat}>
+                <button 
+                  className="btn btn-sm btn-light" 
+                  onClick={toggleChat}
+                  title="Close chat"
+                >
                   ×
                 </button>
               </div>
             </div>
 
-            <div className="card-body overflow-auto p-3">
+            <div className="card-body overflow-auto p-3" style={{ height: size.height - 120 }}>
               {renderMessages()}
               {isLoading && (
-                <div className="text-center">
+                <div className="text-center mt-3">
                   <div className="spinner-border text-primary" role="status" />
+                  <div className="text-muted mt-1">Processing...</div>
                 </div>
               )}
               {detectedLang && (
                 <div className="text-center text-muted small mt-2">
-                  Ngôn ngữ: {detectedLang.toUpperCase()}
+                  Detected Language: {detectedLang.toUpperCase()}
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -327,7 +431,7 @@ function Chatbot() {
                   ref={inputRef}
                   type="text"
                   className="form-control"
-                  placeholder="Nhập tin nhắn..."
+                  placeholder="Type your message..."
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
@@ -337,8 +441,13 @@ function Chatbot() {
                   className="btn btn-primary"
                   onClick={handleSendMessage}
                   disabled={isLoading || !inputMessage.trim()}
+                  title="Send message"
                 >
-                  Gửi
+                  {isLoading ? (
+                    <span className="spinner-border spinner-border-sm" />
+                  ) : (
+                    'Send'
+                  )}
                 </button>
               </div>
             </div>
@@ -349,6 +458,13 @@ function Chatbot() {
       <button
         className="btn btn-primary rounded-circle p-3 shadow-lg chatbot-toggle"
         onClick={toggleChat}
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          zIndex: 1000
+        }}
+        title="Toggle chat"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
           <path d="M16 8c0 3.866-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.584.296-1.925.864-4.181 1.234-.2.032-.352-.176-.273-.362.354-.836.674-1.95.77-2.966C.744 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7zM5 8a1 1 0 1 0-2 0 1 1 0 0 0 2 0zm4 0a1 1 0 1 0-2 0 1 1 0 0 0 2 0zm3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" />

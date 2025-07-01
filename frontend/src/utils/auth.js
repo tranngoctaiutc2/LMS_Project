@@ -2,8 +2,8 @@ import { useAuthStore } from "../store/auth";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import Cookie from "js-cookie";
+import { clerk } from "./clerk";
 
-// Create a separate axios instance for auth operations to avoid circular dependency
 const authApi = axios.create({
   baseURL: import.meta.env.VITE_REACT_APP_API_URL || "http://127.0.0.1:8000/api/v1/",
   timeout: 15000,
@@ -22,8 +22,6 @@ export const login = async (email, password) => {
         if (status === 200) {
             setAuthUser(data.access, data.refresh);
             
-            // ✅ THÊM: Trigger reload data sau khi login thành công
-            // Dispatch custom event để App.jsx biết cần reload data
             window.dispatchEvent(new CustomEvent('auth-changed', { 
                 detail: { type: 'login', user: jwt_decode(data.access) } 
             }));
@@ -56,25 +54,20 @@ export const register = async (full_name, email, password, password2) => {
     }
 };
 
-// ✅ FIXED: Logout không reload trang
 export const logout = () => {
-    // Clear cookies with all possible options
-    Cookie.remove("access_token");
-    Cookie.remove("refresh_token");
-    Cookie.remove("access_token", { path: "/" });
-    Cookie.remove("refresh_token", { path: "/" });
-    
-    useAuthStore.getState().clearUser();
-    
-    // ✅ THAY ĐỔI: Sử dụng React Router thay vì window.location.href
-    // Dispatch custom event để App.jsx handle navigation
-    window.dispatchEvent(new CustomEvent('auth-changed', { 
-        detail: { type: 'logout' } 
-    }));
+  const tokenKeys = ["access_token", "refresh_token"];
+  tokenKeys.forEach((key) => {
+    Cookie.remove(key);
+    Cookie.remove(key, { path: "/" });
+  });
+  localStorage.clear();
+  sessionStorage.clear();
+  useAuthStore.getState().clearUser();
 };
 
+
 export const setUser = async () => {
-    useAuthStore.getState().initializeAuth(); // Set loading true
+    useAuthStore.getState().initializeAuth();
     
     const access_token = Cookie.get("access_token");
     const refresh_token = Cookie.get("refresh_token");
@@ -105,16 +98,15 @@ export const setUser = async () => {
 export const setAuthUser = (access_token, refresh_token) => {
     try {
         if (access_token && refresh_token) {
-            // Fix cookie settings for development
             const cookieOptions = {
                 expires: 1,
-                secure: window.location.protocol === 'https:', // Only secure in production
+                secure: window.location.protocol === 'https:',
                 sameSite: 'strict'
             };
 
             const refreshCookieOptions = {
                 expires: 7,
-                secure: window.location.protocol === 'https:', // Only secure in production
+                secure: window.location.protocol === 'https:',
                 sameSite: 'strict'
             };
 
@@ -160,7 +152,6 @@ export const isAccessTokenExpired = (access_token) => {
         const decodedToken = jwt_decode(access_token);
         const currentTime = Date.now() / 1000;
         
-        // Thêm buffer 30 giây để tránh trường hợp token expire ngay khi đang gọi API
         return decodedToken.exp < (currentTime + 30);
     } catch (error) {
         console.error("Error decoding token:", error);
@@ -168,7 +159,6 @@ export const isAccessTokenExpired = (access_token) => {
     }
 };
 
-// Hàm helper để check refresh token có expired không
 export const isRefreshTokenExpired = (refresh_token) => {
     try {
         if (!refresh_token) return true;
@@ -179,4 +169,103 @@ export const isRefreshTokenExpired = (refresh_token) => {
         console.error("Error decoding refresh token:", error);
         return true;
     }
+};
+export const clerkLogin = async () => {
+    try {
+        useAuthStore.getState().setLoading(true);
+        
+        // Get Clerk session token
+        const clerkToken = await clerk.session?.getToken();
+        
+        if (!clerkToken) {
+            throw new Error("No Clerk session token available");
+        }
+
+        // Call Django backend to exchange Clerk token for JWT
+        const { data, status } = await authApi.post('/clerk/login/', {}, {
+            headers: {
+                'Authorization': `Bearer ${clerkToken}`
+            }
+        });
+
+        if (status === 200) {
+            setAuthUser(data.access, data.refresh);
+            
+            // Trigger auth change event
+            window.dispatchEvent(new CustomEvent('auth-changed', { 
+                detail: { type: 'clerk-login', user: data.user } 
+            }));
+            
+            console.log("Successfully authenticated with Django via Clerk");
+            return { data, error: null };
+        }
+
+    } catch (error) {
+        console.error("Clerk login error:", error);
+        const errorMessage = error.response?.data?.detail || error.message || "Clerk authentication failed";
+        useAuthStore.getState().setLoading(false);
+        return { data: null, error: errorMessage };
+    }
+};
+
+// 🆕 Initialize Clerk authentication
+export const initializeClerkAuth = async () => {
+    try {
+        await clerk.load();
+        
+        if (clerk.user) {
+            // User is signed in with Clerk, authenticate with Django
+            const result = await clerkLogin();
+            return result;
+        } else {
+            // User is not signed in with Clerk
+            console.log("No Clerk user found");
+            return { data: null, error: null };
+        }
+    } catch (error) {
+        console.error("Failed to initialize Clerk auth:", error);
+        return { data: null, error: error.message };
+    }
+};
+
+// 🆕 Sign in with Clerk
+export const signInWithClerk = async () => {
+  try {
+    useAuthStore.getState().setLoading(true);
+
+    // Chuyển hướng đến Clerk sign-in flow
+    await clerk.redirectToSignIn({
+      redirectUrl: '/clerk-callback', // URL để Clerk redirect sau khi đăng nhập
+    });
+
+    // Trả về promise để component gọi hàm này có thể chờ
+    return new Promise((resolve) => {
+      // Clerk sẽ xử lý callback ở /clerk-callback, không cần kiểm tra thêm ở đây
+      resolve({ data: null, error: null });
+    });
+  } catch (error) {
+    console.error('Clerk sign-in error:', error);
+    useAuthStore.getState().setLoading(false);
+    return { data: null, error: error.message };
+  }
+};
+
+// 🆕 Sign up with Clerk
+export const signUpWithClerk = async () => {
+  try {
+    useAuthStore.getState().setLoading(true);
+
+    // Chuyển hướng đến Clerk sign-up flow
+    await clerk.redirectToSignUp({
+      redirectUrl: '/clerk-callback', // URL để Clerk redirect sau khi đăng ký
+    });
+
+    return new Promise((resolve) => {
+      resolve({ data: null, error: null });
+    });
+  } catch (error) {
+    console.error('Clerk sign-up error:', error);
+    useAuthStore.getState().setLoading(false);
+    return { data: null, error: error.message };
+  }
 };

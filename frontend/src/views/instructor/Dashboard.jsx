@@ -266,9 +266,9 @@ function Dashboard() {
                                                         <button className="btn btn-sm btn-danger me-1">
                                                             <i className="fas fa-trash"></i>
                                                         </button>
-                                                        <button className="btn btn-sm btn-secondary">
+                                                        {/* <button className="btn btn-sm btn-secondary">
                                                             <i className="fas fa-eye"></i>
-                                                        </button>
+                                                        </button> */}
                                                     </td>
                                                 </tr>
                                             ))}

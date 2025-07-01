@@ -28,8 +28,15 @@ function Search() {
   const fetchCourses = async () => {
     setIsLoading(true);
     try {
-      const res = await apiInstance.get("/course/course-list/");
-      setCourses(res.data);
+      const cachedCourses = localStorage.getItem("cachedCourses");
+
+      if (cachedCourses) {
+        setCourses(JSON.parse(cachedCourses));
+      } else {
+        const res = await apiInstance.get("/course/course-list/");
+        setCourses(res.data);
+        localStorage.setItem("cachedCourses", JSON.stringify(res.data));
+      }
     } catch (error) {
       console.error("Error fetching courses:", error);
       Toast.error("Failed to load courses");
@@ -37,6 +44,7 @@ function Search() {
       setIsLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchCourses();
@@ -70,19 +78,21 @@ function Search() {
   const handleSearch = (e) => {
     const query = e.target.value.toLowerCase();
     setSearchQuery(query);
-    setCurrentPage(1); // Reset về page 1 khi tìm kiếm
+    setCurrentPage(1);
+
+    const cachedCourses = JSON.parse(localStorage.getItem("cachedCourses") || "[]");
 
     if (query === "") {
-      fetchCourses();
+      setCourses(cachedCourses);
     } else {
-      const filteredCourses = courses.filter((course) =>
+      const filteredCourses = cachedCourses.filter((course) =>
         course.title.toLowerCase().includes(query)
       );
       setCourses(filteredCourses);
     }
   };
 
-  // Pagination logic
+
   const indexOfLastCourse = currentPage * coursesPerPage;
   const indexOfFirstCourse = indexOfLastCourse - coursesPerPage;
   const paginatedCourses = courses.slice(indexOfFirstCourse, indexOfLastCourse);

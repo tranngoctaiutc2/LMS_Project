@@ -6,7 +6,7 @@ import jwt_decode from "jwt-decode";
 // Configuration for Axios instance
 const apiInstance = axios.create({
   baseURL: import.meta.env.VITE_REACT_APP_API_URL || "http://127.0.0.1:8000/api/v1/",
-  timeout: 15000,
+  timeout: 30000,
 });
 
 // State for token refresh management

@@ -241,7 +241,7 @@ function Courses() {
                                                                             style={{ width: "80px", height: "60px", objectFit: "cover" }}
                                                                             onError={(e) => {
                                                                                 e.target.onerror = null;
-                                                                                e.target.src = '/default-course.png'; // Đường dẫn ảnh mặc định
+                                                                                e.target.src = '/default-course.png';
                                                                             }}
                                                                         />
                                                                     </div>
@@ -282,9 +282,9 @@ function Courses() {
                                                                 >
                                                                     <i className="fas fa-trash"></i>
                                                                 </button>
-                                                                <button className="btn btn-sm btn-outline-secondary" title="View">
+                                                                {/* <button className="btn btn-sm btn-outline-secondary" title="View">
                                                                     <i className="fas fa-eye"></i>
-                                                                </button>
+                                                                </button> */}
                                                             </td>
                                                         </tr>
                                                     ))}

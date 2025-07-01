@@ -264,17 +264,17 @@ function Students() {
                                                                     <span className="d-block text-muted small">Enrolled</span>
                                                                     <span className="fw-bold text-dark">{moment(student.date).format("MMM D, YYYY")}</span>
                                                                 </div>
-                                                                <div className="text-end">
+                                                                {/* <div className="text-end">
                                                                     <span className="d-block text-muted small">Courses</span>
                                                                     <span className="fw-bold text-dark">{student.courses_count || 0}</span>
-                                                                </div>
+                                                                </div> */}
                                                             </div>
                                                         </div>
-                                                        <div className="card-footer bg-transparent border-top-0 pt-0 pb-3 text-center">
+                                                        {/* <div className="card-footer bg-transparent border-top-0 pt-0 pb-3 text-center">
                                                             <button className="btn btn-sm btn-outline-primary rounded-pill px-3">
                                                                 <i className="fas fa-envelope me-1"></i> Message
                                                             </button>
-                                                        </div>
+                                                        </div> */}
                                                     </div>
                                                 </div>
                                             ))}

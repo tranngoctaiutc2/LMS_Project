@@ -34,38 +34,41 @@ function Index() {
     const cartId = CartId();
 
     const fetchCourses = async (forceRefresh = false) => {
-        const cached = localStorage.getItem("courses");
-        const cacheTimestamp = localStorage.getItem("courses_timestamp");
-        const CACHE_DURATION = 5 * 60 * 1000;
-        
-        if (!forceRefresh && cached && cacheTimestamp) {
-            const now = Date.now();
-            const cacheTime = parseInt(cacheTimestamp);
-            
-            if (now - cacheTime < CACHE_DURATION) {
-                setCourses(JSON.parse(cached));
-                setIsLoading(false);
-                return;
-            }
-        }
+        setIsLoading(true);
+
+        // const cached = localStorage.getItem("courses");
+        // const cacheTimestamp = localStorage.getItem("courses_timestamp");
+        // const CACHE_DURATION = 5 * 60 * 1000;
+
+        // if (!forceRefresh && cached && cacheTimestamp) {
+        //     const now = Date.now();
+        //     const cacheTime = parseInt(cacheTimestamp);
+
+        //     if (now - cacheTime < CACHE_DURATION) {
+        //         setCourses(JSON.parse(cached));
+        //         setIsLoading(false);
+        //         return;
+        //     }
+        // }
 
         try {
             const res = await apiInstance.get(`/course/course-list/`);
             setCourses(res.data);
-            
-            localStorage.setItem("courses", JSON.stringify(res.data));
-            localStorage.setItem("courses_timestamp", Date.now().toString());
+
+            // localStorage.setItem("courses", JSON.stringify(res.data));
+            // localStorage.setItem("courses_timestamp", Date.now().toString());
         } catch (error) {
             Toast.error("Failed to load courses");
-            
-            if (cached) {
-                setCourses(JSON.parse(cached));
-                Toast.info("Showing cached data due to network error");
-            }
+
+            // if (cached) {
+            //     setCourses(JSON.parse(cached));
+            //     Toast.info("Showing cached data due to network error");
+            // }
         } finally {
             setIsLoading(false);
         }
     };
+
 
 
 
@@ -235,7 +238,7 @@ function Index() {
                         </p>
 
                         <div className="d-flex flex-wrap gap-3">
-                            <a href="#" className="btn btn-primary btn-lg px-4 shadow">
+                            <a href="/register" className="btn btn-primary btn-lg px-4 shadow">
                             {t("hero_platform.join_now")} <i className="fas fa-plus ms-2"></i>
                             </a>
                             <a

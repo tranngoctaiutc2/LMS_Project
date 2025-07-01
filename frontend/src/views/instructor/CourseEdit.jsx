@@ -45,7 +45,7 @@ function CourseEdit() {
         const fetchedData = {
           title: courseRes.data.title || "",
           description: courseRes.data.description || "",
-          image: null,
+          image:courseRes.data.image || "",
           file: courseRes.data.file || "",
           level: courseRes.data.level || "",
           language: courseRes.data.language || "",
@@ -55,11 +55,11 @@ function CourseEdit() {
           featured: !!courseRes.data.featured,
           variants: Array.isArray(courseRes.data.variants)
             ? courseRes.data.variants.map((variant) => ({
-                variant_id: variant.variant_id || "",
+                variant_id: variant.variant_id || variant.id || "",
                 title: variant.title || "",
                 items: Array.isArray(variant.items)
                   ? variant.items.map((item) => ({
-                      variant_item_id: item.variant_item_id || "",
+                      variant_item_id: item.variant_item_id || item.id || "",
                       title: item.title || "",
                       description: item.description || "",
                       file: item.file || "",
@@ -209,7 +209,13 @@ function CourseEdit() {
         teacher: teacherId,
         platform_status: "Published",
       }).forEach(([key, val]) => {
-        if (key === "image" && val instanceof File) formData.append(key, val);
+        if (key === "image") {
+          if (val instanceof File) {
+            formData.append("image", val);
+          } else if (typeof val === "string") {
+            formData.append("image_url", val);
+          }
+        }
         else if (key === "variants") formData.append(key, JSON.stringify(val));
         else if (key === "delete_variant_ids") formData.append(key, JSON.stringify(deleteVariantIds));
         else if (key === "delete_item_ids") formData.append(key, JSON.stringify(deleteItemIds));

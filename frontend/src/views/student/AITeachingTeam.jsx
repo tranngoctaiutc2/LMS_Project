@@ -98,7 +98,7 @@ const AITeachingAgents = () => {
         selectedAdvisorDoc: null,
         loading: false,
         docUrl: null,
-        completed: false, // Thêm trạng thái completed
+        completed: false,
         ...(agent.type === "advisor" ? { duration: "4 weeks" } : {}),
       },
     }), {})
@@ -154,7 +154,6 @@ const AITeachingAgents = () => {
     return !specialCharPattern.test(topic);
   };
 
-  // Hàm format text với ** thành bold
   const formatBoldText = (text) => {
     if (typeof text !== 'string') return text;
     
@@ -205,7 +204,7 @@ const AITeachingAgents = () => {
       Toast.success(`${agentType} completed!`);
       updateAgentState(agentType, { 
         docUrl: res.data.doc_url,
-        completed: true // Đánh dấu là hoàn thành
+        completed: true
       });
       return res.data;
     } catch (error) {
@@ -218,16 +217,13 @@ const AITeachingAgents = () => {
     }
   };
 
-  // Hàm clear để reset trang bất đồng bộ
   const handleClear = async () => {
-    // Reset tất cả state
     setGlobalTopic("");
     setGlobalLanguage("en");
     setTopicStatus({ status: null, message: "" });
     setTopicSuggestions([]);
     setExistingAgents([]);
     
-    // Reset agent states
     setAgentStates(
       agents.reduce((acc, agent) => ({
         ...acc,
@@ -242,7 +238,6 @@ const AITeachingAgents = () => {
       }), {})
     );
 
-    // Fetch lại documents
     try {
       const res = await apiInstance.get("/ai-document-list/", {
         params: { user_id: UserData()?.user_id },
@@ -369,19 +364,14 @@ const AITeachingAgents = () => {
     }
   };
 
-  const capitalizeTopic = (topic) => {
-    return topic
-      .split(" ")
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(" ");
-  };
+
 
   const getIsRunEnabled = (agentType) => {
     return (
       (topicStatus.status === "Allow" && !existingAgents.includes(agentType)) ||
       agentStates[agentType].selectedProfessorDoc ||
       (agentType === "advisor" && agentStates[agentType].selectedAdvisorDoc)
-    ) && !agentStates[agentType].completed; // Thêm điều kiện completed
+    ) && !agentStates[agentType].completed;
   };
 
   const isAnyDocSelectedExcept = (currentAgentType) => {
@@ -413,7 +403,7 @@ const AITeachingAgents = () => {
                   Toast.error("Special characters are not allowed in topic");
                   return;
                 }
-                const formattedTopic = capitalizeTopic(value);
+                const formattedTopic = value;
                 setGlobalTopic(formattedTopic);
                 setTopicStatus({ status: null, message: "" });
                 setExistingAgents([]);

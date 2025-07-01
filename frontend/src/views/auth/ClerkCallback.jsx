@@ -1,51 +1,86 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@clerk/clerk-react";
-import Toast from "../plugin/Toast";
-import apiInstance from "../../utils/axios";
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useClerk, useUser } from '@clerk/clerk-react';
+import { clerkLogin } from '../../utils/auth';
 
-export default function ClerkCallback() {
+const ClerkCallback = () => {
   const navigate = useNavigate();
-  const { isLoaded, userId, getToken } = useAuth();
+  const { isLoaded, isSignedIn } = useUser();
+  const clerk = useClerk();
 
   useEffect(() => {
-    if (!isLoaded || !userId) return;
+    const timeoutId = setTimeout(() => {
+      if (!isSignedIn) {
+        console.log('Callback timeout, redirecting to login');
+        navigate('/login?error=callback_timeout', { replace: true });
+      }
+    }, 10000);
 
     const handleCallback = async () => {
-      try {
-        const token = await getToken({ template: "LMS-Project" });
-        if (!token) {
-          Toast.error("Fail to fetch token from Clerk");
-          return;
+      console.log('ClerkCallback - Debug info:', {
+        isLoaded,
+        isSignedIn,
+        clerk: !!clerk,
+      });
+
+      if (!isLoaded) {
+        console.log('Clerk not loaded yet, waiting...');
+        return;
+      }
+
+      if (isSignedIn) {
+        try {
+          const result = await clerkLogin();
+          if (result.error) {
+            console.error('Backend authentication failed:', result.error);
+            navigate('/login?error=backend_auth_failed', { replace: true });
+            return;
+          }
+          console.log('User signed in successfully, redirecting to dashboard');
+          navigate('/dashboard', { replace: true });
+        } catch (error) {
+          console.error('Error during clerkLogin:', error);
+          navigate('/login?error=backend_auth_failed', { replace: true });
         }
-        const res = await apiInstance.post("/clerk/login/", {}, {
-          headers: { Authorization: `Bearer ${token}` },
+        return;
+      }
+
+      try {
+        await clerk.handleRedirectCallback({
+          redirectUrl: '/dashboard',
+          continueSignUpUrl: '/dashboard',
         });
-        const { access, refresh, user } = res.data;
-        localStorage.setItem("access_token", access);
-        localStorage.setItem("refresh_token", refresh);
-        localStorage.setItem("user", JSON.stringify(user));
-        apiInstance.defaults.headers.common["Authorization"] = `Bearer ${access}`;
-        Toast.success("Login successful");
-        navigate("/");
+        if (clerk.user) {
+          const result = await clerkLogin();
+          if (result.error) {
+            console.error('Backend authentication failed:', result.error);
+            navigate('/login?error=backend_auth_failed', { replace: true });
+            return;
+          }
+          navigate('/dashboard', { replace: true });
+        } else {
+          console.log('No user found after callback, redirecting to login');
+          navigate('/login?error=callback_failed', { replace: true });
+        }
       } catch (error) {
-        Toast.error(error?.response?.data?.detail || "Login failed");
+        console.error('Error handling Clerk callback:', error);
+        navigate('/login?error=callback_failed', { replace: true });
       }
     };
 
     handleCallback();
-  }, [isLoaded, userId]);
+    return () => clearTimeout(timeoutId);
+  }, [isLoaded, isSignedIn, navigate, clerk]);
 
-  if (!isLoaded || !userId) {
-    return (
-      <section className="d-flex justify-content-center align-items-center vh-100">
-        <div className="text-center">
-          <div className="spinner-border text-primary" role="status" />
-          <p className="mt-3">Đang xác thực tài khoản...</p>
-        </div>
-      </section>
-    );
-  }
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <div id="clerk-captcha" className="mb-4"></div> {/* Thêm phần tử clerk-captcha */}
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Đang xử lý đăng nhập...</p>
+      </div>
+    </div>
+  );
+};
 
-  return null;
-}
+export default ClerkCallback;
